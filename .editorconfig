@@ -1,0 +1,20 @@
+﻿root = true                 # 本文件所在路径为项目根目录
+
+[*]                         # 对于所有文件
+charset = utf-8             # 文件编码
+indent_style = space        # 缩进风格
+tab_width = 4               # 缩进宽度
+end_of_line = crlf          # 行尾格式
+insert_final_newline = true # 在文件结尾添加换行以防止一些编译器警告
+trim_trailing_whitespace = true # 删除所有行尾的空格
+
+[*.{md,markdown,mmd,mdwn,mdown}]
+trim_trailing_whitespace = false
+
+[*.{c,cpp,h}]
+charset = utf-8-bom
+
+[*.cs]
+
+# CS4014: 由于此调用不会等待，因此在调用完成前将继续执行当前方法
+dotnet_diagnostic.CS4014.severity = error

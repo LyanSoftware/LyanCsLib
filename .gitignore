@@ -1,0 +1,14 @@
+# 自动生成的文件
+[Bb]in
+[Dd]ebug
+[Oo]bj
+[Rr]elease
+.vs
+
+# 用户工作区文件
+*.*proj.user
+*.pubxml.user
+
+# VSCode
+.vscode/*
+!.vscode/*.shared.json
