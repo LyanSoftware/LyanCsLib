@@ -1,4 +1,4 @@
-﻿root = true                 # 本文件所在路径为项目根目录
+root = true                 # 本文件所在路径为项目根目录
 
 [*]                         # 对于所有文件
 charset = utf-8             # 文件编码
@@ -18,3 +18,18 @@ charset = utf-8-bom
 
 # CS4014: 由于此调用不会等待，因此在调用完成前将继续执行当前方法
 dotnet_diagnostic.CS4014.severity = error
+
+# IDE0090: 使用 "new(...)"
+dotnet_diagnostic.IDE0090.severity = none
+
+# IDE0054: 使用复合分配
+dotnet_diagnostic.IDE0054.severity = none
+
+# IDE0074: 使用复合分配
+dotnet_diagnostic.IDE0074.severity = none
+
+# IDE0220: 添加显式转换
+dotnet_diagnostic.IDE0220.severity = none
+
+# IDE0066:将 switch 语句转换为表达式
+dotnet_diagnostic.IDE0066.severity = none
