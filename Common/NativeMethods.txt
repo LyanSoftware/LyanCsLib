@@ -1,0 +1,7 @@
+SendMessage
+GetWindowLong
+SetWindowLong
+WM_SETICON
+WINDOW_EX_STYLE
+SET_WINDOW_POS_FLAGS
+SetWindowPos

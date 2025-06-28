@@ -164,8 +164,8 @@ namespace Lytec.Common
             }
         }
 
-        public static bool IsNullOrEmpty(this string str) => string.IsNullOrEmpty(str);
-        public static bool IsNullOrWhiteSpace(this string str) => string.IsNullOrWhiteSpace(str);
+        public static bool IsNullOrEmpty([AllowNull][NotNullWhen(false)] this string str) => string.IsNullOrEmpty(str);
+        public static bool IsNullOrWhiteSpace([AllowNull][NotNullWhen(false)] this string str) => string.IsNullOrWhiteSpace(str);
 
         public static void ForceLoadClass<T>() => typeof(T).ForceLoadClass();
         public static void ForceLoadClass(this Type t) => System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(t.TypeHandle);
