@@ -2,11 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
-    <AssemblyName>Lytec.AvaloniaUI</AssemblyName>
-    <LangVersion>latest</LangVersion>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <!-- <PackageVersion>1.0</PackageVersion> -->
-    <Authors></Authors>
   </PropertyGroup>
 
   <ItemGroup>

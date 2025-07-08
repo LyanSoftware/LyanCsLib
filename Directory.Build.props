@@ -1,6 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project>
   <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageVersion>0.0.1</PackageVersion>
+    <Authors>Lytec.K</Authors>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
     <AvaloniaVersion>11.0.5</AvaloniaVersion>
   </PropertyGroup>
 </Project>

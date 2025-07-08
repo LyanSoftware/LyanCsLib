@@ -1,3 +1,5 @@
+using System;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -5,73 +7,126 @@ using Lytec.Common.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
-namespace Lytec.Common.Localization
+namespace Lytec.Common.Localization;
+
+public abstract class Localization
 {
-    public interface ILocalization : DI.IService
+    public enum EndOfLineFormat
     {
-        /// <summary>
-        /// 查询指定键名的本地化字符串
-        /// </summary>
-        string Q(string key, string defaultValue);
+        DontChange = 0,
+        EnvironmentDefault,
+        CR,
+        LF,
+        CRLF,
+        Windows = CRLF,
+        Linux = LF,
+        Mac = CR,
     }
 
-    public class Localization : ILocalization
+    public bool AllowEscape { get; set; } = true;
+
+    public EndOfLineFormat EOF { get; set; } = EndOfLineFormat.CRLF;
+
+    public Func<string, string>? PostProcess { get; set; }
+
+    public Func<string, string>? FormatInterpolateKey { get; set; } = key => $"{{{{{key}}}}}";
+
+    public Localization()
     {
-        protected virtual ILocalizationDataSource DataSource { get; set; }
-
-        public Localization(ILocalizationDataSource dataSource)
+        PostProcess = str =>
         {
-            DataSource = dataSource;
-        }
-
-        public virtual string Q(string key, string defaultValue)
-        {
-            var ori = defaultValue;
-            if (DataSource != null && DataSource.TryGetValue(key, out var v))
-                ori = v;
-            var sb = new StringBuilder(Regex.Unescape(ori));
-            sb.Replace("\r\n", "\n");
-            sb.Replace("\n\r", "\n");
-            sb.Replace("\r", "\n");
-            sb.Replace("\n", Environment.NewLine);
+            if (AllowEscape)
+                str = Regex.Unescape(str);
+            var sb = new StringBuilder(str);
+            switch (EOF)
+            {
+                default:
+                case EndOfLineFormat.DontChange:
+                    break;
+                case EndOfLineFormat.EnvironmentDefault:
+                case EndOfLineFormat.CR:
+                case EndOfLineFormat.LF:
+                case EndOfLineFormat.CRLF:
+                    sb.Replace("\r\n", "\n");
+                    sb.Replace("\n\r", "\n");
+                    sb.Replace("\r", "\n");
+                    switch (EOF)
+                    {
+                        default:
+                            break;
+                        case EndOfLineFormat.EnvironmentDefault:
+                            sb.Replace("\n", Environment.NewLine);
+                            break;
+                        case EndOfLineFormat.CR:
+                            sb.Replace("\n", "\r");
+                            break;
+                        case EndOfLineFormat.LF:
+                            break;
+                        case EndOfLineFormat.CRLF:
+                            sb.Replace("\n", "\r\n");
+                            break;
+                    }
+                    break;
+            }
             return sb.ToString();
-        }
-
-        /// <summary>
-        /// 查询指定键名的本地化字符串
-        /// </summary>
-        public virtual string Q(string key) => Q(key, key);
-        /// <summary>
-        /// 查询指定键名的本地化字符串
-        /// </summary>
-        public virtual string Q(string key, string defaultValue, params (string Placeholder, object Value)[] args)
-        {
-            var template = Q(key, defaultValue);
-            if (string.IsNullOrEmpty(template))
-                return template;
-            var sb = new StringBuilder(template);
-            foreach (var (p, v) in args)
-                sb.Replace(p, v?.ToString() ?? "");
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// 查询指定枚举值的本地化字符串
-        /// </summary>
-        public virtual string Q<T>(T value, string? defaultValue = null) where T : Enum
-        {
-            var path = $"{value.GetType().GetNestedClassName()}.{value}";
-            return Q(path, defaultValue ?? path);
-        }
-
+        };
     }
 
+    public abstract bool Query(string key, out string Value);
+
+    public virtual string Format(string str, IEnumerable<(string Key, string Value)> values)
+    {
+        var sb = new StringBuilder(str);
+        foreach (var (key, value) in values)
+            sb.Replace(FormatInterpolateKey?.Invoke(key) ?? key, value);
+        return sb.ToString();
+    }
+
+    public string Format(string str, IEnumerable<KeyValuePair<string, string>> values)
+    => Format(str, values.Select(kv => (kv.Key, kv.Value)));
+
+    public string Format(string str, params KeyValuePair<string, string>[] values)
+    => Format(str, values.AsEnumerable());
+    
+    public string Format(string str, params (string Key, string Value)[] values)
+    => Format(str, values.AsEnumerable());
+
+    public virtual string Q(string key, string defaultValue)
+    {
+        var v = Query(key, out var val) ? val : defaultValue;
+        return PostProcess?.Invoke(v) ?? v;
+    }
+
+    public virtual string Q(string key)
+    => Query(key, out var val) ? (PostProcess?.Invoke(val) ?? val) : key;
+
+    /// <summary>
+    /// 查询指定枚举值的本地化字符串
+    /// </summary>
+    public virtual string Q<T>(T value) where T : Enum
+    {
+        var path = $"{value.GetType().GetNestedClassName()}.{value}";
+        return Query(path, out var val) ? (PostProcess?.Invoke(val) ?? val) : path;
+    }
+
+    /// <summary>
+    /// 查询指定枚举值的本地化字符串
+    /// </summary>
+    public virtual string Q<T>(T value, string defaultValue) where T : Enum
+    {
+        var path = $"{value.GetType().GetNestedClassName()}.{value}";
+        if (Query(path, out var val))
+            return PostProcess?.Invoke(val) ?? val;
+        if (!defaultValue.IsNullOrEmpty())
+            return PostProcess?.Invoke(defaultValue) ?? defaultValue;
+        return path;
+    }
 }
 
-namespace Lytec.Common.Localization.Extensions
+public static class LocalizationExtensions
 {
-    public static class LocalizationUtils
-    {
-        public static void AddI18N(this IServiceCollection collection) => collection.AddSingleton<ILocalization, Localization>();
-    }
+    public static IServiceCollection AddLocalization<T>(this IServiceCollection collection) where T : Localization, new()
+    => collection.AddSingleton<Localization>(new T());
+    public static IServiceCollection AddLocalization<T>(this IServiceCollection collection, T i18n) where T : Localization
+    => collection.AddSingleton<Localization>(i18n);
 }
