@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Lytec.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Condition="'$(TargetFramework)' == 'netstandard2.0'" Include="..\NetStandard20Compatibility\Lytec.NetStandard20Compatibility.csproj" />
+  </ItemGroup>
+
+</Project>

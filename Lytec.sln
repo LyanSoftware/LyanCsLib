@@ -12,8 +12,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		Directory.Build.props = Directory.Build.props
-		Directory.Packages.props = Directory.Packages.props
 		Directory.Build.targets = Directory.Build.targets
+		Directory.Packages.props = Directory.Packages.props
 		Generators.References.props = Generators.References.props
 		nuget.config = nuget.config
 	EndProjectSection
@@ -23,6 +23,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.AvaloniaUI", "AvaloniaUI\Lytec.AvaloniaUI.csproj", "{1E5D574D-00B4-459E-BF15-7FB212963CB5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.AvaloniaUI.Generators", "AvaloniaUI.Generators\Lytec.AvaloniaUI.Generators.csproj", "{C52737E5-42BA-4FCC-B0E1-ED2E0D6D41C2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.WinForms", "WinForms\Lytec.WinForms.csproj", "{3561417C-AFE2-4A80-8176-11E4A2DB7303}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Protocol", "Protocol\Lytec.Protocol.csproj", "{98C4A539-0432-4A86-89CA-46B1DB53A39B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -50,6 +54,14 @@ Global
 		{C52737E5-42BA-4FCC-B0E1-ED2E0D6D41C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C52737E5-42BA-4FCC-B0E1-ED2E0D6D41C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C52737E5-42BA-4FCC-B0E1-ED2E0D6D41C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3561417C-AFE2-4A80-8176-11E4A2DB7303}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3561417C-AFE2-4A80-8176-11E4A2DB7303}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3561417C-AFE2-4A80-8176-11E4A2DB7303}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3561417C-AFE2-4A80-8176-11E4A2DB7303}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98C4A539-0432-4A86-89CA-46B1DB53A39B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98C4A539-0432-4A86-89CA-46B1DB53A39B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98C4A539-0432-4A86-89CA-46B1DB53A39B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98C4A539-0432-4A86-89CA-46B1DB53A39B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
