@@ -869,6 +869,24 @@ namespace Lytec.Common
         public static bool IsSubtypeObjectOf<T>(this T t, Type baseType) => t!.GetType().IsSubtypeOf(baseType);
 
         public static bool IsSubtypeObjectOf<T, TBase>(this T t) => t.IsSubtypeObjectOf(typeof(T));
+
+        public static int LimitToRange(int min, int value, int max) => Math.Max(Math.Min(value, max), min);
+        public static uint LimitToRange(uint min, uint value, uint max) => Math.Max(Math.Min(value, max), min);
+        public static long LimitToRange(long min, long value, long max) => Math.Max(Math.Min(value, max), min);
+        public static ulong LimitToRange(ulong min, ulong value, ulong max) => Math.Max(Math.Min(value, max), min);
+        public static float LimitToRange(float min, float value, float max) => Math.Max(Math.Min(value, max), min);
+        public static double LimitToRange(double min, double value, double max) => Math.Max(Math.Min(value, max), min);
+        public static decimal LimitToRange(decimal min, decimal value, decimal max) => Math.Max(Math.Min(value, max), min);
+        /*
+            public static sbyte Max(sbyte val1, sbyte val2)
+            public static byte Max(byte val1, byte val2)
+            public static short Max(short val1, short val2)
+            public static ushort Max(ushort val1, ushort val2)
+            public static int Max(int val1, int val2)
+            public static uint Max(uint val1, uint val2)
+            public static long Max(long val1, long val2)
+            public static ulong Max(ulong val1, ulong val2)
+         */
     }
 
 }

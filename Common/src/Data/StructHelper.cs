@@ -147,6 +147,18 @@ namespace Lytec.Common.Data
 
         #endregion
 
+        public static T ToStruct<T>(this IEnumerable<byte> data, Endian? defaultEndian = null)
+        => data.Take(Marshal.SizeOf(typeof(T))).ToArray().ToStruct<T>(defaultEndian);
+
+        public static object ToStruct(this IEnumerable<byte> data, Type type, Endian? defaultEndian)
+        => data.Take(Marshal.SizeOf(type)).ToArray().ToStruct(type, defaultEndian);
+
+        public static T ToStruct<T>(this IEnumerable<byte> data, int offset, Endian? defaultEndian = null)
+        => data.Skip(offset).Take(Marshal.SizeOf(typeof(T))).ToArray().ToStruct<T>(defaultEndian);
+
+        public static object ToStruct(this IEnumerable<byte> data, int offset, Type type, Endian? defaultEndian)
+        => data.Skip(offset).Take(Marshal.SizeOf(type)).ToArray().ToStruct(type, defaultEndian);
+
         public static int SizeAlignTo(this int size, int align) => (size + align - 1) / align * align;
         public static uint SizeAlignTo(this uint size, uint align) => (size + align - 1) / align * align;
         public static long SizeAlignTo(this long size, long align) => (size + align - 1) / align * align;

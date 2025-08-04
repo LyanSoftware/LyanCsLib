@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace Lytec.Common.Communication
 {
-    public static class Utils
+    public static class CommunicationUtils
     {
         public static IPEndPoint EmptyIPEndPoint { get; } = new IPEndPoint(IPAddress.Any, 0);
         public static IPEndPoint EmptyIPv6EndPoint { get; } = new IPEndPoint(IPAddress.IPv6Any, 0);

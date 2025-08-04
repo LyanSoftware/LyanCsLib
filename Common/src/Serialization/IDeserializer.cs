@@ -6,16 +6,13 @@ namespace Lytec.Common.Serialization
 {
     public interface IDeserializer<out T>
     {
-        T Deserialize(IEnumerable<byte> b, out bool ok);
+        T? Deserialize(IEnumerable<byte> b);
     }
 
-    public static class DeserializerUtils
+    public interface ISequenceDeserializer<out T> : IDeserializer<T>
     {
-        public static T Deserialize<T>(this IDeserializer<T> d, IEnumerable<byte> data)
-        => d.Deserialize(data, out _);
-        public static T Deserialize<T>(this ISequenceDeserializer<T> d, byte data)
-        => d.Deserialize(data, out _);
-        public static T Deserialize<T>(this ISequenceDeserializer<T> d, out int DeserializedLength, IEnumerable<byte> data)
-        => d.Deserialize(data, out DeserializedLength, out _);
+        T? Deserialize(byte data, out bool ok);
+        T? Deserialize(IEnumerable<byte> data, out int DeserializedLength, out bool ok);
     }
+
 }

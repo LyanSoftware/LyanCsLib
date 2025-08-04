@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Lytec.Common.Serialization;
 
@@ -15,29 +16,36 @@ namespace Lytec.Common.Communication
 
     public class SendAndGetAnswerConfig
     {
+        public int? AddrCode { get; set; }
         public int Retries { get; set; }
         public bool IsStream { get; set; }
-        public delegate bool SendFunc(byte[] data);
-        public SendFunc Send { get; set; }
-        public delegate bool TryGetAnswerFunc(out byte[] data, int extTimeout = 0);
+        public Func<byte[], bool> Send { get; set; }
+        public delegate bool TryGetAnswerFunc([NotNullWhen(true)] out byte[]? data, int extTimeout = 0);
         public TryGetAnswerFunc TryGetAnswer { get; set; }
         public SendAndGetAnswerConfig()
         {
-            static bool s(byte[] data) => false;
-            Send = s;
-            static bool ga(out byte[] data, int extTimeout)
+            Send = _ => false;
+            static bool ga([NotNullWhen(true)] out byte[]? data, int extTimeout)
             {
                 data = Array.Empty<byte>();
                 return false;
             }
             TryGetAnswer = ga;
         }
-        public SendAndGetAnswerConfig(int retries, bool isStream, SendFunc send, TryGetAnswerFunc tryGetAnswer)
+        public SendAndGetAnswerConfig(int retries, bool isStream, Func<byte[], bool> send, TryGetAnswerFunc tryGetAnswer)
         {
             Retries = retries;
             IsStream = isStream;
             Send = send;
             TryGetAnswer = tryGetAnswer;
+        }
+
+        public bool SendAndGetAnswer(byte[] send, [NotNullWhen(true)] out byte[]? data, int extTimeout)
+        {
+            data = null;
+            if (!Send(send))
+                return false;
+            return TryGetAnswer(out data, extTimeout);
         }
     }
 }
