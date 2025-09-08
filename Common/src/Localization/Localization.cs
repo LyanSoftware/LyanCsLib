@@ -2,8 +2,6 @@ using System;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using Lytec.Common.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -121,12 +119,4 @@ public abstract class Localization
             return PostProcess?.Invoke(defaultValue) ?? defaultValue;
         return path;
     }
-}
-
-public static class LocalizationExtensions
-{
-    public static IServiceCollection AddLocalization<T>(this IServiceCollection collection) where T : Localization, new()
-    => collection.AddSingleton<Localization>(new T());
-    public static IServiceCollection AddLocalization<T>(this IServiceCollection collection, T i18n) where T : Localization
-    => collection.AddSingleton<Localization>(i18n);
 }

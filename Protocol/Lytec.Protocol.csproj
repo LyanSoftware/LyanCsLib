@@ -9,6 +9,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.IO.Ports" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Condition="'$(TargetFramework)' == 'netstandard2.0'" Include="..\NetStandard20Compatibility\Lytec.NetStandard20Compatibility.csproj" />
   </ItemGroup>
 

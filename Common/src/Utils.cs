@@ -11,6 +11,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Resources;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -50,23 +51,6 @@ namespace Lytec.Common
         public static int Add(this bool b, bool v) => b.ToInt() + v.ToInt();
 
         public static int Add(this int v, bool b) => v + b.ToInt();
-
-        public static string GetFileVersion(this Assembly assembly)
-        => GetFileVersion(assembly.Location);
-        public static string GetFileVersion(string filePath)
-        => FileVersionInfo.GetVersionInfo(filePath).FileVersion;
-        public static string? GetShortFileVersion(this Assembly assembly)
-        => GetShortFileVersion(assembly.Location);
-        private static readonly Regex FileVersionShorterRegex = new Regex(@"^(\d+\.\d.*?)\.0+$", RegexOptions.Compiled);
-        public static string? GetShortFileVersion(string filePath)
-        {
-            var v = GetFileVersion(filePath);
-            if (v.IsNullOrEmpty())
-                return null;
-            for (var m = FileVersionShorterRegex.Match(v); m.Success; m = FileVersionShorterRegex.Match(v))
-                v = m.Groups[1].Value;
-            return v;
-        }
 
         public static void Write(this Stream st, byte[] buf) => st.Write(buf, 0, buf.Length);
         public static Task WriteAsync(this Stream st, byte[] buf, CancellationToken cancellationToken) => st.WriteAsync(buf, 0, buf.Length, cancellationToken);
@@ -270,27 +254,6 @@ namespace Lytec.Common
             return false;
         }
 
-        public static string JoinToString<T>(this IEnumerable<T> list, string sep)
-        => list.JoinToString(null, sep);
-
-        public static string JoinToString<T>(this IEnumerable<T> list, Func<T, string>? toString = null, string sep = ",")
-        {
-            if (toString == null)
-                toString = t => t?.ToString() ?? "";
-            var isFirst = true;
-            var sb = new StringBuilder();
-            var addSep = !sep.IsNullOrEmpty();
-            foreach (var str in list.Select(toString))
-            {
-                if (isFirst)
-                    isFirst = false;
-                else if (addSep)
-                    sb.Append(sep);
-                sb.Append(str);
-            }
-            return sb.ToString();
-        }
-
         public static string CamelCase2SnakeCase(this string input)
         => Regex.Replace(input, @"(?<=[a-z0-9])[A-Z]", m => "_" + m.Value).ToLower();
 
@@ -356,12 +319,14 @@ namespace Lytec.Common
             return member.GetCustomAttributes<System.ComponentModel.DescriptionAttribute>().FirstOrDefault()?.Description ?? member.Name;
         }
 
+        public static T GetDefault<T>() where T : Enum => (T)Enum.ToObject(typeof(T), 0);
+
         public class EnumDataWithDescription : EnumDataWithDescription<Enum> { }
         public class EnumDataWithDescription<T> where T : Enum
         {
-            public string? Name { get; }
-            public T? Value { get; }
-            public string? Description { get; }
+            public string Name { get; } = "";
+            public T Value { get; } = (T)Activator.CreateInstance(typeof(T));
+            public string Description { get; } = "";
 
             protected EnumDataWithDescription() { }
             public EnumDataWithDescription(string name, T value, string description)
@@ -370,7 +335,7 @@ namespace Lytec.Common
                 Value = value;
                 Description = description;
             }
-            public void Deconstruct(out string? Name, out T? Value, out string? Description)
+            public void Deconstruct(out string Name, out T Value, out string Description)
             {
                 Name = this.Name;
                 Value = this.Value;
@@ -503,22 +468,6 @@ namespace Lytec.Common
             }
             return current < end ? source.Substring(start, current - start) : "";
         }
-
-        /// <summary>
-        /// 设置尝试加载Resources内dll
-        /// </summary>
-        /// <param name="appDomain"></param>
-        /// <param name="Namespace">Resources所属命名空间</param>
-        public static void SetLoadResourcesLibraries(this AppDomain appDomain, string Namespace)
-        => appDomain.AssemblyResolve += (sender, args) =>
-        {
-            string dllName = args.Name.Contains(",") ? args.Name.Substring(0, args.Name.IndexOf(',')) : args.Name.Replace(".dll", "");
-            dllName = dllName.Replace(".", "_");
-            if (dllName.EndsWith("_resources")) return null;
-            ResourceManager rm = new ResourceManager(Namespace + ".Properties.Resources", Assembly.GetExecutingAssembly());
-            byte[] bytes = (byte[])rm.GetObject(dllName);
-            return Assembly.Load(bytes);
-        };
 
         public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this IEnumerable<(TKey Key, TValue Value)> origin)
         => origin.ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -870,23 +819,19 @@ namespace Lytec.Common
 
         public static bool IsSubtypeObjectOf<T, TBase>(this T t) => t.IsSubtypeObjectOf(typeof(T));
 
-        public static int LimitToRange(int min, int value, int max) => Math.Max(Math.Min(value, max), min);
-        public static uint LimitToRange(uint min, uint value, uint max) => Math.Max(Math.Min(value, max), min);
-        public static long LimitToRange(long min, long value, long max) => Math.Max(Math.Min(value, max), min);
-        public static ulong LimitToRange(ulong min, ulong value, ulong max) => Math.Max(Math.Min(value, max), min);
-        public static float LimitToRange(float min, float value, float max) => Math.Max(Math.Min(value, max), min);
-        public static double LimitToRange(double min, double value, double max) => Math.Max(Math.Min(value, max), min);
-        public static decimal LimitToRange(decimal min, decimal value, decimal max) => Math.Max(Math.Min(value, max), min);
-        /*
-            public static sbyte Max(sbyte val1, sbyte val2)
-            public static byte Max(byte val1, byte val2)
-            public static short Max(short val1, short val2)
-            public static ushort Max(ushort val1, ushort val2)
-            public static int Max(int val1, int val2)
-            public static uint Max(uint val1, uint val2)
-            public static long Max(long val1, long val2)
-            public static ulong Max(ulong val1, ulong val2)
-         */
+        public static int LimitToRange(this int value, int min, int max) => Math.Max(Math.Min(value, max), min);
+        public static uint LimitToRange(this uint value, uint min, uint max) => Math.Max(Math.Min(value, max), min);
+        public static long LimitToRange(this long value, long min, long max) => Math.Max(Math.Min(value, max), min);
+        public static ulong LimitToRange(this ulong value, ulong min, ulong max) => Math.Max(Math.Min(value, max), min);
+        public static float LimitToRange(this float value, float min, float max) => Math.Max(Math.Min(value, max), min);
+        public static double LimitToRange(this double value, double min, double max) => Math.Max(Math.Min(value, max), min);
+        public static decimal LimitToRange(this decimal value, decimal min, decimal max) => Math.Max(Math.Min(value, max), min);
+        public static sbyte LimitToRange(this sbyte value, sbyte min, sbyte max) => Math.Max(Math.Min(value, max), min);
+        public static byte LimitToRange(this byte value, byte min, byte max) => Math.Max(Math.Min(value, max), min);
+        public static short LimitToRange(this short value, short min, short max) => Math.Max(Math.Min(value, max), min);
+        public static ushort LimitToRange(this ushort value, ushort min, ushort max) => Math.Max(Math.Min(value, max), min);
+
+        public static string GetCallerMemberName([CallerMemberName] string name = "") => name;
     }
 
 }

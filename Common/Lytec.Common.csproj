@@ -13,8 +13,10 @@
     <PackageReference Include="Microsoft.CodeAnalysis" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="Microsoft.Windows.CsWin32" />
+    <PackageReference Include="Portable.BouncyCastle" />
+    <PackageReference Include="System.Net.Http.WinHttpHandler" />
   </ItemGroup>
 
 </Project>

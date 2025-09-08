@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text;
 
 namespace Lytec.Common;
 
-public static partial class Utils
+public static partial class EnumerableUtils
 {
     public static IEnumerable<T> GetEnumValues<T>() where T : struct, Enum
     => Enum.GetValues(typeof(T)).Cast<T>();
@@ -113,4 +114,26 @@ public static partial class Utils
             default: return IndexOf(source, (IReadOnlyList<T>)data.ToList());
         }
     }
+
+    public static string JoinToString<T>(this IEnumerable<T> list, string sep = ",")
+    => list.JoinToString(null, sep);
+
+    public static string JoinToString<T>(this IEnumerable<T> list, Func<T, string>? toString, string sep = ",")
+    {
+        if (toString == null)
+            toString = t => t?.ToString() ?? "";
+        var isFirst = true;
+        var sb = new StringBuilder();
+        var addSep = !sep.IsNullOrEmpty();
+        foreach (var str in list.Select(toString))
+        {
+            if (isFirst)
+                isFirst = false;
+            else if (addSep)
+                sb.Append(sep);
+            sb.Append(str);
+        }
+        return sb.ToString();
+    }
+
 }
