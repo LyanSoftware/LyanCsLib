@@ -3,11 +3,12 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Newtonsoft.Json;
 
 namespace Lytec.Common.Localization;
 
-public abstract class Localization
+public abstract class Localization : IStringLocalizer
 {
     public enum EndOfLineFormat
     {
@@ -28,6 +29,9 @@ public abstract class Localization
     public Func<string, string>? PostProcess { get; set; }
 
     public Func<string, string>? FormatInterpolateKey { get; set; } = key => $"{{{{{key}}}}}";
+
+    public abstract LocalizedString this[string name, params object[] arguments] { get; }
+    public abstract LocalizedString this[string name] { get; }
 
     public Localization()
     {
@@ -119,4 +123,6 @@ public abstract class Localization
             return PostProcess?.Invoke(defaultValue) ?? defaultValue;
         return path;
     }
+
+    public abstract IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures);
 }

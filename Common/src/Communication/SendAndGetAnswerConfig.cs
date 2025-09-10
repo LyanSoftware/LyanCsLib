@@ -67,7 +67,7 @@ namespace Lytec.Common.Communication
 
     public static class SendAndGetAnswerConfigUtils
     {
-        public static bool SendAndGetAnswer(this ISendAndGetAnswerConfig conf, byte[] send, out byte[] data, int extTimeout)
+        public static bool SendAndGetAnswer(this ISendAndGetAnswerConfig conf, byte[] send, out byte[] data, int extTimeout = 0)
         {
             data = Array.Empty<byte>();
             if (!conf.Send(send))

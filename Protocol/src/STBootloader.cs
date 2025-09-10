@@ -413,7 +413,7 @@ public class STBootloader
 
     public static byte GetCheckSum(IEnumerable<byte> data, int initValue = 0)
     => (byte)data.Aggregate(initValue, (a, b) => a ^ b);
-    
+
     public readonly struct OnProcessEventArgs
     {
         public int CurrentStep { get; }
@@ -834,7 +834,7 @@ public class STBootloader
             {
                 var pageSize = GetFlashPageSize(startPage);
                 alignedEndAddr = alignedStartAddr + pageSize;
-                if (alignedEndAddr >= startAddr)
+                if (alignedEndAddr > startAddr)
                     break;
                 alignedStartAddr += pageSize;
                 startPage++;

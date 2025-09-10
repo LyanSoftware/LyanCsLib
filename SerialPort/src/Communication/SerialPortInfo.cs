@@ -32,7 +32,7 @@ namespace Lytec.SerialPort
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 return System.IO.Ports.SerialPort.GetPortNames().Select(n => new SerialPortInfo(n)).ToList();
             using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_PnPEntity WHERE Caption like '%(COM%'");
-            var names = System.IO.Ports.SerialPort.GetPortNames().ToHashSet();
+            var names = System.IO.Ports.SerialPort.GetPortNames().ToDictionary(n => n);
             var captions = searcher.Get().Cast<ManagementBaseObject>().Select(p => p["Caption"].ToString()).ToList();
             return captions
                 .Select(c => Win32SerialPortNameRegex.Match(c))
@@ -44,7 +44,7 @@ namespace Lytec.SerialPort
                     Tag = m.Groups[2].Value,
                     Name = m.Groups[3].Value
                 })
-                .Where(i => names.Contains(i.Name))
+                .Where(i => names.ContainsKey(i.Name))
                 .Select(i => new SerialPortInfo(i.Name, i.Caption, i.Description, i.Tag))
                 .ToList()
                 .OrderBy(i => Convert.ToInt32(i.Name.Replace("COM", "")))

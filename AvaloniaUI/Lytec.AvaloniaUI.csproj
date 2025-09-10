@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Lytec.Common.csproj" />
+    <ProjectReference Include="..\Win32\Lytec.Win32.csproj" />
   </ItemGroup>
 
   <ItemGroup>
