@@ -321,15 +321,6 @@ public class STBootloader
         ReadoutUnprotect = 0x92,
     }
 
-    public static readonly IReadOnlyDictionary<Command, byte[]> CommandBytes
-    = Enum.GetValues(typeof(Command))
-        .Cast<Command>()
-        .ToDictionary(v => v, v =>
-        {
-            var buf = new[] { (byte)v };
-            return buf.Append(GetCheckSum(buf, 0xFF)).ToArray();
-        });
-
     public enum SpBytes : byte
     {
         Call = 0x7f,
@@ -515,7 +506,7 @@ public class STBootloader
                 case WaitAnswerStep.WaitData:
                     step = WaitAnswerStep.WaitData;
                     if (answerLen < 0)
-                        answerLen = rbuf.Dequeue();
+                        answerLen = rbuf.Dequeue() + 1;
                     if (answerLen <= rbuf.Count)
                     {
                         var lst = new List<byte>();
@@ -577,8 +568,8 @@ public class STBootloader
     //      0   无数据
     //      -1  变长数据, 数据中的第1字节为数据长度
     //     其他 定长数据
-    public static bool Exec(ISendAndGetAnswerConfig conf, Command cmd, out byte[] Answer, int answerLen, int extTimeout = 0, CheckSumType checkSum = CheckSumType.Xor_Init0x00)
-    => Exec(conf, CommandBytes[cmd], out Answer, answerLen, extTimeout, true, checkSum);
+    public static bool Exec(ISendAndGetAnswerConfig conf, Command cmd, out byte[] Answer, int answerLen, int extTimeout = 0)
+    => Exec(conf, new byte[] { (byte)cmd }, out Answer, answerLen, extTimeout, true, CheckSumType.Xor_Init0xFF);
 
     public static bool GetBootloaderInfo(ISendAndGetAnswerConfig conf, [NotNullWhen(true)] out BootloaderInfo? Info, int extTimeout = 0)
     {
@@ -664,16 +655,25 @@ public class STBootloader
         Value = bytes.ToStruct<int>(Endian.Little);
         return true;
     }
+    
+    public static bool ReadShortInt(ISendAndGetAnswerConfig conf, int address, out ushort Value, int extTimeout = 0)
+    {
+        Value = 0xffff;
+        if (!Read(conf, address, 2, out var bytes, null, extTimeout))
+            return false;
+        Value = bytes.ToStruct<ushort>(Endian.Little);
+        return true;
+    }
 
     public static bool GetFlashSize(ISendAndGetAnswerConfig conf, DeviceInfo info, out int FlashSize, int extTimeout = 0)
     => GetFlashSize(conf, info.FlashSizeAddress, out FlashSize, extTimeout);
 
     public static bool GetFlashSize(ISendAndGetAnswerConfig conf, int address, out int FlashSize, int extTimeout = 0)
     {
-        if (!ReadInt(conf, address, out FlashSize, extTimeout))
+        FlashSize = -1;
+        if (!ReadShortInt(conf, address, out var sz, extTimeout))
             return false;
-        // 数据取低16位, 单位为KB
-        FlashSize = (FlashSize & 0xffff) << 10;
+        FlashSize = sz << 10;
         return true;
     }
 
@@ -785,15 +785,19 @@ public class STBootloader
         {
             if (!Exec(conf, Command.Erase, out _, 0, extTimeout))
                 return false;
-            return Exec(conf, new byte[] { 0xFF }, out _, 0, extTimeout + 500);
+            return Exec(conf, new byte[] { 0xFF }, out _, 0, extTimeout + 500, true, CheckSumType.Xor_Init0xFF);
         }
     }
 
-    public static bool Erase(ISendAndGetAnswerConfig conf, DeviceInfo info, bool useExtendedErase, int address, int length, int extTimeout = 0)
-    => InnerErase(conf, info, useExtendedErase, address, length, false, null, extTimeout);
+    public static bool Erase(ISendAndGetAnswerConfig conf, DeviceInfo info, bool useExtendedErase, int address, int length, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
+    => InnerErase(conf, info, useExtendedErase, address, length, false, onProcess, extTimeout);
+    public static bool Erase(ISendAndGetAnswerConfig conf, DeviceInfos info, int address, int length, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
+    => InnerErase(conf, info.Device, info.Bootloader.SupportedExtendedErase, address, length, false, onProcess, extTimeout);
 
     public static bool SafeErase(ISendAndGetAnswerConfig conf, DeviceInfo info, bool useExtendedErase, int address, int length, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
     => InnerErase(conf, info, useExtendedErase, address, length, true, onProcess, extTimeout);
+    public static bool SafeErase(ISendAndGetAnswerConfig conf, DeviceInfos info, int address, int length, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
+    => InnerErase(conf, info.Device, info.Bootloader.SupportedExtendedErase, address, length, true, onProcess, extTimeout);
 
     private static bool InnerErase(ISendAndGetAnswerConfig conf, DeviceInfo info, bool useExtendedErase, int address, int length, bool keepAlignData, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
     {

@@ -1,0 +1,5 @@
+GetWindowLong
+SetWindowLong
+SendMessage
+WINDOW_EX_STYLE
+WM_SETICON

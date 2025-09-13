@@ -7,7 +7,7 @@ using AvaWindow = Avalonia.Controls.Window;
 using Lytec.Common;
 using Windows.Win32;
 using Windows.Win32.UI.WindowsAndMessaging;
-using Win32 = Windows.Win32.PInvoke;
+using Win32PI = Windows.Win32.PInvoke;
 using Avalonia.Rendering;
 using System.Diagnostics.CodeAnalysis;
 using Avalonia.Platform;
@@ -46,9 +46,9 @@ public static class Utils
             if (handle == IntPtr.Zero)
                 return;
             var hwnd = new Windows.Win32.Foundation.HWND(handle);
-            var style = Win32.GetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE);
-            Win32.SetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE, style | (int)WINDOW_EX_STYLE.WS_EX_DLGMODALFRAME);
-            Win32.SendMessage(hwnd, Win32.WM_SETICON, 0, 0);
+            var style = Win32PI.GetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE);
+            Win32PI.SetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE, style | (int)WINDOW_EX_STYLE.WS_EX_DLGMODALFRAME);
+            Win32PI.SendMessage(hwnd, Win32PI.WM_SETICON, 0, 0);
         }
     }
 

@@ -318,22 +318,22 @@ public static partial class WinFormUtils
         return task.Result;
     }));
 
-    public static void ErrBox(this IWin32Window window, string msg, string title = "Error")
+    public static void ErrBox(this IWin32Window? window, string msg, string title = "Error")
     {
         MessageBox.Show(window, msg, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 
-    public static void ErrBox(this IWin32Window window, Exception err, string title = "Error")
+    public static void ErrBox(this IWin32Window? window, Exception err, string title = "Error")
     {
         MessageBox.Show(window, (err.InnerException ?? err).Message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 
-    public static void WarnBox(this IWin32Window window, string msg, string title = "Warning")
+    public static void WarnBox(this IWin32Window? window, string msg, string title = "Warning")
     {
         MessageBox.Show(window, msg, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
 
-    public static void InfoBox(this IWin32Window window, string msg, string title = "Info")
+    public static void InfoBox(this IWin32Window? window, string msg, string title = "Info")
     {
         MessageBox.Show(window, msg, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
@@ -347,5 +347,45 @@ public static partial class WinFormUtils
     {
         lb.ClearSelected();
         lb.SelectedIndex = lb.Items.Count - 1;
+    }
+
+    public static bool ClickClearSelection(this DataGridView editor, Point? clickScreenPos = null, bool endEdit = true)
+    {
+        if (editor.GetCellAtPoint(editor.PointToClient(clickScreenPos ?? Cursor.Position)) == null)
+        {
+            if (editor.IsCurrentCellInEditMode)
+            {
+                if (!endEdit)
+                    return false;
+                editor.EndEdit();
+            }
+            editor.ClearSelection();
+            return true;
+        }
+        return false;
+    }
+
+    public static void ClickChangeCheckBoxOrClearSelection(this DataGridView editor, Point? clickScreenPos = null)
+    {
+        var pos = editor.PointToClient(clickScreenPos ?? Cursor.Position);
+        var cell = editor.GetCellAtPoint(pos);
+        var child = editor.GetChildAtPoint(pos);
+        if (cell != null)
+        {
+            if (cell is DataGridViewCheckBoxCell cc && child == null)
+            {
+                if (editor.IsCurrentCellInEditMode)
+                    editor.EndEdit();
+                editor.BeginEdit(false);
+                cc.Value = !(bool)cc.Value;
+                editor.EndEdit();
+                if (editor.SelectedCells.Count == 1)
+                    editor.ClearSelection();
+            }
+            else if (editor.IsCurrentCellInEditMode)
+                editor.EndEdit();
+            else editor.BeginEdit(true);
+        }
+        else editor.ClearSelection();
     }
 }
