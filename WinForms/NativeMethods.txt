@@ -14,3 +14,4 @@ WM_PAINT
 WM_CTLCOLOREDIT
 RECT
 S_OK
+RegisterWindowMessage

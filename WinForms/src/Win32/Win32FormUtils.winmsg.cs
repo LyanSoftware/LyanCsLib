@@ -1,13 +1,11 @@
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
-#if CS_WINFORM
 using System.Windows.Forms;
-#endif
 
-namespace Lytec.Win32;
+namespace Lytec.WinForms;
 
-public static partial class Win32Utils
+public static partial class Win32FormUtils
 {
     #region 常量
 
@@ -71,14 +69,15 @@ public static partial class Win32Utils
 
     #region 辅助函数
 
-#if CS_WINFORM
     /// <summary>
     /// 是否为注销或关机消息
     /// </summary>
     /// <param name="msg"></param>
     /// <returns></returns>
     public static bool IsEndSession(this Message msg) => msg.Msg == WM_QUERYENDSESSION || msg.Msg == WM_ENDSESSION;
-#endif
+
+    public static bool BroadcastMessage(Message msg) => BroadcastMessage(msg.Msg, (int)msg.WParam, (int)msg.LParam);
+    public static bool BroadcastMessage(int msg, int wparam, int lparam) => PostMessage((IntPtr)HWND_BROADCAST, msg, wparam, lparam);
 
 #endregion
 

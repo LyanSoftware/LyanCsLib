@@ -386,6 +386,11 @@ public static partial class WinFormUtils
                 editor.EndEdit();
             else editor.BeginEdit(true);
         }
-        else editor.ClearSelection();
+        else
+        {
+            if (editor.IsCurrentCellInEditMode)
+                editor.EndEdit();
+            editor.ClearSelection();
+        }
     }
 }

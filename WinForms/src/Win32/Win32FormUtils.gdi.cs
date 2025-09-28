@@ -2,9 +2,9 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace Lytec.Win32;
+namespace Lytec.WinForms;
 
-public static partial class Win32Utils
+public static partial class Win32FormUtils
 {
     #region 常量
 
@@ -212,6 +212,58 @@ public static partial class Win32Utils
     {
         var r = new Rect(rect);
         return DrawText(hDC, text, text.Length, ref r, formats);
+    }
+
+    public static byte GetCharSet(this Font font, IDeviceContext? dc = null)
+    {
+        var tmpdc = dc ?? Graphics.FromHwnd(IntPtr.Zero);
+        var hDC = IntPtr.Zero;
+        var hFont = IntPtr.Zero;
+        var hFontDefault = IntPtr.Zero;
+
+        try
+        {
+            hDC = tmpdc.GetHdc();
+
+            hFont = font.ToHfont();
+            hFontDefault = SelectObject(hDC, hFont);
+
+            GetTextMetrics(hDC, out TEXTMETRICW textMetric);
+
+            return textMetric.tmCharSet;
+        }
+        finally
+        {
+            if (hFontDefault != IntPtr.Zero)
+                SelectObject(hDC, hFontDefault);
+            if (hFont != IntPtr.Zero)
+                DeleteObject(hFont);
+            tmpdc.ReleaseHdc();
+            if (dc == null)
+                tmpdc.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 创建GDI字体对象
+    /// </summary>
+    /// <param name="family"></param>
+    /// <param name="size"></param>
+    /// <param name="style"></param>
+    /// <returns>GDI字体对象指针</returns>
+    public static IntPtr CreateFont(string family, int size, FontStyle style)
+    => CreateFont(family, size, style.HasFlag(FontStyle.Bold) ? FW_BOLD : FW_NORMAL, style.HasFlag(FontStyle.Italic), style.HasFlag(FontStyle.Underline), style.HasFlag(FontStyle.Strikeout));
+
+    public static void TextOut(this Graphics g, string text, IntPtr gdiFont, Color color, int x = 0, int y = 0, Color? bgColor = null)
+    {
+        var hdc = g.GetHdc();
+        SetTextColor(hdc, GDIUtils.ARGB2ABGR(color.ToArgb()));
+        if (bgColor != null)
+            SetBkColor(hdc, bgColor.Value.ToABGR());
+        SetBkMode(hdc, bgColor == null ? BKMODE_TRANSPARENT : BKMODE_OPAQUE);
+        SelectObject(hdc, gdiFont);
+        TextOut(hdc, text, x, y);
+        g.ReleaseHdc(hdc);
     }
 
     #endregion

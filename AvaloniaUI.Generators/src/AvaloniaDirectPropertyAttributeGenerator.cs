@@ -59,11 +59,11 @@ public class AvaloniaDirectPropertyAttributeGenerator : ISourceGenerator
                     .Where(n => n is UsingDirectiveSyntax)
                     .SelectMany(n => n.ChildNodes())
                     .Select(n => n.ToFullString())
-                    .ToHashSet();
-                usings.Add("System");
-                usings.Add("Avalonia");
-                usings.Add("Avalonia.Data");
-                var nsb = usings
+                    .ToDictionary(k => k);
+                usings.Add("System", "");
+                usings.Add("Avalonia", "");
+                usings.Add("Avalonia.Data", "");
+                var nsb = usings.Keys
                     .OrderBy(u => u)
                     .Aggregate(new StringBuilder(), (sb, line) => sb.Append("using ").Append(line).Append(";\r\n"));
                 nsb.Append($@"

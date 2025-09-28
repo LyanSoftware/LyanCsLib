@@ -681,9 +681,7 @@ public class STBootloader
     {
         if (!Exec(conf, Command.Go, out _, 0, extTimeout))
             return false;
-        if (!Exec(conf, address.ToBytes(Endian.Big), out _, 0, extTimeout + 1000))
-            return false;
-        return WaitAnswer(conf, out _, 0);
+        return Exec(conf, address.ToBytes(Endian.Big), out var buf, 1, extTimeout + 1000) && buf.Length == 1 && buf[0] == (int)SpBytes.ACK;
     }
 
     public const int DefaultMainFlashStartAddress = 0x08000000;
@@ -911,11 +909,7 @@ public class STBootloader
     }
 
     public static bool WriteUnprotect(ISendAndGetAnswerConfig conf, int extTimeout = 0)
-    {
-        if (!Exec(conf, Command.WriteUnprotect, out _, 0, extTimeout))
-            return false;
-        return WaitAnswer(conf, out _, 0);
-    }
+    => Exec(conf, Command.WriteUnprotect, out var buf, 1, extTimeout) && buf.Length == 1 && buf[0] == (int)SpBytes.ACK;
 
     public static bool ReadoutProtect(ISendAndGetAnswerConfig conf, int extTimeout = 0)
     {

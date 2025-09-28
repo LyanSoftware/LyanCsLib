@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Lytec.Win32;
 
@@ -180,7 +181,20 @@ public static partial class Win32Utils
         }
     }
 
-#region Serach in System Extend Path
+    /// <summary>
+    /// 设置阻止系统关闭时的提示信息
+    /// </summary>
+    /// <param name="hwnd"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    public static bool SetShutdownBlockReason(IntPtr hwnd, string message) => Win32.Win32Utils.ShutdownBlockReasonCreate(hwnd, message);
+    /// <summary>
+    /// 清除阻止系统关闭时的提示信息
+    /// </summary>
+    /// <param name="hwnd"></param>
+    /// <returns></returns>
+    public static bool ClearShutdownBlockReason(IntPtr hwnd) => ShutdownBlockReasonDestroy(hwnd);
+    #region Serach in System Extend Path
 
 
     private const int MAX_PATH = 260;

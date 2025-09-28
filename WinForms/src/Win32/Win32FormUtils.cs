@@ -1,3 +1,4 @@
+using Lytec.Win32;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using static Lytec.Win32.Win32Utils;
 
 namespace Lytec.WinForms;
 
-public static partial class Win32Utils
+public static partial class Win32FormUtils
 {
     /// <summary>
     /// 添加防火墙例外（按应用程序）
@@ -22,21 +23,8 @@ public static partial class Win32Utils
     /// <param name="timeout">超时时间</param>
     /// <returns></returns>
     public static bool AddFirewallException(this IWin32Window _, string? name = null, int timeout = 30000)
-    => Win32.Win32Utils.AddFirewallException(Application.ExecutablePath, name, timeout);
+    => Win32Utils.AddFirewallException(Application.ExecutablePath, name, timeout);
 
-    /// <summary>
-    /// 设置阻止系统关闭时的提示信息
-    /// </summary>
-    /// <param name="hwnd"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    public static bool SetShutdownBlockReason(IntPtr hwnd, string message) => Win32.Win32Utils.ShutdownBlockReasonCreate(hwnd, message);
-    /// <summary>
-    /// 清除阻止系统关闭时的提示信息
-    /// </summary>
-    /// <param name="hwnd"></param>
-    /// <returns></returns>
-    public static bool ClearShutdownBlockReason(IntPtr hwnd) => ShutdownBlockReasonDestroy(hwnd);
     /// <summary>
     /// 设置阻止系统关闭时的提示信息
     /// </summary>

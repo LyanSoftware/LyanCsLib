@@ -2,9 +2,9 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace Lytec.Win32;
+namespace Lytec.WinForms;
 
-public static partial class Win32Utils
+public static partial class Win32FormUtils
 {
     #region 常量
 
