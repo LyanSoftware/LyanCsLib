@@ -61,9 +61,9 @@ namespace Lytec.Common.Communication
 
         public override string ToString() => IPEndPoint.ToString();
 
-        public override bool Equals(object obj) => obj is NetEndPoint ep && Equals(ep);
+        public override bool Equals(object? obj) => obj is NetEndPoint ep && Equals(ep);
 
-        public bool Equals(NetEndPoint other) => EqualityComparer<IPEndPoint>.Default.Equals(IPEndPoint, other.IPEndPoint);
+        public bool Equals(NetEndPoint? other) => other is not null && EqualityComparer<IPEndPoint>.Default.Equals(IPEndPoint, other.IPEndPoint);
 
         public override int GetHashCode() => 1646792853 + EqualityComparer<IPEndPoint>.Default.GetHashCode(IPEndPoint);
 

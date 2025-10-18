@@ -515,7 +515,7 @@ public static class Utils
         var blocks = src.ToList();
         if (blocks == null || blocks.Count < 1)
             return (Array.Empty<byte>(), 0);
-        if (blocks?.Count == 1)
+        if (blocks.Count == 1)
             return (blocks[0].Data, blocks[0].Address);
         blocks = blocks.OrderBy(b => b.Address).ToList();
         var data = new List<byte>();

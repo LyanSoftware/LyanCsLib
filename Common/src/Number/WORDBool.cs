@@ -25,7 +25,7 @@ public struct WORDBool : IEquatable<WORDBool>
     public static bool operator ==(WORDBool left, WORDBool right) => left.Equals(right);
     public static bool operator !=(WORDBool left, WORDBool right) => !(left == right);
     public static bool operator !(WORDBool v) => v.Value == 0;
-    public override bool Equals(object obj) => obj is WORDBool v && Equals(v);
+    public override bool Equals(object? obj) => obj is WORDBool v && Equals(v);
     public bool Equals(WORDBool other) => Value == other.Value;
     public override int GetHashCode() => Value.GetHashCode();
 }

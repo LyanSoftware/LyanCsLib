@@ -10,9 +10,9 @@ namespace Lytec.Common
 {
     public static class AssemblyUtils
     {
-        public static string GetFileVersion(this Assembly assembly)
+        public static string? GetFileVersion(this Assembly assembly)
         => GetFileVersion(assembly.Location);
-        public static string GetFileVersion(string filePath)
+        public static string? GetFileVersion(string filePath)
         => FileVersionInfo.GetVersionInfo(filePath).FileVersion;
         public static string? GetShortFileVersion(this Assembly assembly)
         => GetShortFileVersion(assembly.Location);
@@ -39,8 +39,9 @@ namespace Lytec.Common
             dllName = dllName.Replace(".", "_");
             if (dllName.EndsWith("_resources")) return null;
             ResourceManager rm = new ResourceManager(Namespace + ".Properties.Resources", Assembly.GetExecutingAssembly());
-            byte[] bytes = (byte[])rm.GetObject(dllName);
-            return Assembly.Load(bytes);
+            if (rm.GetObject(dllName) is byte[] bytes)
+                return Assembly.Load(bytes);
+            throw new MissingManifestResourceException();
         };
 
     }

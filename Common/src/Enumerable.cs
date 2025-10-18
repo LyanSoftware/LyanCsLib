@@ -11,11 +11,11 @@ public static partial class EnumerableUtils
     public static IEnumerable<T> GetEnumValues<T>() where T : struct, Enum
     => Enum.GetValues(typeof(T)).Cast<T>();
 
-    public static IEnumerable<T> Distinct<T>(this IEnumerable<T> source, Func<T, T, bool> equals, Func<T, int>? getHashCode = null)
+    public static IEnumerable<T> Distinct<T>(this IEnumerable<T> source, Func<T?, T?, bool> equals, Func<T, int>? getHashCode = null)
     => source.Distinct(new IEqualityComparerWrapper<T>(equals, getHashCode));
 
     public static IEnumerable<T> DistinctBy<T, TCompare>(this IEnumerable<T> source, Func<T, TCompare> selector)
-    => source.Distinct(new IEqualityComparerWrapper<T>((a, b) => Comparer<TCompare>.Default.Compare(selector(a), selector(b)) == 0, x => selector(x)!.GetHashCode()));
+    => source.Distinct(new IEqualityComparerWrapper<T>((a, b) => Comparer<TCompare>.Default.Compare(selector(a!), selector(b!)) == 0, x => selector(x)!.GetHashCode()));
 
     public static void DisposeAll<T>(this IEnumerable<T> source) where T : IDisposable
     {

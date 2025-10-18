@@ -29,9 +29,9 @@ namespace Lytec.Common.Communication
 
         public override string ToString() => $"[{Mode}]{base.ToString()}";
 
-        public override bool Equals(object obj) => obj is NetEndPointEx n && Equals(n);
+        public override bool Equals(object? obj) => obj is NetEndPointEx n && Equals(n);
 
-        public bool Equals(NetEndPointEx other) => base.Equals(other) && Mode == other.Mode;
+        public bool Equals(NetEndPointEx? other) => base.Equals(other) && Mode == other.Mode;
 
         public override int GetHashCode()
         {

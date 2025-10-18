@@ -56,7 +56,7 @@ namespace Lytec.Common.Converters
             var inputType = input.GetType();
             var parse = type.GetTryParseMethod(inputType);
             var args = new object?[] { input, null };
-            if (parse != null && (bool)parse.Invoke(null, args))
+            if (parse != null && (bool)parse.Invoke(null, args)!)
                 return args[1];
             parse = type.GetParseMethod(inputType);
             if (parse != null)
@@ -134,7 +134,7 @@ namespace Lytec.Common.Converters
 
     public class IPEndPointStringTypeConverter : StringTypeConverter<IPEndPoint>
     {
-        public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+        public override object ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
         {
             return value is string str && TryParse(str, out var ep) ? ep : value;
         }
@@ -142,15 +142,15 @@ namespace Lytec.Common.Converters
 
     public class StringTypeConverter<T> : TypeConverter
     {
-        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
-        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType) => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
-        public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+        public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+        public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+        public override object ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
         {
             return value is string str && typeof(T).TryParse(str, out var obj) ? obj : value;
         }
-        public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
+        public override object ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value, Type? destinationType)
         {
-            if (destinationType == typeof(string)) return value.ToString();
+            if (destinationType == typeof(string)) return value?.ToString() ?? "";
             throw new NotSupportedException();
         }
     }

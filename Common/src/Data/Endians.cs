@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Lytec.Common.Data
@@ -10,7 +10,7 @@ namespace Lytec.Common.Data
         /// </summary>
         public static Endian LocalEndian { get; } = BitConverter.IsLittleEndian ? Endian.Little : Endian.Big;
 
-        public static EndianAttribute GetEndianAttribute(this MemberInfo info, bool inherit = true) => info.GetCustomAttribute<EndianAttribute>(inherit);
+        public static EndianAttribute? GetEndianAttribute(this MemberInfo info, bool inherit = true) => info.GetCustomAttribute<EndianAttribute>(inherit);
 
         /// <summary>
         /// 修正字节序
@@ -36,9 +36,9 @@ namespace Lytec.Common.Data
             }
             else
             {
-                for (; type != null; type = type.BaseType)
+                for (Type? t1 = type; t1 != null; t1 = t1.BaseType)
                 {
-                    foreach (var f in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                    foreach (var f in t1.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
                     {
                         var subType = false;
                         if (f.GetEndianAttribute(false) is EndianAttribute attr2)
@@ -66,14 +66,14 @@ namespace Lytec.Common.Data
                             }
                             else Array.Reverse(newdata, offset, size);
                         }
-                        var fieldOffset = Marshal.OffsetOf(type, f.Name).ToInt32();
+                        var fieldOffset = Marshal.OffsetOf(t1, f.Name).ToInt32();
                         if (f.FieldType.IsArray)
                         {
                             if (f.GetCustomAttribute<MarshalAsAttribute>() is MarshalAsAttribute marshalAs)
                             {
                                 if (marshalAs.Value == UnmanagedType.ByValArray)
                                 {
-                                    var es = Marshal.SizeOf(f.FieldType.GetElementType());
+                                    var es = Marshal.SizeOf(f.FieldType.GetElementType()!);
                                     for (var i = 0; i < marshalAs.SizeConst; i++)
                                         proc(fieldOffset + i * es, es);
                                 }

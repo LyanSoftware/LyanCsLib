@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -100,9 +101,9 @@ namespace Lytec.Common
 
         public static void TriggerEvent(this object obj, string name, EventArgs? e = null)
         {
-            var handlers = ((MulticastDelegate)obj.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).GetValue(obj))?.GetInvocationList();
-            if (handlers != null)
-                foreach (Delegate dlg in handlers)
+            if (obj.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) is FieldInfo field
+                && field.GetValue(obj) is MulticastDelegate func)
+                foreach (Delegate dlg in func.GetInvocationList())
                     dlg.Method.Invoke(dlg.Target, new object?[] { obj, e });
         }
 
@@ -165,7 +166,7 @@ namespace Lytec.Common
                 var names = new List<string>() { t.Name };
                 while (t.IsNested)
                 {
-                    t = t.DeclaringType;
+                    t = t.DeclaringType!;
                     names.Add(t.Name);
                 }
                 NestedClassNames[t] = names.AsEnumerable().Reverse().JoinToString(sep: ".");
@@ -269,10 +270,10 @@ namespace Lytec.Common
         public static IEnumerable<T> GetPredefineObjects<T>()
             => from field in typeof(T).GetFields(BindingFlags.Public | BindingFlags.Static)
                where field.FieldType.IsAssignableFrom(typeof(T))
-               select (T)field.GetValue(null);
+               select (T)field.GetValue(null)!;
 
-        public static T GetCustomAttribute<TEnum, T>(this TEnum e) where TEnum : Enum where T : Attribute
-        => typeof(TEnum).GetField(Enum.GetName(typeof(TEnum), e)).GetCustomAttributes<T>().FirstOrDefault();
+        public static FieldInfo? GetEnumFieldInfo<T>(this T e) where T : Enum
+        => Enum.GetName(typeof(T), e) is string name ? typeof(T).GetField(name) : null;
 
         public static string Encrypt(this System.Security.Cryptography.HashAlgorithm algorithm, string source, string? salt = null, Encoding? encode = default)
         {
@@ -280,7 +281,9 @@ namespace Lytec.Common
             var buf = algorithm.ComputeHash(encode.GetBytes(source));
             if (!string.IsNullOrEmpty(salt))
                 algorithm.ComputeHash(buf.Concat(encode.GetBytes(salt)).ToArray());
-            return algorithm.Hash.ToHex("");
+            if (algorithm.Hash is byte[] bytes)
+                return bytes.ToHex("");
+            else throw new InvalidOperationException();
         }
 
         public static void Add(this MultipartFormDataContent content, string name, string value)
@@ -310,14 +313,8 @@ namespace Lytec.Common
         //    return args;
         //}
 
-        public static string GetDescription(this object obj)
-        {
-            var type = obj.GetType();
-            var member = type.IsEnum ? (MemberInfo)type.GetField(obj.ToString()) : obj.GetType();
-            if (member == null)
-                return obj.ToString();
-            return member.GetCustomAttributes<System.ComponentModel.DescriptionAttribute>().FirstOrDefault()?.Description ?? member.Name;
-        }
+        public static string GetDescription<T>(this T obj) where T : Enum
+        => obj.GetEnumFieldInfo()?.GetCustomAttributes<DescriptionAttribute>().FirstOrDefault()?.Description ?? obj.ToString()!;
 
         public static T GetDefault<T>() where T : Enum => (T)Enum.ToObject(typeof(T), 0);
 
@@ -325,7 +322,7 @@ namespace Lytec.Common
         public class EnumDataWithDescription<T> where T : Enum
         {
             public string Name { get; } = "";
-            public T Value { get; } = (T)Activator.CreateInstance(typeof(T));
+            public T Value { get; } = (T)Activator.CreateInstance(typeof(T))!;
             public string Description { get; } = "";
 
             protected EnumDataWithDescription() { }
@@ -469,7 +466,7 @@ namespace Lytec.Common
             return current < end ? source.Substring(start, current - start) : "";
         }
 
-        public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this IEnumerable<(TKey Key, TValue Value)> origin)
+        public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this IEnumerable<(TKey Key, TValue Value)> origin) where TKey : notnull
         => origin.ToDictionary(kv => kv.Key, kv => kv.Value);
 
         public static (TKey Key, TValue Value)[] ToArray<TKey, TValue>(this IDictionary<TKey, TValue> dic)
@@ -804,9 +801,9 @@ namespace Lytec.Common
             }
             else
             {
-                for (; t != null; t = t.BaseType)
+                for (Type? t1 = t; t1 != null; t1 = t1.BaseType)
                 {
-                    var args = get(t);
+                    var args = get(t1);
                     if (args != null)
                         yield return args;
                 }

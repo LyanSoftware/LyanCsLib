@@ -25,7 +25,7 @@ public struct DWORDBool : IEquatable<DWORDBool>
     public static bool operator ==(DWORDBool left, DWORDBool right) => left.Equals(right);
     public static bool operator !=(DWORDBool left, DWORDBool right) => !(left == right);
     public static bool operator !(DWORDBool v) => v.Value == 0;
-    public override bool Equals(object obj) => obj is DWORDBool v && Equals(v);
+    public override bool Equals(object? obj) => obj is DWORDBool v && Equals(v);
     public bool Equals(DWORDBool other) => Value == other.Value;
     public override int GetHashCode() => Value.GetHashCode();
 }

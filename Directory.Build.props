@@ -9,7 +9,7 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-    <AvaloniaVersion>11.0.5</AvaloniaVersion>
-    <SkiaSharpVersion>3.116.1</SkiaSharpVersion>
+    <AvaloniaVersion>11.3.6</AvaloniaVersion>
+    <SkiaSharpVersion>2.88.9</SkiaSharpVersion>
   </PropertyGroup>
 </Project>

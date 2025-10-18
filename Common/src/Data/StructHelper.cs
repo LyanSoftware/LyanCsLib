@@ -62,7 +62,7 @@ namespace Lytec.Common.Data
             if (t.IsArray)
             {
                 var arr = (object[])obj;
-                var ts = Array.CreateInstance(t.GetElementType(), arr.Length);
+                var ts = Array.CreateInstance(t.GetElementType()!, arr.Length);
                 Array.Copy(arr, ts, arr.Length);
                 return (T)(object)ts;
             }
@@ -84,7 +84,7 @@ namespace Lytec.Common.Data
         {
             if (type.IsArray)
             {
-                var elt = type.GetElementType();
+                var elt = type.GetElementType()!;
                 var elSize = Marshal.SizeOf(elt.IsEnum ? elt.GetEnumUnderlyingType() : elt);
                 var arr = new object[(bytes.Length - offset) / elSize];
                 for (var i = 0; i < arr.Length; i++)
@@ -135,7 +135,7 @@ namespace Lytec.Common.Data
             {
                 p = Marshal.AllocHGlobal(size);
                 Marshal.Copy(bytes.FixEndian(type, defaultEndian), offset, p, size);
-                t = Marshal.PtrToStructure(p, type);
+                t = Marshal.PtrToStructure(p, type)!;
             }
             finally
             {
