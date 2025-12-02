@@ -44,6 +44,16 @@ namespace Lytec.Protocol
         }
 
         [Serializable]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public enum TestPlayType : byte
+        {
+            Default = 0,
+            None = 0x55,
+            FourHighlightDots = 0xAA,
+            DotByDot = 0x3C
+        }
+
+        [Serializable]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         [Endian(DefaultEndian)]
         public struct AnalogIOConfig
@@ -147,6 +157,15 @@ namespace Lytec.Protocol
             public byte[] Serialize() => this.ToBytes();
         }
 
+        [JsonConverter(typeof(StringEnumConverter))]
+        public enum RowDriveMode
+        {
+            Normal = 0,     // 常规
+            Decrease1 = 1,  // 行序-1
+            Decode = 2,     // 2扫/4扫译码输出
+            ClockScan = 3,  // 时钟扫描(RT5958类)
+        }
+
         [Serializable]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         [Endian(DefaultEndian)]
@@ -175,28 +194,22 @@ namespace Lytec.Protocol
                 set => OptionBits = BitHelper.SetFlag(OptionBits, value, 8);
             }
 
-            public bool LineOrderOffsetDec1
+            public bool IsOnLeftSide
             {
                 get => BitHelper.GetFlag(OptionBits, 9);
                 set => OptionBits = BitHelper.SetFlag(OptionBits, value, 9);
             }
 
-            public bool IsOnLeftSide
+            public bool InvertDataSignal
             {
                 get => BitHelper.GetFlag(OptionBits, 10);
                 set => OptionBits = BitHelper.SetFlag(OptionBits, value, 10);
             }
 
-            public bool InvertDataSignal
+            public RowDriveMode RowDriveMode
             {
-                get => BitHelper.GetFlag(OptionBits, 11);
-                set => OptionBits = BitHelper.SetFlag(OptionBits, value, 11);
-            }
-
-            public bool LineDecode
-            {
-                get => BitHelper.GetFlag(OptionBits, 12);
-                set => OptionBits = BitHelper.SetFlag(OptionBits, value, 12);
+                get => (RowDriveMode)BitHelper.GetValue(OptionBits, 11, 2);
+                set => OptionBits = BitHelper.SetValue(OptionBits, (int)value, 11, 2);
             }
 
             public bool WidenOESignal
@@ -290,62 +303,49 @@ namespace Lytec.Protocol
             public ushort LedHeight { get; set; }
 
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 5)]
-            public byte[] VINTFreqDiv { get; set; } = new byte[5];
+            public byte[] VINTFreqDiv { get; set; } = new byte[5] { 8, 7, 5, 3, 1 };
 
-            public CardType CardType { get; set; }
+            public TestPlayType TestPlayType { get; set; }
 
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
             public byte[] ModuleConfigsData { get; set; } = new byte[16];
-            public IModuleConfigs? ModuleConfigs
+            public Module2500Configs Module2500Configs
             {
-                get
-                {
-                    switch (CardType)
-                    {
-                        case CardType.ADSCL2500:
-                            return ModuleConfigsData.ToStruct<Module2500Configs>();
-                        case CardType.ADSCL2800:
-                            return ModuleConfigsData.ToStruct<Module2800Configs>();
-                        case CardType.ADSCL2900:
-                            return ModuleConfigsData.ToStruct<Module2900Configs>();
-                        default:
-                            return null;
-                    }
-                }
-                set
-                {
-                    void set(IModuleConfigs cfg) => ModuleConfigsData = cfg.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16).ToArray(); ;
-                    switch (CardType)
-                    {
-                        case CardType.ADSCL2500:
-                            {
-                                if (value is Module2500Configs cfg)
-                                    set(cfg);
-                                else throw new ArgumentException();
-                                break;
-                            }
-                        case CardType.ADSCL2800:
-                            {
-                                if (value is Module2800Configs cfg)
-                                    set(cfg);
-                                else throw new ArgumentException();
-                                break;
-                            }
-                        case CardType.ADSCL2900:
-                            {
-                                if (value is Module2900Configs cfg)
-                                    set(cfg);
-                                else throw new ArgumentException();
-                                break;
-                            }
-                        default:
-                            throw new NotSupportedException();
-                    }
-                }
+                get => ModuleConfigsData.ToStruct<Module2500Configs>();
+                set => ModuleConfigsData = value.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16).ToArray();
+            }
+            public Module2800Configs Module2800Configs
+            {
+                get => ModuleConfigsData.ToStruct<Module2800Configs>();
+                set => ModuleConfigsData = value.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16).ToArray();
+            }
+            public Module2900Configs Module2900Configs
+            {
+                get => ModuleConfigsData.ToStruct<Module2900Configs>();
+                set => ModuleConfigsData = value.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16).ToArray();
             }
 
-            public byte GammaValue { get; set; }
-            public float Gamma { get => GammaValue / 10f; set => GammaValue = (byte)(value * 10); }
+            public byte OptionBits2 { get; set; }
+            public bool UseStagger
+            {
+                get => BitHelper.GetFlag(OptionBits2, 0);
+                set => OptionBits2 = (byte)BitHelper.SetFlag(OptionBits2, value, 0);
+            }
+            public bool UseSyncPlay
+            {
+                get => BitHelper.GetFlag(OptionBits2, 1);
+                set => OptionBits2 = (byte)BitHelper.SetFlag(OptionBits2, value, 1);
+            }
+            public bool SyncPlaySendFromCom1
+            {
+                get => BitHelper.GetFlag(OptionBits2, 2);
+                set => OptionBits2 = (byte)BitHelper.SetFlag(OptionBits2, value, 2);
+            }
+            public bool IsSmallRangeCard
+            {
+                get => BitHelper.GetFlag(OptionBits2, 3);
+                set => OptionBits2 = (byte)BitHelper.SetFlag(OptionBits2, value, 3);
+            }
 
             public byte BrightOptions { get; set; }
 
@@ -384,20 +384,15 @@ namespace Lytec.Protocol
 
             public short TemperatureOffset { get; set; }
 
-            public TestPlayType TestPlayType { get; set; }
-
             public ushort SPIHideSecCount { get; set; }
 
-            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
-            public UartConfig[] ComPara { get; set; } = new UartConfig[3];
+            public ushort LocalCodePage { get; set; }
 
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
             public AnalogIOConfig[] AnalogIOConfigs { get; set; } = new AnalogIOConfig[6];
 
-            public byte StaggerOptions { get; set; }
-
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 114)]
-            private readonly byte[] unused = new byte[114];
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 146)]
+            private readonly byte[] unused = new byte[146];
 
             public uint PoTimeout { get; set; }
 
@@ -407,7 +402,7 @@ namespace Lytec.Protocol
 
             public byte[] Serialize() => this.ToBytes();
 
-            public static LEDConfig TryParse(byte[] bytes, int offset = 0) => bytes.ToStruct<LEDConfig>(offset);
+            public static LEDConfig Deserialize(byte[] bytes, int offset = 0) => bytes.ToStruct<LEDConfig>(offset);
         }
 
     }

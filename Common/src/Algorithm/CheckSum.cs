@@ -23,6 +23,8 @@ namespace System.Security.Cryptography
             Result = datas.Aggregate(Result, (sum, v) => Compute(v, sum));
             return Result;
         }
+        public virtual T Compute(byte[] datas, int offset, int len)
+        => Compute(datas.Skip(offset).Take(len));
 
         public override void Initialize() => Result = InitValue;
 

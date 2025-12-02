@@ -18,6 +18,7 @@ namespace Lytec.Common.Data
         /// <param name="t"></param>
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
         /// <returns></returns>
+        [return: NotNull]
         public static byte[] ToBytes<T>(this T t, Endian? defaultEndian = null) => t!.ToBytes(t!.GetType(), defaultEndian);
 
         /// <summary>
@@ -26,6 +27,7 @@ namespace Lytec.Common.Data
         /// <param name="t"></param>
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
         /// <returns></returns>
+        [return: NotNull]
         public static byte[] ToBytes(this object t, Type type, Endian? defaultEndian = null)
         {
             switch (t)
@@ -55,6 +57,7 @@ namespace Lytec.Common.Data
         /// <param name="offset">数据的起始位置</param>
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
         /// <returns></returns>
+        [return: NotNull]
         public static T ToStruct<T>(this byte[] bytes, int offset = 0, Endian? defaultEndian = null)
         {
             var t = typeof(T);
@@ -69,6 +72,7 @@ namespace Lytec.Common.Data
             return (T)obj;
         }
 
+        [return: NotNull]
         public static T ToStruct<T>(this byte[] bytes, Endian? endian)
         => bytes.ToStruct<T>(0, endian);
 
@@ -80,6 +84,7 @@ namespace Lytec.Common.Data
         /// <param name="offset">数据的起始位置</param>
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
         /// <returns></returns>
+        [return: NotNull]
         public static object ToStruct(this byte[] bytes, Type type, int offset = 0, Endian? defaultEndian = null)
         {
             if (type.IsArray)
@@ -107,9 +112,11 @@ namespace Lytec.Common.Data
             return ToStruct(bytes, offset, size, type, defaultEndian);
         }
 
+        [return: NotNull]
         public static object ToStruct(this byte[] bytes, Type type, Endian? endian)
         => bytes.ToStruct(type, 0, endian);
 
+        [return: NotNull]
         public static byte[] ToBytes(byte[] buf, object to, Type type, Endian? defaultEndian = null)
         {
             IntPtr p = default;
@@ -127,6 +134,7 @@ namespace Lytec.Common.Data
             return buf.FixEndian(type, defaultEndian);
         }
 
+        [return: NotNull]
         public static object ToStruct(byte[] bytes, int offset, int size, Type type, Endian? defaultEndian)
         {
             object t;
@@ -147,15 +155,19 @@ namespace Lytec.Common.Data
 
         #endregion
 
+        [return: NotNull]
         public static T ToStruct<T>(this IEnumerable<byte> data, Endian? defaultEndian = null)
         => data.Take(Marshal.SizeOf(typeof(T))).ToArray().ToStruct<T>(defaultEndian);
 
+        [return: NotNull]
         public static object ToStruct(this IEnumerable<byte> data, Type type, Endian? defaultEndian)
         => data.Take(Marshal.SizeOf(type)).ToArray().ToStruct(type, defaultEndian);
 
+        [return: NotNull]
         public static T ToStruct<T>(this IEnumerable<byte> data, int offset, Endian? defaultEndian = null)
         => data.Skip(offset).Take(Marshal.SizeOf(typeof(T))).ToArray().ToStruct<T>(defaultEndian);
 
+        [return: NotNull]
         public static object ToStruct(this IEnumerable<byte> data, int offset, Type type, Endian? defaultEndian)
         => data.Skip(offset).Take(Marshal.SizeOf(type)).ToArray().ToStruct(type, defaultEndian);
 

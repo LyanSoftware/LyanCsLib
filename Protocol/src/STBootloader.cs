@@ -655,7 +655,7 @@ public class STBootloader
         Value = bytes.ToStruct<int>(Endian.Little);
         return true;
     }
-    
+
     public static bool ReadShortInt(ISendAndGetAnswerConfig conf, int address, out ushort Value, int extTimeout = 0)
     {
         Value = 0xffff;
@@ -813,7 +813,7 @@ public class STBootloader
         var beforeBuf = Array.Empty<byte>();
         var afterBuf = Array.Empty<byte>();
         var alignedStartAddr = flashStartAddr;
-        var alignedEndAddr = endAddr;
+        var alignedEndAddr = alignedStartAddr;
         List<int> pageIndexes;
         if (pageSizes.Length == 1)
         {

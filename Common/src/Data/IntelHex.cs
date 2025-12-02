@@ -433,13 +433,17 @@ public class Records : ISerializable, IReadOnlyList<Record>
     public static Records? Decode(Stream data)
     {
         var records = new List<Record>();
-        using (var r = new StreamReader(data, Encoding.UTF8))
+        using (var r = new StreamReader(data, Encoding.UTF8, false, 1024, true))
         {
             while (!r.EndOfStream)
             {
                 var line = r.ReadLine();
                 if (!line.IsNullOrWhiteSpace() && Record.TryParse(line, out var rec))
+                {
+                    if (rec.Type == RecordType.EndOfFile)
+                        break;
                     records.Add(rec);
+                }
             }
         }
         if (records.Count == 0)
@@ -471,9 +475,9 @@ public static class Utils
         src.Save(fs, startAddress);
     }
 
-    private static void Save(this IEnumerable<DataBlock> src, Stream stream, IStartAddress? startAddress = null)
+    public static void Save(this IEnumerable<DataBlock> src, Stream stream, IStartAddress? startAddress = null)
     {
-        using (var fw = new StreamWriter(stream, Encoding.ASCII))
+        using (var fw = new StreamWriter(stream, Encoding.ASCII, 1024, true))
         {
             var writeTask = Task.CompletedTask;
             var blocks = new List<DataBlock>();
@@ -491,7 +495,7 @@ public static class Utils
                     var addr = bs.First().Address;
                     foreach (var b in bs)
                         data = data.Take(b.Address - addr).Concat(b.Data);
-                    var recs = Records.Encode(new DataBlock[] { new DataBlock(addr, data) });
+                    var recs = Records.Encode(new DataBlock[] { new DataBlock(addr, data) }, addEOF: false);
                     foreach (var r in recs)
                         fw.Write(r.ToString() + Record.NewLine);
                 });

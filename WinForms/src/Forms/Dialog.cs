@@ -55,6 +55,11 @@ namespace Lytec.WinForms
             IsInDesigner = LicenseManager.UsageMode == LicenseUsageMode.Designtime;
         }
 
+        public Dialog(Form owner) : this()
+        {
+            Owner = owner;
+        }
+
         protected override void OnShown(EventArgs e)
         {
             if (!IsInDesigner)

@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json;
 
 namespace Lytec.Protocol
 {
-    public partial class ADSCL
+    public partial class SCL
     {
         [Serializable]
         [JsonConverter(typeof(StringEnumConverter))]

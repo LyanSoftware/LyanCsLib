@@ -11,7 +11,7 @@ namespace Lytec.Protocol.Images.SCL
         public string GetConfigStr(string fileName)
         {
             fileName = Path.GetFileName(fileName);
-            return IsSBCS ? $"{fileName},A,{CharCount}" : $"{fileName},C,{CharCount},{ExportOptions.Byte2Start},{ExportOptions.Byte1Start}";
+            return IsSBCS ? $"{fileName},{CharCount},A,{Width},{Height}" : $"{fileName},{CharCount},C,{Width},{Height},{ExportOptions.Byte2Start},{ExportOptions.Byte1Start}";
         }
     }
 }

@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using Lytec.Common.Serialization;
 
@@ -16,6 +19,7 @@ namespace Lytec.Common.Communication
         bool TryGetAnswer(out byte[] data, int extTimeout = 0);
         bool TryGetAnswerWithFixedTimeout(out byte[] data, int timeout = 0);
         void ClearReceiveBuffer();
+
     }
 
     public class SendAndGetAnswerConfig : ISendAndGetAnswerConfig
@@ -57,7 +61,7 @@ namespace Lytec.Common.Communication
             ClearReceiveBuffer = clearReceiveBuffer;
             DisposeFunc = dispose;
         }
-        
+
         public SendAndGetAnswerConfig(
             int retries,
             int timeout,
@@ -83,6 +87,7 @@ namespace Lytec.Common.Communication
         void ISendAndGetAnswerConfig.ClearReceiveBuffer() => ClearReceiveBuffer?.Invoke();
 
         public void Dispose() => DisposeFunc?.Invoke();
+
     }
 
     public static class SendAndGetAnswerConfigUtils
@@ -94,5 +99,43 @@ namespace Lytec.Common.Communication
                 return false;
             return conf.TryGetAnswer(out data, extTimeout);
         }
+
+        public static ISendAndGetAnswerConfig GenerateSimpleUDP(IPEndPoint local, IPEndPoint remote, int timeout = 3000, int retries = 3)
+        {
+            var udp = new UdpClient(local);
+            var dststr = remote.ToString();
+            bool tryGetAnswer(out byte[] Data, int ftimeout = 0)
+            {
+                var xtimeout = DateTime.Now.AddMilliseconds(ftimeout);
+                Data = Array.Empty<byte>();
+                while (xtimeout > DateTime.Now)
+                {
+                    if (udp!.Available < 1)
+                    {
+                        Thread.Sleep(20);
+                        continue;
+                    }
+                    var ep = new IPEndPoint(IPAddress.Any, 0);
+                    var data = udp.Receive(ref ep);
+                    if (ep.ToString() == dststr)
+                    {
+                        Data = data;
+                        return true;
+                    }
+                }
+                return false;
+            }
+            return new SendAndGetAnswerConfig(retries, timeout, false, buf => udp.Send(buf, buf.Length, remote) == buf.Length, tryGetAnswer, () =>
+            {
+                while (udp.Available > 0)
+                {
+                    var ep = new IPEndPoint(IPAddress.Any, 0);
+                    udp.Receive(ref ep);
+                }
+            }, udp.Dispose);
+        }
+
+        public static ISendAndGetAnswerConfig GenerateSimpleUDP(IPEndPoint dst, int timeout = 3000, int retries = 3)
+        => GenerateSimpleUDP(new IPEndPoint(IPAddress.Any, 0), dst, timeout, retries);
     }
 }

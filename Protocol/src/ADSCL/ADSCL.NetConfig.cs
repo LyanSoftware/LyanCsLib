@@ -8,6 +8,8 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System;
+using Lytec.Common.Number;
 
 namespace Lytec.Protocol
 {
@@ -21,87 +23,106 @@ namespace Lytec.Protocol
             ADSCL = 0,
         }
 
+        /// <summary>
+        /// 串口配置
+        /// </summary>
         [Serializable]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct IPv4Address
+        [Endian(DefaultEndian)]
+        public struct UartConfig
+        {
+            [JsonConverter(typeof(StringEnumConverter))]
+            public enum StopBit : ushort
+            {
+                None = 0,
+                Bits_1 = 1,
+                Bits_2 = 2,
+                Bits_1_Point_5 = 3,
+            }
+
+            [JsonConverter(typeof(StringEnumConverter))]
+            public enum CheckBit : ushort
+            {
+                None = 0,
+                Even = 1,
+                Odd = 2,
+            }
+
+            [JsonConverter(typeof(StringEnumConverter))]
+            public enum Protocols : ushort
+            {
+                Simple = 0,
+                SCLStandard = 1,
+                TS_AVS05 = 2,
+                KYX_24G_S001 = 3,
+                NMEA_0183 = 4,
+                WuXiNewSkySensor = 5,
+                LyFoglight = 6,
+            }
+
+            /// <summary>
+            /// 波特率
+            /// </summary>
+            public uint Baudrate { get; set; }
+            /// <summary>
+            /// 数据位
+            /// </summary>
+            public ushort DataBits { get; set; }
+            /// <summary>
+            /// 停止位
+            /// </summary>
+            public StopBit StopBits { get; set; }
+            public CheckBit Check { get; set; }
+            /// <summary>
+            /// 使用的协议
+            /// </summary>
+            public Protocols Protocol { get; set; }
+            /// <summary>
+            /// 双数据校验
+            /// </summary>
+            public WORDBool DoubleDataCheck { get; set; }
+            private readonly ushort unused;
+        }
+
+        [Serializable]
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        [Endian(Endian.Little)]
+        public struct IPv4Address : ICloneable<IPv4Address>, IEquatable<IPv4Address>
         {
             public const int SizeConst = 4;
+            static IPv4Address() => Debug.Assert(Marshal.SizeOf<IPv4Address>() == SizeConst);
 
             public IPAddress Address
             {
-                get => new IPAddress((uint)_Address);
-                set => _Address = value.ToInt(DefaultEndian); // 数值已经按大端存储了，此时转换需要按默认字节序转
+                get => new IPAddress(_Address.ToBytes(Endian.Little));
+                set => _Address = value.ToInt(Endian.Little);
             }
-            [Endian(Endian.Big)]
+            [Endian(Endian.Little)]
             private int _Address;
-
-            public static readonly IPv4Address Invalid = InitFlashDataBlock(SizeConst).ToStruct<IPv4Address>();
 
             public IPv4Address(IPAddress addr) : this() => Address = addr;
 
             public static implicit operator IPAddress(IPv4Address addr) => addr.Address;
             public static implicit operator IPv4Address(IPAddress addr) => new IPv4Address(addr);
 
+            public static bool operator ==(IPv4Address left, IPv4Address right) => left.Equals(right);
+
+            public static bool operator !=(IPv4Address left, IPv4Address right) => !(left == right);
+
             public override string ToString() => Address.ToString();
+
+            public IPv4Address Clone() => new IPv4Address(Address);
+
+            object ICloneable.Clone() => Clone();
+
+            public override bool Equals(object? obj) => obj is IPv4Address address && Equals(address);
+
+            public bool Equals(IPv4Address other) => _Address == other._Address;
+
+            public override int GetHashCode() => -906666570 + _Address.GetHashCode();
         }
 
-        [Serializable]
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct IPv4AddressWithValid
-        {
-            public const int SizeConst = 5;
-
-            static IPv4AddressWithValid() => Debug.Assert(SizeConst == Marshal.SizeOf<IPv4AddressWithValid>());
-
-            public static readonly IPv4AddressWithValid Invalid = InitFlashDataBlock(SizeConst).ToStruct<IPv4AddressWithValid>();
-
-            public IPv4Address Address { get; set; }
-            public bool IsValid => Valid != 0xff;
-            private readonly byte Valid;
-
-            public IPv4AddressWithValid(IPv4Address addr)
-            {
-                Address = addr;
-                Valid = 0;
-            }
-
-            public IPv4AddressWithValid(IPAddress addr) : this(new IPv4Address(addr)) { }
-
-            public static implicit operator IPv4Address(IPv4AddressWithValid addr) => addr.IsValid ? addr.Address : throw new ArgumentException();
-            public static implicit operator IPv4AddressWithValid(IPv4Address addr) => new IPv4AddressWithValid(addr);
-            public static implicit operator IPAddress(IPv4AddressWithValid addr) => (IPv4Address)addr;
-            public static implicit operator IPv4AddressWithValid(IPAddress addr) => new IPv4AddressWithValid(addr);
-
-            public override string ToString() => IsValid ? Address.ToString() : "Invalid";
-        }
-
-        [Serializable]
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct MacAddressPack
-        {
-            public const int SizeConst = 8;
-
-            static MacAddressPack() => Debug.Assert(Marshal.SizeOf<MacAddressPack>() == SizeConst);
-
-            public MacAddress Mac { get; set; }
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
-            private readonly byte[] Unused;
-
-            public MacAddressPack(MacAddress mac)
-            {
-                Mac = mac;
-                Unused = InitFlashDataBlock(2);
-            }
-
-            public override string ToString() => Mac.ToString();
-
-            public static implicit operator MacAddress(MacAddressPack mac) => mac.Mac;
-            public static implicit operator MacAddressPack(MacAddress mac) => new MacAddressPack(mac);
-        }
-
-#if USE_NEWTONSOFT_JSON
         [JsonConverter(typeof(StringEnumConverter))]
-#endif
         public enum AuthMode : byte
         {
             [Description("未使用")]
@@ -118,6 +139,9 @@ namespace Lytec.Protocol
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct AuthInfo
         {
+            public const int SizeConst = 16;
+            static AuthInfo() => Debug.Assert(Marshal.SizeOf<AuthInfo>() == SizeConst);
+
             public AuthMode Mode { get; set; }
             public byte Level { get; set; }
             public IPv4Address Address { get; set; }
@@ -154,138 +178,7 @@ namespace Lytec.Protocol
         }
 
         [Serializable]
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        [Endian(DefaultEndian)]
-        public struct FAT16Date
-        {
-            public const int SizeConst = 2;
-            static FAT16Date() => Debug.Assert(Marshal.SizeOf<FAT16Date>() == SizeConst);
-
-            public ushort Data { get; set; }
-
-            public int Day
-            {
-                get => BitHelper.GetValue(Data, 0, 5);
-                set => Data = (ushort)BitHelper.SetValue(Data, value, 0, 5);
-            }
-
-            public int Month
-            {
-                get => BitHelper.GetValue(Data, 5, 4);
-                set => Data = (ushort)BitHelper.SetValue(Data, value, 5, 4);
-            }
-
-            public int Year
-            {
-                get => BitHelper.GetValue(Data, 9, 7) + 1980;
-                set => Data = (ushort)BitHelper.SetValue(Data, value - 1980, 9, 7);
-            }
-
-            public FAT16Date(DateTime date) : this() => (Year, Month, Day) = (date.Year, date.Month, date.Day);
-
-            public override string ToString() => ((DateTime)this).ToString();
-
-            public static implicit operator DateTime(FAT16Date date) => new DateTime(date.Year, date.Month, date.Day);
-            public static implicit operator FAT16Date(DateTime date) => new FAT16Date(date);
-        }
-
-        [Serializable]
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        [Endian(DefaultEndian)]
-        public struct FAT16Time
-        {
-            public const int SizeConst = 2;
-            static FAT16Time() => Debug.Assert(Marshal.SizeOf<FAT16Time>() == SizeConst);
-
-            public ushort Data { get; set; }
-
-            public int Second
-            {
-                get => BitHelper.GetValue(Data, 0, 5) * 2;
-                set => Data = (ushort)BitHelper.SetValue(Data, value / 2, 0, 5);
-            }
-
-            public int Minute
-            {
-                get => BitHelper.GetValue(Data, 5, 6);
-                set => Data = (ushort)BitHelper.SetValue(Data, value, 5, 6);
-            }
-
-            public int Hour
-            {
-                get => BitHelper.GetValue(Data, 11, 5);
-                set => Data = (ushort)BitHelper.SetValue(Data, value, 11, 5);
-            }
-
-            public FAT16Time(DateTime time) : this() => (Hour, Minute, Second) = (time.Hour, time.Minute, time.Second);
-
-            public override string ToString() => ((DateTime)this).ToString();
-
-            public static implicit operator DateTime(FAT16Time time) => new DateTime(0, 0, 0, time.Hour, time.Minute, time.Second);
-            public static implicit operator FAT16Time(DateTime time) => new FAT16Time(time);
-        }
-
-        [Serializable]
-        [Endian(DefaultEndian)]
-        public enum FAT16ItemType : byte
-        {
-            File = 0x00,
-            Dir = 0x10,
-        }
-
-        [Serializable]
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        [Endian(DefaultEndian)]
-        public struct FAT16ItemInfo : IPackage
-        {
-            public const int SizeConst = 32;
-            static FAT16ItemInfo() => Debug.Assert(Marshal.SizeOf<FAT16ItemInfo>() == SizeConst);
-
-            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-            public byte[] NameBytes { get; set; }
-            public string Name
-            {
-                get => DefaultEncode.GetString(NameBytes.Take(NameMaxLength).Reverse().SkipWhile(c => c == (byte)' ').Reverse().ToArray());
-                set => NameBytes = DefaultEncode.GetBytes(value)
-                    .Take(NameMaxLength)
-                    .Concat(Enumerable.Repeat<byte>(0, NameMaxLength))
-                    .Take(NameMaxLength)
-                    .ToArray();
-            }
-            public int NameMaxLength => Type == FAT16ItemType.Dir ? 3 : 8;
-            public int ExtMaxLength => Type == FAT16ItemType.Dir ? 0 : 3;
-            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
-            public byte[] ExtBytes { get; set; }
-            public string Ext
-            {
-                get => DefaultEncode.GetString(ExtBytes.Take(ExtMaxLength).Reverse().SkipWhile(c => c == (byte)' ').Reverse().ToArray());
-                set => ExtBytes = DefaultEncode.GetBytes(value)
-                    .Take(ExtMaxLength)
-                    .Concat(Enumerable.Repeat<byte>(0, ExtMaxLength))
-                    .Take(ExtMaxLength)
-                    .ToArray();
-            }
-            public FAT16ItemType Type { get; set; }
-
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 10)]
-            private readonly byte[] _Unused;
-
-            public FAT16Time CreateTime { get; set; }
-            public FAT16Date CreateDate { get; set; }
-
-            private readonly ushort _Unused2;
-
-            public uint FileSize { get; set; }
-
-            public byte[] Serialize() => this.ToBytes();
-            public static FAT16ItemInfo Deserialize(byte[] bytes, int offset = 0) => bytes.ToStruct<FAT16ItemInfo>(offset, DefaultEndian);
-            public static FAT16ItemInfo[] DeserializeAll(byte[] bytes, int offset = 0) => bytes.ToStruct<FAT16ItemInfo[]>(offset, DefaultEndian);
-        }
-
-        [Serializable]
-#if USE_NEWTONSOFT_JSON
         [JsonConverter(typeof(StringEnumConverter))]
-#endif
         public enum TimeZone : byte
         {
             UTC = 0,
@@ -315,33 +208,6 @@ namespace Lytec.Protocol
         }
 
         [Serializable]
-        [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = DefaultCharSet)]
-        [Endian(DefaultEndian)]
-        public struct MacConfig : IPackage
-        {
-            public const int SizeConst = 256;
-
-            static MacConfig() => Debug.Assert(Marshal.SizeOf<MacConfig>() == SizeConst);
-
-
-            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 31)]
-            public MacAddressPack[] MacPacks { get; set; }
-
-            [field: MarshalAs(UnmanagedType.ByValTStr, SizeConst = 8)]
-            public string CardTypeString { get; set; }
-
-            public MacAddress Mac => MacPacks[0];
-            public MacAddress MacAddress => MacPacks[0];
-
-            public static MacConfig CreateInstance() => Deserialize(InitFlashDataBlock(SizeConst));
-
-            public byte[] Serialize() => this.ToBytes();
-
-            public static MacConfig Deserialize(byte[] bytes, int offset = 0)
-            => bytes.ToStruct<MacConfig>(offset);
-        }
-
-        [Serializable]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         [Endian(DefaultEndian)]
         public struct Clock : IPackage
@@ -351,9 +217,7 @@ namespace Lytec.Protocol
             static Clock() => Debug.Assert(Marshal.SizeOf<Clock>() == SizeConst);
 
 
-#if USE_NEWTONSOFT_JSON
             [JsonConverter(typeof(StringEnumConverter))]
-#endif
             public enum Weekdays : ushort
             {
                 Sunday = 0,
@@ -400,99 +264,238 @@ namespace Lytec.Protocol
             => bytes.ToStruct<Clock>(offset);
         }
 
+        public enum VerifyByte : byte
+        {
+            Unused = 0,
+            OK = 1,
+            Unset = 0xff,
+        }
+
+        public enum WifiMode
+        {
+            AP = 0,
+            STA = 1,
+            STA_DHCP = 2,
+            Disabled = 3,
+        }
+
         [Serializable]
-        [StructLayout(LayoutKind.Explicit, Pack = 1, Size = SizeConst, CharSet = DefaultCharSet)]
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        [Endian(DefaultEndian)]
+        public struct WifiConfig
+        {
+            public const int SizeConst = 116;
+            public const int APMinChannel = 1;
+            public const int APMaxChannel = 13;
+            public const int MaxConnections = 4;
+            public const int SSIDMaxLength = 32;
+            public const int PasswordMaxLength = 64;
+
+            static WifiConfig() => Debug.Assert(Marshal.SizeOf<WifiConfig>() == SizeConst);
+
+            public int OptionBits { get; set; }
+            public WifiMode Mode
+            {
+                get => (WifiMode)BitHelper.GetValue(OptionBits, 0, 2);
+                set => OptionBits = BitHelper.SetValue(OptionBits, (int)value, 0, 2);
+            }
+            public int APChannel
+            {
+                get => (BitHelper.GetValue(OptionBits, 2, 4) + 1).LimitToRange(APMinChannel, APMaxChannel);
+                set => OptionBits = BitHelper.SetValue(OptionBits, (value - 1).LimitToRange(APMinChannel, APMaxChannel), 2, 4);
+            }
+            public bool UseWifiNTP
+            {
+                get => BitHelper.GetFlag(OptionBits, 2);
+                set => OptionBits = BitHelper.SetFlag(OptionBits, value, 2);
+            }
+            public int MaxConnection
+            {
+                get => BitHelper.GetValue(OptionBits, 7, 2);
+                set => OptionBits = BitHelper.SetValue(OptionBits, value, 7, 2);
+            }
+            public bool AutoDisableWhenIdle
+            {
+                get => BitHelper.GetFlag(OptionBits, 9);
+                set => OptionBits = BitHelper.SetFlag(OptionBits, value, 9);
+            }
+            public byte AutoDisableIdleMinutes { get; set; }
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
+            private readonly byte[] unused;
+            public string SSID
+            {
+                get => FromFixedLengthString(SSIDBytes);
+                set => SSIDBytes = ToFixedLengthString(value, SSIDMaxLength + 1);
+            }
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = SSIDMaxLength + 1)]
+            public byte[] SSIDBytes;
+            public string Password
+            {
+                get => FromFixedLengthString(PasswordBytes);
+                set => PasswordBytes = ToFixedLengthString(value, PasswordMaxLength + 1);
+            }
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = PasswordMaxLength + 1)]
+            public byte[] PasswordBytes;
+            public IPv4Address IP { get; set; }
+            public IPv4Address SubnetMask { get; set; }
+            public IPv4Address Gateway { get; set; }
+
+            public WifiConfig()
+            {
+                unused = new byte[3];
+                SSIDBytes = new byte[SSIDMaxLength + 1];
+                PasswordBytes = new byte[PasswordMaxLength + 1];
+            }
+        }
+
+        [Serializable]
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        [Endian(DefaultEndian)]
+        public struct NTPServerAddress
+        {
+            public const int SizeConst = NetConfig.NTPServerAddressMaxLength;
+            static NTPServerAddress() => Debug.Assert(Marshal.SizeOf<NTPServerAddress>() == SizeConst);
+            public string Address
+            {
+                get => FromFixedLengthString(Bytes);
+                set => Bytes = ToFixedLengthString(value, SizeConst);
+            }
+            public byte[] Bytes { get; set; }
+            public NTPServerAddress()
+            {
+                Bytes = new byte[SizeConst];
+            }
+        }
+
+        [Serializable]
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        [Endian(DefaultEndian)]
+        public struct HeartbeatConfig
+        {
+            public const int SizeConst = 45;
+            static HeartbeatConfig() => Debug.Assert(Marshal.SizeOf<HeartbeatConfig>() == SizeConst);
+
+            public byte PeriodMinutes { get; set; }
+            public ushort ServerPort { get; set; }
+            public string ServerAddress
+            {
+                get => FromFixedLengthString(ServerAddressBytes);
+                set => ServerAddressBytes = ToFixedLengthString(value, 42);
+            }
+            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 42)]
+            public byte[] ServerAddressBytes { get; set; }
+        }
+
+        [Serializable]
+        [StructLayout(LayoutKind.Sequential, Pack = 1, Size = SizeConst)]
         [Endian(DefaultEndian)]
         public struct NetConfig : IPackage
         {
-            public const int SizeConst = 256;
+            public const int SizeConst = 768;
             public const int ServerAddrMaxLength = 42;
+            public const int NTPServerAddressCount = 4;
+            public const int NTPServerAddressMaxLength = 24;
+            public const int TCPServerAddressMaxLength = 64;
 
             static NetConfig() => Debug.Assert(Marshal.SizeOf<NetConfig>() == SizeConst);
 
-
-            public const uint FooterIdentifier = 0xaa55ffff;
-
-            [field: FieldOffset(0)]
-            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = SizeConst)]
-            public byte[] Data { get; set; }
-
+            public MacAddress MacAddress { get; set; }
+            public VerifyByte MacAddressVerify { get; set; }
+            public byte AddrCode { get; set; }
+            public string CardTypeStr
+            {
+                get => FromFixedLengthString(CardTypeStrBytes);
+                set => CardTypeStrBytes = ToFixedLengthString(value, 8, false);
+            }
+            private byte[] CardTypeStrBytes;
             public string Name
             {
-                get => GetStringFromFixedLength(Data.Take(NameSize).ToArray());
-                set => Array.Copy(GetFixedLengthStringWithFlash(value, NameSize), Data, NameSize);
+                get => FromFixedLengthString(NameBytes);
+                set => NameBytes = ToFixedLengthString(value, NameSize);
             }
-            [field: FieldOffset(16)]
-            public IPv4AddressWithValid IP { get; set; }
-            [field: FieldOffset(21)]
-            public IPv4AddressWithValid NetMask { get; set; }
-            [field: FieldOffset(26)]
-            public IPv4AddressWithValid GateWay { get; set; }
-            [field: FieldOffset(31)]
-            public byte AddrCode { get; set; }
-            [field: FieldOffset(32)]
+            private byte[] NameBytes;
+            public IPv4Address IP { get; set; }
+            public IPv4Address SubnetMask { get; set; }
+            public IPv4Address Gateway { get; set; }
+
+            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
+            public UartConfig[] ComPara { get; set; }
+
+            public WifiConfig Wifi { get; set; }
+
+            public IPv4Address LocalNTPServer { get; set; }
+            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = NTPServerAddressCount)]
+            public NTPServerAddress[] NTPServerAddresses { get; set; }
+            public TimeZone TimeZone { get; set; }
+            public HeartbeatConfig Heartbeat { get; set; }
+
+            public string Password
+            {
+                get => FromFixedLengthString(PasswordBytes);
+                set => PasswordBytes = ToFixedLengthString(value, 12);
+            }
+            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 12)]
+            public byte[] PasswordBytes { get; set; }
+            public ushort PasswordCRC { get; set; }
+
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
             public AuthInfo[] AuthInfos { get; set; }
-            [field: FieldOffset(160)]
-            public IPv4AddressWithValid NTPServerIP { get; set; }
-            [field: FieldOffset(165)]
-            public TimeZone TimeZone { get; set; }
-            public string ServerAddr
-            {
-                get => GetStringFromFixedLength(Data.Skip(166).Take(ServerAddrMaxLength).ToArray());
-                set
-                {
-                    var buf = GetFixedLengthStringWithFlash(value, ServerAddrMaxLength);
-                    Array.Copy(buf, 0, Data, 166, Math.Min(buf.Length, Data.Length - 166));
-                }
-            }
-            [field: FieldOffset(208)]
-            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 12)]
-            public byte[] ConfigPassword { get; set; }
-            [field: FieldOffset(220)]
-            public ushort ConfigPasswordCRC { get; set; }
-            [field: FieldOffset(222)]
-            public IPv4AddressWithValid ServerIP { get; set; }
-            [field: FieldOffset(227)]
-            public byte HeartbeatPeriod { get; set; }
-            [field: FieldOffset(228)]
-            public ushort HeartbeatPort { get; set; }
-            [field: FieldOffset(230)]
-            public IPv4AddressWithValid DNSServer { get; set; }
-            [field: FieldOffset(230)]
+
             public ushort UDPPort { get; set; }
-            [field: FieldOffset(232)]
+            public ushort TCPPort { get; set; }
+            public ushort JT3000TCPPort { get; set; }
+            public DiskDriver JT3000DefaultDisk { get; set; }
             public TCPProtocol TCPProtocol { get; set; }
-            [field: FieldOffset(233)]
-            private readonly ushort _unused;
-            [field: FieldOffset(235)]
-            public byte DHCPCfg { get; set; }
+
+            public ushort OptionBits { get; set; }
             public bool IsDHCPEnabled
             {
-                get => BitHelper.GetFlag(~DHCPCfg, 0);
-                set => DHCPCfg = (byte)BitHelper.SetFlag(DHCPCfg, !value, 0);
+                get => BitHelper.GetFlag(OptionBits, 0);
+                set => OptionBits = (byte)BitHelper.SetFlag(OptionBits, value, 0);
             }
-            [field: FieldOffset(236)]
-            public ushort TCPPort { get; set; }
-            [field: FieldOffset(238)]
-            public Clock Clock { get; set; }
-            [field: FieldOffset(252)]
-            public uint FooterID { get; set; }
 
-            public bool IsValid => FooterID == FooterIdentifier && IP.IsValid;
+            public bool TCPServerMode
+            {
+                get => BitHelper.GetFlag(OptionBits, 1);
+                set => OptionBits = (byte)BitHelper.SetFlag(OptionBits, value, 1);
+            }
+
+            public string TCPServerAddress
+            {
+                get => FromFixedLengthString(TCPServerAddressBytes);
+                set => TCPServerAddressBytes = ToFixedLengthString(value, TCPServerAddressMaxLength);
+            }
+            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = TCPServerAddressMaxLength)]
+            public byte[] TCPServerAddressBytes { get; set; }
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 212)]
+            private readonly byte[] unused;
+            public uint Valid { get; set; }
+            public bool IsValid => Valid == 0xAA55;
 
 
-            public static NetConfig CreateInstance() => InnerDeserialize(InitFlashDataBlock(SizeConst));
+            public NetConfig()
+            {
+                CardTypeStrBytes = new byte[8];
+                NameBytes = new byte[NameSize];
+                ComPara = new UartConfig[3];
+                Wifi = new WifiConfig();
+                NTPServerAddresses = new NTPServerAddress[NTPServerAddressCount];
+                PasswordBytes = new byte[12];
+                AuthInfos = new AuthInfo[16];
+                UDPPort = 27694;
+                TCPPort = 17019;
+                JT3000TCPPort = 4001;
+                JT3000DefaultDisk = DiskDriver.SDCard;
+                TCPServerMode = true;
+                TCPServerAddressBytes = new byte[TCPServerAddressMaxLength];
+                unused = new byte[212];
+            }
 
             public byte[] Serialize() => this.ToBytes();
 
-            private static NetConfig InnerDeserialize(byte[] bytes, int offset = 0) => bytes.ToStruct<NetConfig>(offset);
-
-            public static NetConfig Deserialize(byte[] bytes, int offset = 0)
-            {
-                var cfg = InnerDeserialize(bytes, offset);
-                return cfg.IsValid && cfg.IP.IsValid ? cfg : throw new ArgumentException();
-            }
+            public static NetConfig? Deserialize(byte[] bytes, int offset = 0)
+            => bytes.ToStruct<NetConfig>(offset) is NetConfig cfg && cfg.IsValid ? cfg : null;
         }
 
     }

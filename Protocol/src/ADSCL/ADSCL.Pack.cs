@@ -126,8 +126,15 @@ namespace Lytec.Protocol
                     }
                 }
 
+                protected virtual void MoveStep(int step)
+                {
+                    StepLen = 0;
+                    Step = step;
+                }
+
                 public virtual void Reset()
                 {
+                    RecvTimeoutTimer?.Stop();
                     Cache.Clear();
                     Step = 0;
                     StepLen = 0;
@@ -157,14 +164,8 @@ namespace Lytec.Protocol
                 private int DataLen = 0;
                 public virtual TImpl? Deserialize(byte d)
                 {
-                    void MoveStep(int step)
-                    {
-                        StepLen = 0;
-                        Step = step;
-                    }
-
                     var RcvLen = Cache.Count;
-                    var rcvLen = RcvLen;
+                    var beforeRcvLen = RcvLen;
                     if (NoValidStepLens.TryGetValue((Steps)Step, out var len))
                     {
                         Cache.Add(d);
@@ -174,7 +175,7 @@ namespace Lytec.Protocol
                             switch ((Steps)Step)
                             {
                                 case Steps.DataLen:
-                                    DataLen = Cache.Skip(Cache.Count - 2).ToArray().ToStruct<ushort>();
+                                    DataLen = Cache.Skip(Cache.Count - 2).ToArray().ToStruct<ushort>(DefaultEndian);
                                     if (DataLen < MinDataLength)
                                     {
                                         Reset();
@@ -225,6 +226,7 @@ namespace Lytec.Protocol
                     switch ((Steps)Step)
                     {
                         case Steps.Fin:
+                            RecvTimeoutTimer?.Stop();
                             p = new TImpl();
                             var offset = 0;
                             p.Identifier = Cache.Take(Cache[offset] == RecvIdentifier[offset] ? RecvIdentifier.Length : SendIdentifier.Length).ToArray();
@@ -239,10 +241,9 @@ namespace Lytec.Protocol
                             offset += DataLen;
                             p.CheckSum = Cache.ToStruct<ushort>(offset, Endian.Big);
                             Reset();
-                            RecvTimeoutTimer?.Stop();
                             break;
                         default:
-                            if (rcvLen != RcvLen)
+                            if (RcvLen > beforeRcvLen)
                                 RecvTimeoutTimer?.Restart();
                             break;
 

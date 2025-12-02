@@ -22,7 +22,7 @@ namespace Lytec.Common.Communication;
 [TypeConverter(typeof(Converters.StringTypeConverter<MacAddress>))]
 [JsonObject]
 [JsonConverter(typeof(Converters.StringJsonConverter))]
-public struct MacAddress : IEquatable<MacAddress>, IComparable<MacAddress>
+public struct MacAddress : IPackage, IEquatable<MacAddress>, IComparable<MacAddress>
 {
     public const int SizeConst = 6;
 
@@ -152,6 +152,9 @@ public struct MacAddress : IEquatable<MacAddress>, IComparable<MacAddress>
     public int CompareTo(MacAddress other) => (int)(ToLong() - other.ToLong());
 
     public long ToLong() => Data;
+
+    public byte[] Serialize() => this.ToBytes();
+
     public static explicit operator long(MacAddress mac) => mac.Data;
     public static explicit operator MacAddress(long mac) => new MacAddress(mac);
 

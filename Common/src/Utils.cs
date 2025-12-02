@@ -529,6 +529,39 @@ namespace Lytec.Common
                 ni.GetIPProperties().UnicastAddresses.Select(i => i.Address).ToArray()
             )).ToArray();
 
+        public static uint GetIPv4AddressValue(this IPAddress addr)
+        => addr.AddressFamily == AddressFamily.InterNetwork ? BitConverter.ToUInt32(addr.GetAddressBytes(), 0) : throw new ArgumentException();
+
+        public static IPAddress GetBroadcastAddress(this UnicastIPAddressInformation unicastAddress)
+        => GetBroadcastAddress(unicastAddress.Address, unicastAddress.IPv4Mask);
+
+        public static IPAddress GetBroadcastAddress(this IPAddress address, IPAddress mask)
+        => GetBroadcastAddress(address, mask.GetIPv4AddressValue());
+
+        public static IPAddress GetBroadcastAddress(this IPAddress address, uint mask)
+        => GetBroadcastAddress(address.GetIPv4AddressValue(), mask);
+
+        public static IPAddress GetBroadcastAddress(uint addr, uint mask)
+        => new IPAddress(BitConverter.GetBytes(addr | ~mask));
+
+        public static IPAddress GetBroadcastAddress(this IPAddress address, int prefixLength)
+        => GetBroadcastAddress(address, (uint)~BitHelper.MakeMask(32 - prefixLength));
+
+        public static bool IsInSameSubnet(this IPAddress ip, IPAddress mask, IPAddress ip2)
+        => IsInSameSubnet(ip.GetIPv4AddressValue(), mask.GetIPv4AddressValue(), ip2.GetIPv4AddressValue());
+
+        public static bool IsInSameSubnet(this IPAddress ip, uint mask, IPAddress ip2)
+        => IsInSameSubnet(ip.GetIPv4AddressValue(), mask, ip2.GetIPv4AddressValue());
+
+        public static bool IsInSameSubnet(this IPAddress ip, IPAddress mask, uint ip2)
+        => IsInSameSubnet(ip.GetIPv4AddressValue(), mask.GetIPv4AddressValue(), ip2);
+
+        public static bool IsInSameSubnet(this IPAddress ip, uint mask, uint ip2)
+        => IsInSameSubnet(ip.GetIPv4AddressValue(), mask, ip2);
+
+        public static bool IsInSameSubnet(uint ip, uint mask, uint ip2)
+        => (ip & mask) == (ip2 & mask);
+
         /// <summary>
         /// 获取Tcp连接状态
         /// </summary>
