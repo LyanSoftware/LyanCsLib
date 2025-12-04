@@ -35,14 +35,9 @@ namespace Lytec.Protocol
         public const int FlashWriteBytesPerSecond = GBufferSize / FlashWriteMaxFileSeconds; // Flash写入速度
         public const int FlashReadBytesPerSecond = GBufferSize / FlashReadMaxFileSeconds; // Flash读取速度
 
-        [Serializable]
-        [Endian(DefaultEndian)]
-        public readonly struct AllConfigs
+        public record AllConfigs(LEDConfig Led, NetConfig Net)
         {
             public const int SizeConst = LEDConfig.SizeConst + NetConfig.SizeConst;
-            static AllConfigs() => Debug.Assert(Marshal.SizeOf<AllConfigs>() == SizeConst);
-            public LEDConfig Led { get; }
-            public NetConfig Net { get; }
         }
 
         public static byte[] InitFlashDataBlock(int size, byte fillByte = 0xFF) => GetFlashDataBlock(size, fillByte).ToArray();

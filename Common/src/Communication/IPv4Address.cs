@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using Lytec.Common.Data;
@@ -16,5 +16,8 @@ namespace Lytec.Common.Communication
         public IPv4Address(byte[] bytes) => Address = bytes.ToStruct<IPv4Address>().Address;
         public IPv4Address(IPAddress address)
         => Address = address.AddressFamily == AddressFamily.InterNetwork ? address.GetAddressBytes().ToStruct<IPv4Address>().Address : throw new InvalidOperationException();
+        public override string ToString() => IPAddress.ToString();
+        public static implicit operator IPAddress(IPv4Address addr) => addr.IPAddress;
+        public static implicit operator IPv4Address(IPAddress addr) => new(addr);
     }
 }

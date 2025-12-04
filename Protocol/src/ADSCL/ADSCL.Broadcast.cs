@@ -55,12 +55,12 @@ public partial class ADSCL
                 else buf.AddRange(SendIdBytes);
                 var cmd = (int)Command;
                 buf.AddRange(cmd.ToBytes(Endian.Little));
+                buf.AddRange(MacAddress.Serialize());
+                buf.Add(0);
+                buf.Add(0);
                 switch (Command)
                 {
                     case BroadcastCommand.SetConfig:
-                        buf.AddRange(MacAddress.Serialize());
-                        buf.Add(0);
-                        buf.Add(0);
                         buf.AddRange(Data);
                         break;
                 }
@@ -82,11 +82,13 @@ public partial class ADSCL
                     isRcv = true;
                 else return null;
                 var cmd = bytes.Skip(offset).Take(4).ToArray().ToStruct<int>(Endian.Little);
+                offset += 4;
                 len -= 4;
                 var mac = MacAddress.Empty;
                 if (len >= 8)
                 {
                     mac = new(bytes.Skip(offset).Take(6).ToArray());
+                    offset += 8;
                     len -= 8;
                 }
                 switch (cmd)
@@ -150,10 +152,10 @@ public partial class ADSCL
             };
         }
 
-        public record SeekAddress(IPEndPoint Local, IPEndPoint Remote, NetworkInterface NetworkInterface, bool IsInSameSubnet)
+        public record SeekAddress(IPEndPoint Local, IPEndPoint Remote, NetworkInterface NetworkInterface)
         {
-            public static implicit operator SCL.BroadcastSeek.SeekAddress(SeekAddress addr) => new(addr.Local, addr.Remote, addr.NetworkInterface, addr.IsInSameSubnet);
-            public static implicit operator SeekAddress(SCL.BroadcastSeek.SeekAddress addr) => new(addr.Local, addr.Remote, addr.NetworkInterface, addr.IsInSameSubnet);
+            public static implicit operator SCL.BroadcastSeek.SeekAddress(SeekAddress addr) => new(addr.Local, addr.Remote, addr.NetworkInterface);
+            public static implicit operator SeekAddress(SCL.BroadcastSeek.SeekAddress addr) => new(addr.Local, addr.Remote, addr.NetworkInterface);
         }
 
         [Serializable]
@@ -229,50 +231,45 @@ public partial class ADSCL
                 .ToArray();
             var socks = (from ni in nis
                          from ip in ni.ips
+                         from local in new bool[] { false, true }
                          where ip.Address.AddressFamily == AddressFamily.InterNetwork
-                         select (ni.ni, ip, so: new UdpClient(new IPEndPoint(ip.Address, 0)))
+                         select (ni.ni, ip, local, so: new UdpClient(new IPEndPoint(ip.Address, 0)))
                          ).ToList();
             var cmd = BCPack.Seek.Serialize();
             var infos = new Dictionary<MacAddress, SeekInfo>();
-            void proc(bool localBroadcast)
+            var tasks = new List<Task>();
+            foreach (var (_, ip, local, so) in socks)
+                tasks.Add(so.SendAsync(cmd, cmd.Length, new IPEndPoint(local ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port)));
+            var timeout = DateTime.Now.AddMilliseconds(timeoutMs);
+            while (timeout > DateTime.Now)
             {
-                var tasks = new List<Task>();
-                foreach (var (_, ip, so) in socks)
-                    tasks.Add(so.SendAsync(cmd, cmd.Length, new IPEndPoint(localBroadcast ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port)));
-                var timeout = DateTime.Now.AddMilliseconds(timeoutMs);
-                while (timeout > DateTime.Now)
+                var count1 = 0;
+                foreach (var (ni, ip, local, so) in socks)
                 {
-                    var count1 = 0;
-                    foreach (var (ni, ip, so) in socks)
+                    if (so.Available > 0)
                     {
-                        if (so.Available > 0)
+                        var remote = new IPEndPoint(IPAddress.Any, 0);
+                        if (BCPack.Deserialize(so.Receive(ref remote)) is BCPack pack
+                            && pack.Command == BroadcastCommand.ConfigData)
                         {
-                            var remote = new IPEndPoint(IPAddress.Any, 0);
-                            if (BCPack.Deserialize(so.Receive(ref remote)) is BCPack pack
-                                && pack.Command == BroadcastCommand.ConfigData)
+                            var net = NetConfig.Deserialize(pack.Data);
+                            var info = NetInfo.Deserialize(pack.Data, NetConfig.SizeConst) ?? new();
+                            if (net != null)
                             {
-                                var net = NetConfig.Deserialize(pack.Data);
-                                var info = NetInfo.Deserialize(pack.Data, NetConfig.SizeConst) ?? new();
-                                if (net != null)
-                                {
-                                    if (!infos.TryGetValue(net.Value.MacAddress, out var seekinfo))
-                                        infos[net.Value.MacAddress] = seekinfo = new SeekInfo(net.Value.MacAddress, net.Value, info);
-                                    seekinfo.Addresses.Add(new SeekAddress(
-                                        new IPEndPoint(ip.Address, 0),
-                                        new IPEndPoint(localBroadcast ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port),
-                                        ni,
-                                        ip.Address.IsInSameSubnet(ip.IPv4Mask, net.Value.IP)
-                                        ));
-                                }
+                                if (!infos.TryGetValue(net.MacAddress, out var seekinfo))
+                                    infos[net.MacAddress] = seekinfo = new SeekInfo(net.MacAddress, net, info);
+                                seekinfo.Addresses.Add(new SeekAddress(
+                                    new IPEndPoint(ip.Address, 0),
+                                    new IPEndPoint(local ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port),
+                                    ni
+                                    ));
                             }
                         }
                     }
-                    if (count1 == 0)
-                        Thread.Sleep(20);
                 }
+                if (count1 == 0)
+                    Thread.Sleep(20);
             }
-            proc(false);
-            proc(true);
             foreach (var so in socks)
             {
                 so.so.Close();

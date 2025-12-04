@@ -393,4 +393,18 @@ public static partial class WinFormUtils
             editor.ClearSelection();
         }
     }
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    private delegate int EditWordBreakProcDelegate(IntPtr text, int pos_in_text, int bCharSet, int action);
+
+    public static void SetDefaultWordbreak(IntPtr handle, ushort width, ushort height, bool enable = false)
+    {
+        EditWordBreakProcDelegate f = (_, _, _, _) => 0;
+        var cbFunc = enable ? IntPtr.Zero : Marshal.GetFunctionPointerForDelegate(f);
+        PInvoke.SendMessage(new(handle), PInvoke.EM_SETWORDBREAKPROC, 0, cbFunc);
+        PInvoke.SendMessage(new(handle), PInvoke.WM_SIZE, 0, new IntPtr((width << 16) | height));
+    }
+    public static void SetDefaultWordbreak(this RichTextBox box, bool enable = false)
+    => SetDefaultWordbreak(box.Handle, (ushort)box.Width, (ushort)box.Height, enable);
+
 }

@@ -4,6 +4,8 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Text;
 using Windows.Win32;
+using Timer = System.Windows.Forms.Timer;
+using System.Runtime.InteropServices;
 
 namespace Lytec.WinForms
 {
@@ -43,6 +45,18 @@ namespace Lytec.WinForms
         [DefaultValue(typeof(BorderStyle), nameof(BorderStyle.FixedSingle))]
         public new BorderStyle BorderStyle { get => base.BorderStyle; set => base.BorderStyle = value; }
 
+        //public new bool WordWrap
+        //{
+        //    get => base.WordWrap;
+        //    set
+        //    {
+        //        if (value == WordWrap)
+        //            return;
+        //        base.WordWrap = value;
+        //        this.SetDefaultWordbreak(value);
+        //    }
+        //}
+
         [Browsable(false)]
         public int MaxBytes { get; protected set; }
 
@@ -51,11 +65,19 @@ namespace Lytec.WinForms
 
         protected string TextCache { get; set; } = "";
 
+        protected Timer TextChangedTimer { get; set; } = new() { Interval = 20 };
         public TextBoxEx()
         {
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             BorderStyle = BorderStyle.FixedSingle;
             TextChanged += (sender, e) => Invalidate();
+            TextChangedTimer.Tick += (sender, args) =>
+            {
+                TextChangedTimer.Stop();
+                TextCache = Text;
+                if (!IsDisposed)
+                    TextChangeSuccess?.Invoke(this, Text);
+            };
         }
 
         public void ResetMaxBytes() => MaxBytes = 0;
@@ -91,8 +113,7 @@ namespace Lytec.WinForms
             var len = SelectionLength;
             if (Validate(Text))
             {
-                TextCache = Text;
-                TextChangeSuccess?.Invoke(this, Text);
+                TextChangedTimer.Restart();
             }
             else
             {
@@ -173,5 +194,6 @@ namespace Lytec.WinForms
                 using (var brush = new SolidBrush(PlaceHolderColor))
                     e.Graphics.DrawString(PlaceHolder, Font, brush, Padding.Left + 2 + PlaceHolderPosition.X, Padding.Top + 2 + PlaceHolderPosition.Y);
         }
+
     }
 }

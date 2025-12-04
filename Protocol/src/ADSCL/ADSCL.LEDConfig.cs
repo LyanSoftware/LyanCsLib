@@ -365,8 +365,8 @@ namespace Lytec.Protocol
 
             public byte AutoBrightMinLevel { get; set; }
 
-            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-            public byte[] BrightSensorADVTable { get; set; } = new byte[32];
+            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 64)]
+            public byte[] BrightSensorADVTable { get; set; } = new byte[64];
 
             public ushort PowerOnTimeValue { get; set; }
             public (int Hour, int Minute) PowerOnTime
@@ -391,8 +391,8 @@ namespace Lytec.Protocol
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
             public AnalogIOConfig[] AnalogIOConfigs { get; set; } = new AnalogIOConfig[6];
 
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 146)]
-            private readonly byte[] unused = new byte[146];
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 114)]
+            private readonly byte[] unused = new byte[114];
 
             public uint PoTimeout { get; set; }
 

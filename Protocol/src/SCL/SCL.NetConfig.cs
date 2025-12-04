@@ -187,8 +187,13 @@ public static partial class SCL
         [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 31)]
         public MacAddressPack[] MacPacks { get; set; }
 
-        [field: MarshalAs(UnmanagedType.ByValTStr, SizeConst = 8)]
-        public string CardTypeString { get; set; }
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+        private byte[] CardTypeStringBytes;
+        public string CardTypeString
+        {
+            get => GetStringFromFixedLength(CardTypeStringBytes);
+            set => CardTypeStringBytes = GetFixedLengthStringWithFlash(value, 8, false);
+        }
 
         public MacAddress Mac => MacPacks[0];
         public MacAddress MacAddress => MacPacks[0];

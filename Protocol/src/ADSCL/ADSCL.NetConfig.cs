@@ -94,8 +94,8 @@ namespace Lytec.Protocol
 
             public IPAddress Address
             {
-                get => new IPAddress(_Address.ToBytes(Endian.Little));
-                set => _Address = value.ToInt(Endian.Little);
+                get => new IPAddress(_Address.ToBytes(Endian.Big));
+                set => _Address = value.ToInt(Endian.Big);
             }
             [Endian(Endian.Little)]
             private int _Address;
@@ -137,9 +137,10 @@ namespace Lytec.Protocol
 
         [Serializable]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        [Endian(DefaultEndian)]
         public struct AuthInfo
         {
-            public const int SizeConst = 16;
+            public const int SizeConst = 8;
             static AuthInfo() => Debug.Assert(Marshal.SizeOf<AuthInfo>() == SizeConst);
 
             public AuthMode Mode { get; set; }
@@ -293,31 +294,31 @@ namespace Lytec.Protocol
 
             static WifiConfig() => Debug.Assert(Marshal.SizeOf<WifiConfig>() == SizeConst);
 
-            public int OptionBits { get; set; }
+            public ushort OptionBits { get; set; }
             public WifiMode Mode
             {
                 get => (WifiMode)BitHelper.GetValue(OptionBits, 0, 2);
-                set => OptionBits = BitHelper.SetValue(OptionBits, (int)value, 0, 2);
+                set => OptionBits = (ushort)BitHelper.SetValue(OptionBits, (int)value, 0, 2);
             }
             public int APChannel
             {
                 get => (BitHelper.GetValue(OptionBits, 2, 4) + 1).LimitToRange(APMinChannel, APMaxChannel);
-                set => OptionBits = BitHelper.SetValue(OptionBits, (value - 1).LimitToRange(APMinChannel, APMaxChannel), 2, 4);
+                set => OptionBits = (ushort)BitHelper.SetValue(OptionBits, (value - 1).LimitToRange(APMinChannel, APMaxChannel), 2, 4);
             }
             public bool UseWifiNTP
             {
                 get => BitHelper.GetFlag(OptionBits, 2);
-                set => OptionBits = BitHelper.SetFlag(OptionBits, value, 2);
+                set => OptionBits = (ushort)BitHelper.SetFlag(OptionBits, value, 2);
             }
             public int MaxConnection
             {
-                get => BitHelper.GetValue(OptionBits, 7, 2);
-                set => OptionBits = BitHelper.SetValue(OptionBits, value, 7, 2);
+                get => BitHelper.GetValue(OptionBits, 7, 2) + 1;
+                set => OptionBits = (ushort)BitHelper.SetValue(OptionBits, Math.Max(0, value - 1), 7, 2);
             }
             public bool AutoDisableWhenIdle
             {
                 get => BitHelper.GetFlag(OptionBits, 9);
-                set => OptionBits = BitHelper.SetFlag(OptionBits, value, 9);
+                set => OptionBits = (ushort)BitHelper.SetFlag(OptionBits, value, 9);
             }
             public byte AutoDisableIdleMinutes { get; set; }
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
@@ -360,11 +361,8 @@ namespace Lytec.Protocol
                 get => FromFixedLengthString(Bytes);
                 set => Bytes = ToFixedLengthString(value, SizeConst);
             }
+            [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = SizeConst)]
             public byte[] Bytes { get; set; }
-            public NTPServerAddress()
-            {
-                Bytes = new byte[SizeConst];
-            }
         }
 
         [Serializable]
@@ -387,9 +385,9 @@ namespace Lytec.Protocol
         }
 
         [Serializable]
-        [StructLayout(LayoutKind.Sequential, Pack = 1, Size = SizeConst)]
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
         [Endian(DefaultEndian)]
-        public struct NetConfig : IPackage
+        public class NetConfig : IPackage
         {
             public const int SizeConst = 768;
             public const int ServerAddrMaxLength = 42;
@@ -407,26 +405,28 @@ namespace Lytec.Protocol
                 get => FromFixedLengthString(CardTypeStrBytes);
                 set => CardTypeStrBytes = ToFixedLengthString(value, 8, false);
             }
-            private byte[] CardTypeStrBytes;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+            private byte[] CardTypeStrBytes = new byte[8];
             public string Name
             {
                 get => FromFixedLengthString(NameBytes);
                 set => NameBytes = ToFixedLengthString(value, NameSize);
             }
-            private byte[] NameBytes;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = NameSize)]
+            private byte[] NameBytes = new byte[NameSize];
             public IPv4Address IP { get; set; }
             public IPv4Address SubnetMask { get; set; }
             public IPv4Address Gateway { get; set; }
 
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
-            public UartConfig[] ComPara { get; set; }
+            public UartConfig[] ComPara { get; set; } = new UartConfig[2];
 
             public WifiConfig Wifi { get; set; }
 
             public IPv4Address LocalNTPServer { get; set; }
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = NTPServerAddressCount)]
-            public NTPServerAddress[] NTPServerAddresses { get; set; }
-            public TimeZone TimeZone { get; set; }
+            public NTPServerAddress[] NTPServerAddresses { get; set; } = new NTPServerAddress[NTPServerAddressCount];
+            private byte _unused;
             public HeartbeatConfig Heartbeat { get; set; }
 
             public string Password
@@ -435,11 +435,11 @@ namespace Lytec.Protocol
                 set => PasswordBytes = ToFixedLengthString(value, 12);
             }
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 12)]
-            public byte[] PasswordBytes { get; set; }
+            public byte[] PasswordBytes { get; set; } = new byte[12];
             public ushort PasswordCRC { get; set; }
 
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-            public AuthInfo[] AuthInfos { get; set; }
+            public AuthInfo[] AuthInfos { get; set; } = new AuthInfo[16];
 
             public ushort UDPPort { get; set; }
             public ushort TCPPort { get; set; }
@@ -466,31 +466,13 @@ namespace Lytec.Protocol
                 set => TCPServerAddressBytes = ToFixedLengthString(value, TCPServerAddressMaxLength);
             }
             [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = TCPServerAddressMaxLength)]
-            public byte[] TCPServerAddressBytes { get; set; }
+            public byte[] TCPServerAddressBytes { get; set; } = new byte[TCPServerAddressMaxLength];
+            public short TimeZoneOffsetMinutes { get; set; }
 
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 212)]
-            private readonly byte[] unused;
-            public uint Valid { get; set; }
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 210)]
+            private readonly byte[] unused = new byte[210];
+            public ushort Valid { get; set; }
             public bool IsValid => Valid == 0xAA55;
-
-
-            public NetConfig()
-            {
-                CardTypeStrBytes = new byte[8];
-                NameBytes = new byte[NameSize];
-                ComPara = new UartConfig[3];
-                Wifi = new WifiConfig();
-                NTPServerAddresses = new NTPServerAddress[NTPServerAddressCount];
-                PasswordBytes = new byte[12];
-                AuthInfos = new AuthInfo[16];
-                UDPPort = 27694;
-                TCPPort = 17019;
-                JT3000TCPPort = 4001;
-                JT3000DefaultDisk = DiskDriver.SDCard;
-                TCPServerMode = true;
-                TCPServerAddressBytes = new byte[TCPServerAddressMaxLength];
-                unused = new byte[212];
-            }
 
             public byte[] Serialize() => this.ToBytes();
 

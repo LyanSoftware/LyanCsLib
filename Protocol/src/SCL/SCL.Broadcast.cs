@@ -98,7 +98,7 @@ public static partial class SCL
         public static byte[] GetSeekPackage(bool isSCL2008 = true)
         => Encoding.ASCII.GetBytes((isSCL2008 ? Id_SCL2008Send : Id_SuperCommSend) + "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00");
 
-        public record SeekAddress(IPEndPoint Local, IPEndPoint Remote, NetworkInterface NetworkInterface, bool IsInSameSubnet);
+        public record SeekAddress(IPEndPoint Local, IPEndPoint Remote, NetworkInterface NetworkInterface);
 
         public class SeekInfo
         {
@@ -117,45 +117,40 @@ public static partial class SCL
                 .ToArray();
             var socks = (from ni in nis
                          from ip in ni.ips
+                         from local in new bool[] { false, true }
                          where ip.Address.AddressFamily == AddressFamily.InterNetwork
-                         select (ni.ni, ip, so: new UdpClient(new IPEndPoint(ip.Address, 0)))
+                         select (ni.ni, ip, local, so: new UdpClient(new IPEndPoint(ip.Address, 0)))
                          ).ToList();
             var cmd = GetSeekPackage();
             var infos = new Dictionary<MacAddress, SeekInfo>();
-            void proc(bool localBroadcast)
+            var tasks = new List<Task>();
+            foreach (var (_, ip, local, so) in socks)
+                tasks.Add(so.SendAsync(cmd, cmd.Length, new IPEndPoint(local ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port)));
+            var timeout = DateTime.Now.AddMilliseconds(timeoutMs);
+            while (timeout > DateTime.Now)
             {
-                var tasks = new List<Task>();
-                foreach (var (_, ip, so) in socks)
-                    tasks.Add(so.SendAsync(cmd, cmd.Length, new IPEndPoint(localBroadcast ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port)));
-                var timeout = DateTime.Now.AddMilliseconds(timeoutMs);
-                while (timeout > DateTime.Now)
+                var count1 = 0;
+                foreach (var (ni, ip, local, so) in socks)
                 {
-                    var count1 = 0;
-                    foreach (var (ni, ip, so) in socks)
+                    count1++;
+                    if (so.Available > 0)
                     {
-                        count1++;
-                        if (so.Available > 0)
+                        var remote = new IPEndPoint(IPAddress.Any, 0);
+                        if (Info.Deserialize(so.Receive(ref remote)) is Info info)
                         {
-                            var remote = new IPEndPoint(IPAddress.Any, 0);
-                            if (Info.Deserialize(so.Receive(ref remote)) is Info info)
-                            {
-                                if (!infos.TryGetValue(info.MacConfig.MacAddress, out var seekinfo))
-                                    infos[info.MacConfig.MacAddress] = seekinfo = new SeekInfo(info.MacConfig.MacAddress, info);
-                                seekinfo.Addresses.Add(new SeekAddress(
-                                    new IPEndPoint(ip.Address, 0),
-                                    new IPEndPoint(localBroadcast ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port),
-                                    ni,
-                                    ip.Address.IsInSameSubnet(ip.IPv4Mask, info.NetConfig.IP)
-                                ));
-                            }
+                            if (!infos.TryGetValue(info.MacConfig.MacAddress, out var seekinfo))
+                                infos[info.MacConfig.MacAddress] = seekinfo = new SeekInfo(info.MacConfig.MacAddress, info);
+                            seekinfo.Addresses.Add(new SeekAddress(
+                                new IPEndPoint(ip.Address, 0),
+                                new IPEndPoint(local ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port),
+                                ni
+                            ));
                         }
                     }
-                    if (count1 == 0)
-                        Thread.Sleep(20);
                 }
+                if (count1 == 0)
+                    Thread.Sleep(20);
             }
-            proc(false);
-            proc(true);
             foreach (var so in socks)
             {
                 so.so.Close();

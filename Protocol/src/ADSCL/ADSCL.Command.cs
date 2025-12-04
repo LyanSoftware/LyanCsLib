@@ -134,8 +134,18 @@ namespace Lytec.Protocol
             return ret;
         }
 
-        public static bool GetAllConfigs(ISendAndGetAnswerConfig config, out AllConfigs Configs, string? password = null)
-        => GetSpStruct(config, SpStructIndex.AllConfigs, out Configs, AllConfigs.SizeConst, password);
+        public static bool GetAllConfigs(ISendAndGetAnswerConfig config, [NotNullWhen(true)] out AllConfigs? Configs, string? password = null)
+        {
+            var ret = GetSpStructInternal(config, SpStructIndex.AllConfigs, out var bytes, AllConfigs.SizeConst, password);
+            Configs = null;
+            if (!ret)
+                return false;
+            Configs = new AllConfigs(
+                bytes.Take(LEDConfig.SizeConst).ToStruct<LEDConfig>(),
+                bytes.Skip(LEDConfig.SizeConst).ToStruct<NetConfig>()
+                );
+            return true;
+        }
 
         public static bool GetNetConfig(ISendAndGetAnswerConfig config, [NotNullWhen(true)] out NetConfig? Config, string? password = null)
         {
