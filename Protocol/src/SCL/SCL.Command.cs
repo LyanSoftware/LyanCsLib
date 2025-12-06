@@ -232,7 +232,7 @@ public static partial class SCL
             return false;
         try
         {
-            data = new(new IPv4Address(new IPAddress(answer.Arg1.ToBytes(Endian.Big))), DefaultEncode.GetString(answer.Arg3), answer.Arg3);
+            data = new(answer.Arg1.ToBytes().ToStruct<IPv4Address>(), GetStringFromFixedLength(answer.Arg3), answer.Arg3);
             return true;
         }
         catch (Exception)

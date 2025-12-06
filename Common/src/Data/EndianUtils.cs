@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Lytec.Common.Data
 {
-    public static class Endians
+    public static class EndianUtils
     {
         /// <summary>
         /// 运行时的本地字节序
@@ -11,6 +11,12 @@ namespace Lytec.Common.Data
         public static Endian LocalEndian { get; } = BitConverter.IsLittleEndian ? Endian.Little : Endian.Big;
 
         public static EndianAttribute? GetEndianAttribute(this MemberInfo info, bool inherit = true) => info.GetCustomAttribute<EndianAttribute>(inherit);
+
+        public static IReadOnlyDictionary<Type, int> UnsupportedTypes = new Type[]
+        {
+            typeof(string),
+            typeof(decimal),
+        }.ToDictionary(v => v, v => 0);
 
         /// <summary>
         /// 修正字节序
@@ -21,18 +27,49 @@ namespace Lytec.Common.Data
         /// <returns></returns>
         public static byte[] FixEndian(this byte[] data, Type type, Endian? defaultEndian = null)
         {
-            if (defaultEndian == null)
-                defaultEndian = LocalEndian;
             var newdata = new byte[data.Length];
             Array.Copy(data, newdata, data.Length);
 
             var typeEndian = type.GetEndianAttribute(true) is EndianAttribute attr1
-                ? attr1.Endian : defaultEndian;
+                ? attr1.Endian : (defaultEndian ?? LocalEndian);
 
-            if (type.IsEnum)
+            bool isSimpleType(Type t) => t.IsEnum || t.IsPrimitive || UnsupportedTypes.ContainsKey(t);
+
+            void proc(int offset, Type t, int size, Endian endian)
             {
-                if (typeEndian != LocalEndian)
+                if (size <= 1 || UnsupportedTypes.ContainsKey(t))
+                    return;
+                if (isSimpleType(t))
+                {
+                    if (endian != LocalEndian)
+                        Array.Reverse(newdata, offset, size);
+                }
+                else
+                {
+                    var arr = new byte[size];
+                    Array.Copy(data, offset, arr, 0, arr.Length);
+                    Array.Copy(arr.FixEndian(t, endian), 0, newdata, offset, arr.Length);
+                }
+            }
+
+            if (isSimpleType(type))
+            {
+                if (!UnsupportedTypes.ContainsKey(type) && typeEndian != LocalEndian)
                     Array.Reverse(newdata);
+            }
+            else if (type.IsArray)
+            {
+                var et = type.GetElementType()!;
+                var es = Marshal.SizeOf(et);
+                var endian = typeEndian;
+                if (et.GetCustomAttribute<EndianAttribute>() is EndianAttribute attr2)
+                    endian = attr2.Endian;
+                if (es > 1)
+                {
+                    var count = data.Length / es;
+                    for (var i = 0; i < count; i++)
+                        proc(i * es, et, es, endian);
+                }
             }
             else
             {
@@ -40,47 +77,39 @@ namespace Lytec.Common.Data
                 {
                     foreach (var f in t1.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
                     {
-                        var subType = false;
+                        var endian = typeEndian;
                         if (f.GetEndianAttribute(false) is EndianAttribute attr2)
                         {
                             // 在字段/属性上标注的
-                            if (attr2.Endian == LocalEndian)
-                                continue;
+                            endian = attr2.Endian;
                         }
                         else if (f.FieldType.GetEndianAttribute(true) is EndianAttribute attr3)
                         {
                             // 在字段/属性的类型上标注的
-                            if (attr3.Endian == LocalEndian)
-                                continue;
-                            subType = true;
-                        }
-                        else if (typeEndian == LocalEndian) // 在类里标注的
-                            continue;
-                        void proc(int offset, int size)
-                        {
-                            if (subType)
-                            {
-                                var arr = new byte[size];
-                                Array.Copy(data, offset, arr, 0, arr.Length);
-                                Array.Copy(arr.FixEndian(f.FieldType, defaultEndian), 0, newdata, offset, arr.Length);
-                            }
-                            else Array.Reverse(newdata, offset, size);
+                            endian = attr3.Endian;
                         }
                         var fieldOffset = Marshal.OffsetOf(t1, f.Name).ToInt32();
-                        if (f.FieldType.IsArray)
+                        if (f.FieldType.IsEnum)
+                        {
+                            var t = Enum.GetUnderlyingType(f.FieldType);
+                            proc(fieldOffset, t, Marshal.SizeOf(t), endian);
+                        }
+                        else if (f.FieldType.IsArray)
                         {
                             if (f.GetCustomAttribute<MarshalAsAttribute>() is MarshalAsAttribute marshalAs)
                             {
                                 if (marshalAs.Value == UnmanagedType.ByValArray)
                                 {
-                                    var es = Marshal.SizeOf(f.FieldType.GetElementType()!);
-                                    for (var i = 0; i < marshalAs.SizeConst; i++)
-                                        proc(fieldOffset + i * es, es);
+                                    var et = f.FieldType.GetElementType()!;
+                                    var es = Marshal.SizeOf(et);
+                                    if (es > 1)
+                                        for (var i = 0; i < marshalAs.SizeConst; i++)
+                                            proc(fieldOffset + i * es, et, es, endian);
                                 }
-                                else proc(fieldOffset, Marshal.SizeOf<IntPtr>());
+                                else proc(fieldOffset, typeof(IntPtr), Marshal.SizeOf<IntPtr>(), endian);
                             }
                         }
-                        else proc(fieldOffset, Marshal.SizeOf(f.FieldType));
+                        else proc(fieldOffset, f.FieldType, Marshal.SizeOf(f.FieldType), endian);
                     }
                 }
             }

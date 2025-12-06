@@ -22,7 +22,7 @@ public static partial class SCL
 
         public IPAddress Address
         {
-            get => new IPAddress((uint)_Address);
+            get => new IPAddress(_Address.ToBytes(Endian.Big));
             set => _Address = value.ToInt(DefaultEndian); // 数值已经按大端存储了，此时转换需要按默认字节序转
         }
         [Endian(Endian.Big)]
