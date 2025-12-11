@@ -249,26 +249,30 @@ public partial class ADSCL
                     if (so.Available > 0)
                     {
                         var remote = new IPEndPoint(IPAddress.Any, 0);
-                        if (BCPack.Deserialize(so.Receive(ref remote)) is BCPack pack
-                            && pack.Command == BroadcastCommand.ConfigData)
+                        try
                         {
-                            var net = NetConfig.Deserialize(pack.Data);
-                            var info = NetInfo.Deserialize(pack.Data, NetConfig.SizeConst) ?? new();
-                            if (net != null)
+                            if (BCPack.Deserialize(so.Receive(ref remote)) is BCPack pack
+                                && pack.Command == BroadcastCommand.ConfigData)
                             {
-                                if (!infos.TryGetValue(net.MacAddress, out var seekinfo))
-                                    infos[net.MacAddress] = seekinfo = new SeekInfo(net.MacAddress, net, info);
-                                seekinfo.Addresses.Add(new SeekAddress(
-                                    new IPEndPoint(ip.Address, 0),
-                                    new IPEndPoint(local ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port),
-                                    ni
-                                    ));
+                                var net = NetConfig.Deserialize(pack.Data);
+                                var info = NetInfo.Deserialize(pack.Data, NetConfig.SizeConst) ?? new();
+                                if (net != null)
+                                {
+                                    if (!infos.TryGetValue(net.MacAddress, out var seekinfo))
+                                        infos[net.MacAddress] = seekinfo = new SeekInfo(net.MacAddress, net, info);
+                                    seekinfo.Addresses.Add(new SeekAddress(
+                                        new IPEndPoint(ip.Address, 0),
+                                        new IPEndPoint(local ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port),
+                                        ni
+                                        ));
+                                }
                             }
                         }
+                        catch (Exception) { }
                     }
                 }
                 if (count1 == 0)
-                    Thread.Sleep(20);
+                    Thread.Sleep(50);
             }
             foreach (var so in socks)
             {

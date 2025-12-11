@@ -116,6 +116,34 @@ namespace Lytec.Common.Data
         public static object ToStruct(this byte[] bytes, Type type, Endian? endian)
         => bytes.ToStruct(type, 0, endian);
 
+        public static bool TryToStruct<T>(this byte[] bytes, [NotNullWhen(true)] out T? t, int offset = 0, Endian? defaultEndian = null)
+        {
+            if (bytes.TryToStruct(typeof(T), out var obj, offset, defaultEndian))
+            {
+                t = (T)obj;
+                return true;
+            }
+            t = default;
+            return false;
+        }
+
+        public static bool TryToStruct(this byte[] bytes, Type type, [NotNullWhen(true)] out object? t, int offset = 0, Endian? defaultEndian = null)
+        {
+            try
+            {
+                t = bytes.ToStruct(type, offset, defaultEndian);
+                return true;
+            }
+            catch (Exception)
+            {
+                t = default;
+                return false;
+            }
+        }
+
+        public static bool TryToStruct(this byte[] bytes, Type type, [NotNullWhen(true)] out object? t, Endian? endian)
+        => bytes.TryToStruct(type, out t, 0, endian);
+
         [return: NotNull]
         public static byte[] ToBytes(byte[] buf, object to, Type type, Endian? defaultEndian = null)
         {

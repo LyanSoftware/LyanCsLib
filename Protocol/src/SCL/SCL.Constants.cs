@@ -11,6 +11,7 @@ partial class SCL
         public const Endian DefaultEndian = Endian.Little;
 
         public const string NewLine = "\r\n";
+        public const string PathSeparator = "\\";
         public const int NameSize = 16;
         public const int MaxDirNameLength = 3; // 三字节子目录
         public const int MaxFilePathLength = MaxDirNameLength + 1 + 12; // 子目录 + '\' + 8.3格式文件名

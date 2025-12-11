@@ -194,7 +194,7 @@ namespace Lytec.Protocol
                                 px |= 1 << 3;
                             b |= px << (i * pixelBits);
                         }
-                        else b |= (c.GetGrayScale() > 127 ? 1 : 0) << (i * pixelBits);
+                        else b |= (c.GetGrayScale() > 127 ? 1 : 0) << i;
                     }
                     bytes[pxOffset++] = (byte)b;
                 }

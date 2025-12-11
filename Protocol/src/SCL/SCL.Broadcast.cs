@@ -136,20 +136,24 @@ public static partial class SCL
                     if (so.Available > 0)
                     {
                         var remote = new IPEndPoint(IPAddress.Any, 0);
-                        if (Info.Deserialize(so.Receive(ref remote)) is Info info)
+                        try
                         {
-                            if (!infos.TryGetValue(info.MacConfig.MacAddress, out var seekinfo))
-                                infos[info.MacConfig.MacAddress] = seekinfo = new SeekInfo(info.MacConfig.MacAddress, info);
-                            seekinfo.Addresses.Add(new SeekAddress(
-                                new IPEndPoint(ip.Address, 0),
-                                new IPEndPoint(local ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port),
-                                ni
-                            ));
+                            if (Info.Deserialize(so.Receive(ref remote)) is Info info)
+                            {
+                                if (!infos.TryGetValue(info.MacConfig.MacAddress, out var seekinfo))
+                                    infos[info.MacConfig.MacAddress] = seekinfo = new SeekInfo(info.MacConfig.MacAddress, info);
+                                seekinfo.Addresses.Add(new SeekAddress(
+                                    new IPEndPoint(ip.Address, 0),
+                                    new IPEndPoint(local ? IPAddress.Broadcast : ip.GetBroadcastAddress(), port),
+                                    ni
+                                ));
+                            }
                         }
+                        catch (Exception) { }
                     }
                 }
                 if (count1 == 0)
-                    Thread.Sleep(20);
+                    Thread.Sleep(50);
             }
             foreach (var so in socks)
             {

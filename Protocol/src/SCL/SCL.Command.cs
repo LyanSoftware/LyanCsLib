@@ -164,7 +164,7 @@ public static partial class SCL
     /// <param name="password">网络通信密码</param>
     /// <returns></returns>
     public static bool Replay(ISendAndGetAnswerConfig config, bool isSerialPort, DiskDriver driver, int index, string? password = null)
-    => Exec(config, isSerialPort, out _, new(CommandCode.Reset, 0, ((index & 0xff) << 24) | ((int)driver << 16)), password);
+    => Exec(config, isSerialPort, out _, new(CommandCode.Reset, 0, (index & 0xff) | ((int)driver << 8)), password);
 
     /// <summary>
     /// 重启设备
@@ -446,7 +446,7 @@ public static partial class SCL
         var nameBytes = DefaultEncode.GetBytes(name);
         var buf = new byte[36];
         Array.Copy(nameBytes, 0, buf, 4, Math.Min(nameBytes.Length, MaxDirNameLength));
-        return Exec(config, isSerialPort, out _, new(CommandCode.MakeDir, (int)drv, 0), password);
+        return Exec(config, isSerialPort, out _, new(CommandCode.MakeDir, (int)drv, 0, buf), password);
     }
 
     /// <summary>
