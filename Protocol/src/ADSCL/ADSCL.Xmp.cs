@@ -235,7 +235,7 @@ namespace Lytec.Protocol
                     case XmpType.R1:
                         {
                             var fh = (h + 7) / 8;
-                            setPixel = (x, y, c) => buf[offset + x * fh + y / 8] |= (byte)((c.GrayScale > threshold ? 1 : 0) << (y % 8));
+                            setPixel = (x, y, c) => buf[offset + x * fh + y / 8] |= (byte)((c.GrayScale > threshold ? 1 : 0) << (7 - y % 8));
                         }
                         break;
                     case XmpType.RG11:
@@ -283,7 +283,7 @@ namespace Lytec.Protocol
                     case XmpType.R1:
                         {
                             var fh = (height + 7) / 8;
-                            getPixel = (x, y) => new(((data[offset + x * fh + y / 8] >> (y % 8)) & 1) == 0 ? 0 : 0xffffffff);
+                            getPixel = (x, y) => new(((data[offset + x * fh + y / 8] >> (7 - y % 8)) & 1) == 0 ? 0 : 0xffffffff);
                         }
                         break;
                     case XmpType.RG11:
