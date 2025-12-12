@@ -320,6 +320,7 @@ namespace Lytec.Protocol
                 .Append('-')
                 .Append(' ')
                 .Append('.')
+                .Append(':')
                 .Concat(Enumerable.Range(0, 26).Select(i => 'A' + i))
                 .Select(c => ((char)c).ToString())
                 .ToArray();
@@ -329,6 +330,7 @@ namespace Lytec.Protocol
                 .Append('-')
                 .Append(' ')
                 .Append('.')
+                .Append(':')
                 .Select(c => ((char)c).ToString())
                 .Concat(Enumerable.Range(0, 10).Select(i => $".{i}"))
                 .ToArray();
