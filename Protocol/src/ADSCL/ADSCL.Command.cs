@@ -149,16 +149,24 @@ namespace Lytec.Protocol
 
         public static bool GetNetConfig(ISendAndGetAnswerConfig config, [NotNullWhen(true)] out NetConfig? Config, string? password = null)
         {
-            var ret = GetAllConfigs(config, out var cfgs, password);
-            Config = ret ? cfgs.Net : default;
-            return ret;
+            if (GetAllConfigs(config, out var cfgs, password))
+            {
+                Config = cfgs.Net;
+                return true;
+            }
+            Config = default;
+            return false;
         }
 
         public static bool GetLedConfig(ISendAndGetAnswerConfig config, [NotNullWhen(true)] out LEDConfig? Config, string? password = null)
         {
-            var ret = GetAllConfigs(config, out var cfgs, password);
-            Config = ret ? cfgs.Led : default;
-            return ret;
+            if (GetAllConfigs(config, out var cfgs, password))
+            {
+                Config = cfgs.Led;
+                return true;
+            }
+            Config = default;
+            return false;
         }
 
         public static bool SendData(ISendAndGetAnswerConfig config, int addr, IEnumerable<byte> data, string? password = null, int extTimeout = 0)
@@ -175,6 +183,23 @@ namespace Lytec.Protocol
 
         public static bool SaveTo(ISendAndGetAnswerConfig config, int addr, int length, string? password = null, int extTimeout = 0)
         => Exec(config, out _, new CommandPack((int)CommandCode.SaveTo, addr, length), password, r => r.Data != null && r.Data.Arg2 == length, extTimeout);
+
+        public static bool GetFileMD5(ISendAndGetAnswerConfig config, DiskDriver disk, string filepath, [NotNullWhen(true)] out string? md5, string? password = null, int extTimeout = 0)
+        {
+            md5 = null;
+            if (Exec(
+                config,
+                out var p,
+                new CommandPack((int)CommandCode.LoadFileToBuff, (int)disk | (2 << 2), 0, new byte[4].Concat(ToFixedLengthString(filepath, 32)).ToArray()),
+                password,
+                r => r.Data?.Arg2 == 1 && r.Data.Arg3.Length == 36+16,
+                extTimeout))
+            {
+                md5 = p.Data!.Arg3.Skip(32).ToArray().ToHex("");
+                return true;
+            }
+            return false;
+        }
 
         public static bool SetLEDConfig(ISendAndGetAnswerConfig config, LEDConfig conf, string? password = null)
         => SendData(config, 0, conf.ToBytes(), password)

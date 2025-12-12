@@ -5,7 +5,7 @@ using Org.BouncyCastle.Ocsp;
 namespace Lytec.Protocol;
 
 [Serializable]
-[DebuggerDisplay("{" + nameof(DebugView) + "}")]
+[DebuggerDisplay("{" + nameof(Value) + "}")]
 public struct Rgba8888Color
 {
     public uint Value
@@ -13,8 +13,6 @@ public struct Rgba8888Color
         get => (uint)(R | (G << 8) | (B << 16) | (A << 24));
         set => (R, G, B, A) = ((byte)(value & 0xFF), (byte)((value >> 8) & 0xff), (byte)((value >> 16) & 0xff), (byte)(value >> 24));
     }
-
-    public string DebugView => $"#{A:X2}{R:X2}{G:X2}{B:X2}";
 
     public byte R { get; set; }
     public byte G { get; set; }

@@ -183,8 +183,8 @@ namespace Lytec.Protocol
             public Xmp(XmpType type, ushort width, ushort height, GetPixelColor getPixelColor)
                 : this(type, width, height)
             {
-                for (var x = 0; x < width; x++)
-                    for (var y = 0; y < height; y++)
+                for (var y = 0; y < height; y++)
+                    for (var x = 0; x < width; x++)
                         this[x, y] = getPixelColor(x, y);
             }
 
@@ -241,13 +241,13 @@ namespace Lytec.Protocol
                     case XmpType.RG11:
                         {
                             var fh = (h + 3) / 4;
-                            setPixel = (x, y, c) => buf[offset + x * fh + y / 4] |= (byte)(((c.R > threshold ? 1 : 0) | ((c.G > threshold ? 1 : 0) << 1)) << (y % 4));
+                            setPixel = (x, y, c) => buf[offset + x * fh + y / 4] |= (byte)(((c.R > threshold ? 1 : 0) | ((c.G > threshold ? 1 : 0) << 1)) << (y % 4 * 2));
                         }
                         break;
                     case XmpType.RGBn1111:
                         {
                             var fh = (h + 1) / 2;
-                            setPixel = (x, y, c) => buf[offset + x * fh + y / 2] |= (byte)(((c.R > threshold ? 1 : 0) | ((c.G > threshold ? 1 : 0) << 1) | ((c.B > threshold ? 1 : 0) << 2)) << (y % 2));
+                            setPixel = (x, y, c) => buf[offset + x * fh + y / 2] |= (byte)(((c.R > threshold ? 1 : 0) | ((c.G > threshold ? 1 : 0) << 1) | ((c.B > threshold ? 1 : 0) << 2)) << (y % 2 * 4));
                         }
                         break;
                     case XmpType.RGB565:
@@ -291,7 +291,7 @@ namespace Lytec.Protocol
                             var fh = (height + 3) / 4;
                             getPixel = (x, y) =>
                             {
-                                var c = BitHelper.GetValue(data[offset + x * fh + y / 4] >> (y % 4), 0, 2);
+                                var c = BitHelper.GetValue(data[offset + x * fh + y / 4] >> (y % 4 * 2), 0, 2);
                                 return new(BitHelper.GetFlag(c, 0) ? 255 : 0, BitHelper.GetFlag(c, 1) ? 255 : 0, 0);
                             };
                         }
@@ -301,7 +301,7 @@ namespace Lytec.Protocol
                             var fh = (height + 2) / 1;
                             getPixel = (x, y) =>
                             {
-                                var c = BitHelper.GetValue(data[offset + x * fh + y / 2] >> (y % 2), 0, 3);
+                                var c = BitHelper.GetValue(data[offset + x * fh + y / 2] >> (y % 2 * 4), 0, 3);
                                 return new(BitHelper.GetFlag(c, 0) ? 255 : 0, BitHelper.GetFlag(c, 1) ? 255 : 0, BitHelper.GetFlag(c, 2) ? 255 : 0);
                             };
                         }

@@ -198,6 +198,59 @@ public static partial class SCL
         public MacAddress Mac => MacPacks[0];
         public MacAddress MacAddress => MacPacks[0];
 
+        public bool IsADSCL => CardTypeString switch
+        {
+            "CHECK25"
+            or "CE2500"
+            or "CE2600"
+            or "CE2610"
+            or "CE2620"
+            or "ADSL250"
+            or "AD2500"
+            or "AD2510"
+            or "AD2520"
+            or "ADSL280"
+            or "AD2800"
+            or "AD2810"
+            or "AD2820"
+            or "AD2900"
+            or "AD2910"
+            or "AD2920"
+            => true,
+            _ => false,
+        };
+        
+        public bool IsCheck => CardTypeString switch
+        {
+            "CHECK25"
+            or "CE2500"
+            or "CE2600"
+            or "CE2610"
+            or "CE2620"
+            => true,
+            _ => false,
+        };
+
+        public bool IsSCL2008
+        {
+            get
+            {
+                if (IsADSCL)
+                    return true;
+                var str = CardTypeString;
+                switch (str)
+                {
+                    case "":
+                    case "SCL2008":
+                        return true;
+                }
+                return str.Length >= 3
+                    && str[0] == 0x6C
+                    && str[1] == 0x59
+                    && str[2] == 0x54;
+            }
+        }
+
         public static MacConfig CreateInstance() => Deserialize(InitFlashDataBlock(SizeConst));
 
         public byte[] Serialize() => this.ToBytes();
