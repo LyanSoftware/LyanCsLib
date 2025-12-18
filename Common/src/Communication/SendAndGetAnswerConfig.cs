@@ -125,14 +125,19 @@ namespace Lytec.Common.Communication
                 }
                 return false;
             }
-            return new SendAndGetAnswerConfig(retries, timeout, false, buf => udp.Send(buf, buf.Length, remote) == buf.Length, tryGetAnswer, () =>
+            void flush()
             {
-                while (udp.Available > 0)
+                while (udp!.Available > 0)
                 {
                     var ep = new IPEndPoint(IPAddress.Any, 0);
                     udp.Receive(ref ep);
                 }
-            }, udp.Dispose);
+            }
+            return new SendAndGetAnswerConfig(retries, timeout, false, buf =>
+            {
+                flush();
+                return udp.Send(buf, buf.Length, remote) == buf.Length;
+            }, tryGetAnswer, flush, udp.Dispose);
         }
 
         public static ISendAndGetAnswerConfig GenerateSimpleUDP(IPEndPoint dst, int timeout = 3000, int retries = 3)
