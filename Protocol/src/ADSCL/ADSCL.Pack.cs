@@ -34,6 +34,7 @@ namespace Lytec.Protocol
             public static IPasswordConverter<int> PasswordConverter { get; set; } = new PasswordConverter();
 
             public static int NoPassword { get; set; } = -1;
+            public static int PasswordAccepted { get; set; } = 0;
 
             private static ushort NextPackIndex = 0;
             private static readonly object SyncRoot = new object();
@@ -66,6 +67,8 @@ namespace Lytec.Protocol
                 && pack.AddrCode == AddrCode
                 && pack.PackIndex == PackIndex
                 && pack.Password == 0;
+
+            public virtual bool IsPasswordAccepted => IsRecv && (Password == NoPassword || Password == PasswordAccepted);
 
             public virtual void UpdatePackIndex() => PackIndex = GetNextPackIndex();
 

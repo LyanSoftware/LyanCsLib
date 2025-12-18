@@ -81,24 +81,34 @@ namespace Lytec.Protocol
             for (var tryCount = -1; tryCount < conf.Retries; tryCount++)
             {
                 deserializer.Reset();
-                byte[] recv;
                 try
                 {
-                    if (conf.SendAndGetAnswer(sbuf, out var r, extTimeout))
-                        recv = r;
+                    if (conf.Send(sbuf))
+                    {
+                        var timeout = DateTime.Now.AddMilliseconds(conf.Timeout + extTimeout);
+                        while (timeout > DateTime.Now)
+                        {
+                            Thread.Sleep(20);
+                            if (conf.TryGetAnswer(out var r, extTimeout))
+                            {
+                                var answer = deserializer.Deserialize(r);
+                                if (answer == null
+                                    || !cmd.IsMyAnswer(answer)
+                                    || !answer.IsPasswordAccepted)
+                                    continue;
+                                Answer = answer;
+                                if (CheckIsSuccess == null)
+                                    CheckIsSuccess = p => p.Data != null && p.Data.Arg2 != FalseValue;
+                                return Answer != null && CheckIsSuccess(Answer);
+                            }
+                        }
+                    }
                     else continue;
                 }
                 catch (TimeoutException)
                 {
                     continue;
                 }
-                var answer = deserializer.Deserialize(recv);
-                if (answer == null || !cmd.IsMyAnswer(answer))
-                    continue;
-                Answer = answer;
-                if (CheckIsSuccess == null)
-                    CheckIsSuccess = p => p.Data != null && p.Data.Arg2 != FalseValue;
-                return Answer != null && CheckIsSuccess(Answer);
             }
             return false;
         }

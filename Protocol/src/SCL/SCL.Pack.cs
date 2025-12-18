@@ -13,8 +13,8 @@ public static partial class SCL
 {
     public class Pack : IPackage, ICloneable<Pack>, IEquatable<Pack?>
     {
-        public const ushort NoPassword = 0;
-        public const ushort PasswordAccepted = 0xffff;
+        public const ushort NoPassword = 0xffff;
+        public const ushort PasswordAccepted = 0;
 
         private static ushort NextPackIndex = (ushort)new Random().Next();
         private static readonly object SyncRoot = new object();
