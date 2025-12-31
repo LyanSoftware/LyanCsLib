@@ -25,48 +25,45 @@ namespace Lytec.Common.Data
         /// <param name="data"></param>
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
         /// <returns></returns>
-        public static byte[] FixEndian(this byte[] data, Type type, Endian? defaultEndian = null)
+        public static byte[] FixEndian(this byte[] data, Type type, Endian? defaultEndian = null, int offset = 0)
         {
-            var newdata = new byte[data.Length];
-            Array.Copy(data, newdata, data.Length);
+            var newdata = data.ToArray();
 
             var typeEndian = type.GetEndianAttribute(true) is EndianAttribute attr1
                 ? attr1.Endian : (defaultEndian ?? LocalEndian);
 
             bool isSimpleType(Type t) => t.IsEnum || t.IsPrimitive || UnsupportedTypes.ContainsKey(t);
 
-            void proc(int offset, Type t, int size, Endian endian)
+            void proc(int offset1, Type t, int size, Endian endian)
             {
                 if (size <= 1 || UnsupportedTypes.ContainsKey(t))
                     return;
                 if (isSimpleType(t))
                 {
                     if (endian != LocalEndian)
-                        Array.Reverse(newdata, offset, size);
+                        Array.Reverse(newdata, offset + offset1, size);
                 }
                 else
                 {
-                    var arr = new byte[size];
-                    Array.Copy(data, offset, arr, 0, arr.Length);
-                    Array.Copy(arr.FixEndian(t, endian), 0, newdata, offset, arr.Length);
+                    newdata.FixEndian(t, endian, offset + offset1);
                 }
             }
 
             if (isSimpleType(type))
             {
                 if (!UnsupportedTypes.ContainsKey(type) && typeEndian != LocalEndian)
-                    Array.Reverse(newdata);
+                    Array.Reverse(newdata, offset, Marshal.SizeOf(type.IsEnum ? type.GetEnumUnderlyingType() : type));
             }
             else if (type.IsArray)
             {
-                var et = type.GetElementType()!;
+                var et = type.GetElementType();
                 var es = Marshal.SizeOf(et);
                 var endian = typeEndian;
                 if (et.GetCustomAttribute<EndianAttribute>() is EndianAttribute attr2)
                     endian = attr2.Endian;
                 if (es > 1)
                 {
-                    var count = data.Length / es;
+                    var count = newdata.Length / es;
                     for (var i = 0; i < count; i++)
                         proc(i * es, et, es, endian);
                 }
@@ -124,7 +121,7 @@ namespace Lytec.Common.Data
         /// <param name="data"></param>
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
         /// <returns></returns>
-        public static byte[] FixEndian<T>(this byte[] data, Endian? defaultEndian = null) => data.FixEndian(typeof(T), defaultEndian);
+        public static byte[] FixEndian<T>(this byte[] data, Endian? defaultEndian = null, int offset = 0) => data.FixEndian(typeof(T), defaultEndian, offset);
 
         /// <summary>
         /// 翻转字节序

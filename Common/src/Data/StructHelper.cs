@@ -170,7 +170,7 @@ namespace Lytec.Common.Data
             try
             {
                 p = Marshal.AllocHGlobal(size);
-                Marshal.Copy(bytes.FixEndian(type, defaultEndian), offset, p, size);
+                Marshal.Copy(bytes.FixEndian(type, defaultEndian, offset), offset, p, size);
                 t = Marshal.PtrToStructure(p, type)!;
             }
             finally
