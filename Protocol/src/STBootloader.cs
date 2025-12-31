@@ -761,7 +761,7 @@ public class STBootloader
         return Exec(conf, pages.Prepend((ushort)(pages.Count - 1)).SelectMany(v => v.ToBytes(Endian.Big)).ToArray(), out _, 0, extTimeout);
     }
 
-    public enum ExtendedEraseBank
+    public enum ExtendedEraseBank : ushort
     {
         FullChip = 0xFFFF,
         Bank1 = 0xFFFE,
@@ -777,13 +777,14 @@ public class STBootloader
 
     public static bool FullChipErase(ISendAndGetAnswerConfig conf, bool useExtendedErase, int extTimeout = 0)
     {
+        extTimeout += 2000;
         if (useExtendedErase)
             return ExtendedErase(conf, ExtendedEraseBank.FullChip, extTimeout);
         else
         {
             if (!Exec(conf, Command.Erase, out _, 0, extTimeout))
                 return false;
-            return Exec(conf, new byte[] { 0xFF }, out _, 0, extTimeout + 500, true, CheckSumType.Xor_Init0xFF);
+            return Exec(conf, new byte[] { 0xFF }, out _, 0, extTimeout, true, CheckSumType.Xor_Init0xFF);
         }
     }
 
