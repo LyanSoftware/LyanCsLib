@@ -56,7 +56,7 @@ namespace Lytec.Common.Data
             }
             else if (type.IsArray)
             {
-                var et = type.GetElementType();
+                var et = type.GetElementType()!;
                 var es = Marshal.SizeOf(et);
                 var endian = typeEndian;
                 if (et.GetCustomAttribute<EndianAttribute>() is EndianAttribute attr2)
