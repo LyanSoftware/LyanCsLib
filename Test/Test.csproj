@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net472;net6.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AvaloniaUI\Lytec.AvaloniaUI.csproj" />
+    <ProjectReference Include="..\Common\Lytec.Common.csproj" />
+    <ProjectReference Include="..\Image\Lytec.Image.csproj" />
+    <ProjectReference Include="..\Protocol.Images\Lytec.Protocol.Images.csproj" />
+    <ProjectReference Include="..\Protocol\Lytec.Protocol.csproj" />
+    <ProjectReference Include="..\SerialPort\Lytec.SerialPort.csproj" />
+    <ProjectReference Include="..\Win32\Lytec.Win32.csproj" />
+  </ItemGroup>
+
+</Project>
