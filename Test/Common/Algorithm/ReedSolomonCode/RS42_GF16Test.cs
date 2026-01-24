@@ -6,6 +6,16 @@ using static RS42;
 public class RS42_GF16Test
 {
     [Fact]
+    public static void FullSpaceTest()
+    {
+        // 无错误
+        for (var data = 0; data < 0x100; data++)
+        {
+            Assert.True(Decode(Encode((byte)data), out var decoded) && decoded == data);
+        }
+    }
+
+    [Fact]
     public static void OneSmybolErrTest()
     {
         // 单符号错误

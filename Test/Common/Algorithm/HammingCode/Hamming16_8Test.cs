@@ -7,6 +7,16 @@ using static Hamming16_8;
 public class Hamming16_8Test
 {
     [Fact]
+    public static void FullSpaceTest()
+    {
+        // 无错误
+        for (var data = 0; data < 0x100; data++)
+        {
+            Assert.True(Decode(Encode((byte)data), out var decoded) && decoded == data);
+        }
+    }
+
+    [Fact]
     public static void OneBitErrTest()
     {
         // 1bit 纠错

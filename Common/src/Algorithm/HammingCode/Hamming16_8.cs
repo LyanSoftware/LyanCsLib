@@ -66,13 +66,15 @@ public static class Hamming16_8
         {
             if (((input >> i) & 1) != 0)
             {
-                v ^= 1;
                 v |= 1 << DataBitPos[i];
                 for (var j = 0; j < 4; j++)
                     if ((DataBitPos[i] & (1 << j)) != 0)
                         v ^= 1 << (1 << j);
             }
         }
+        for (var i = 1; i < 16; i++)
+            if (((v >> i) & 1) != 0)
+                v ^= 1;
         return (ushort)v;
     }
 
