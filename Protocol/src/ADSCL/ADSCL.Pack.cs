@@ -102,7 +102,7 @@ namespace Lytec.Protocol
                 return buf.ToArray();
             }
 
-            public class Deserializer : IDeserializer<TImpl>
+            public class Deserializer : IDeserializer<TImpl>, ISequenceDeserializer<TImpl>
             {
                 public static readonly Deserializer Default = new Deserializer();
 
@@ -269,6 +269,20 @@ namespace Lytec.Protocol
 
                 public virtual TImpl? Deserialize(IEnumerable<byte> b)
                 => Deserialize(b, out _);
+
+                public TImpl? Deserialize(byte data, out bool ok)
+                {
+                    var p = Deserialize(data);
+                    ok = p != null;
+                    return p;
+                }
+
+                public TImpl? Deserialize(IEnumerable<byte> data, out int DeserializedLength, out bool ok)
+                {
+                    var p = Deserialize(data, out DeserializedLength);
+                    ok = p != null;
+                    return p;
+                }
             }
 
             public static Func<Deserializer> CreateDeserializer { get; set; } = () => new Deserializer();
