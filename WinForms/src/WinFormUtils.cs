@@ -83,6 +83,29 @@ public static partial class WinFormUtils
             cbx.ValueMember = "Key";
         }
     }
+    
+    public static void SetDataSourceWithEnumDataAndDescriptionAndAdjustDropDownWidth<T>(this ComboBox cbx, Func<T, bool>? condition = null, Func<Utils.EnumDataWithDescription<T>, string>? descriptionPostProcessor = null, int extendWidth = 0) where T : Enum
+    {
+        var data = Utils.GetEnumDatasWithDescription<T>();
+        if (condition != null)
+            data = data.Where(d => condition(d.Value));
+        if (descriptionPostProcessor == null)
+        {
+            var src = data.ToList();
+            cbx.DataSource = src;
+            cbx.DisplayMember = nameof(Utils.EnumDataWithDescription.Description);
+            cbx.ValueMember = nameof(Utils.EnumDataWithDescription.Value);
+            cbx.AdjustComboBoxDropDownWidth(src, x => x.Description, extendWidth);
+        }
+        else
+        {
+            var src = data.ToDictionary(d => d.Value, d => descriptionPostProcessor(d));
+            cbx.DataSource = new BindingSource(src, null);
+            cbx.DisplayMember = "Value";
+            cbx.ValueMember = "Key";
+            cbx.AdjustComboBoxDropDownWidth(src, x => x.Value, extendWidth);
+        }
+    }
 
     public static void ScrollToEnd(this TextBox tbx)
     {
@@ -125,6 +148,14 @@ public static partial class WinFormUtils
 
     public static void SetToExecutableFileIcon(this Form form) => form.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
+    /// <summary>
+    /// 根据内容自动计算下拉框宽度
+    /// </summary>
+    /// <param name="cbx"></param>
+    /// <param name="args"></param>
+    public static void AdjustComboBoxDropDownWidth(this ComboBox cbx, int extendWidth)
+    => AdjustComboBoxDropDownWidth(cbx, null, (Func<object, string>?)null, extendWidth);
+    
     /// <summary>
     /// 根据内容自动计算下拉框宽度
     /// </summary>
