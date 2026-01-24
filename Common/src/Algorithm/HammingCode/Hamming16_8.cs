@@ -62,7 +62,7 @@ public static class Hamming16_8
     {
         var input = data | (CRC3(data) << 8);
         var v = 0;
-        for (var i = 0; i < 8; i++)
+        for (var i = 0; i < 11; i++)
         {
             if (((input >> i) & 1) != 0)
             {
