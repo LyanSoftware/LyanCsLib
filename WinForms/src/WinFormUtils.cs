@@ -11,6 +11,7 @@ using Timer = System.Windows.Forms.Timer;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Dwm;
+using RichTextBox_TextMode = Windows.Win32.UI.Controls.RichEdit.TEXTMODE;
 
 namespace Lytec.WinForms;
 
@@ -83,7 +84,7 @@ public static partial class WinFormUtils
             cbx.ValueMember = "Key";
         }
     }
-    
+
     public static void SetDataSourceWithEnumDataAndDescriptionAndAdjustDropDownWidth<T>(this ComboBox cbx, Func<T, bool>? condition = null, Func<Utils.EnumDataWithDescription<T>, string>? descriptionPostProcessor = null, int extendWidth = 0) where T : Enum
     {
         var data = Utils.GetEnumDatasWithDescription<T>();
@@ -155,7 +156,7 @@ public static partial class WinFormUtils
     /// <param name="args"></param>
     public static void AdjustComboBoxDropDownWidth(this ComboBox cbx, int extendWidth)
     => AdjustComboBoxDropDownWidth(cbx, null, (Func<object, string>?)null, extendWidth);
-    
+
     /// <summary>
     /// 根据内容自动计算下拉框宽度
     /// </summary>
@@ -438,4 +439,17 @@ public static partial class WinFormUtils
     public static void SetDefaultWordbreak(this RichTextBox box, bool enable = false)
     => SetDefaultWordbreak(box.Handle, (ushort)box.Width, (ushort)box.Height, enable);
 
+    [Flags]
+    public enum RichTextMode
+    {
+        PlainText = RichTextBox_TextMode.TM_PLAINTEXT,
+        RichText = RichTextBox_TextMode.TM_RICHTEXT,
+        SingleLevelUndo = RichTextBox_TextMode.TM_SINGLECODEPAGE,
+        MultiLevelUndo = RichTextBox_TextMode.TM_MULTILEVELUNDO,
+        SingleCodePage = RichTextBox_TextMode.TM_SINGLECODEPAGE,
+        MultiCodePage = RichTextBox_TextMode.TM_MULTICODEPAGE,
+    }
+
+    public static void SetTextMode(this RichTextBox box, RichTextMode mode)
+    => PInvoke.SendMessage(new(box.Handle), PInvoke.EM_SETTEXTMODE, (uint)mode, IntPtr.Zero);
 }
