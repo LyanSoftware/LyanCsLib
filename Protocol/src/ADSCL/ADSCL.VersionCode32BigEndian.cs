@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Lytec.Common.Communication;
 using Lytec.Common.Data;
@@ -8,7 +8,7 @@ namespace Lytec.Protocol
     public partial class ADSCL
     {
         [Serializable]
-        [BigEndian]
+        [Endian(Endian.Big)]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         [DebuggerDisplay("{" + nameof(Major) + "}.{" + nameof(Minor) + "}.{" + nameof(Build) + "}")]
         public readonly struct VersionCode32BigEndian : IPackage, IVersionData

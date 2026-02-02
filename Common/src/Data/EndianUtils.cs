@@ -10,9 +10,12 @@ namespace Lytec.Common.Data
         /// </summary>
         public static Endian LocalEndian { get; } = BitConverter.IsLittleEndian ? Endian.Little : Endian.Big;
 
+        public static bool IsLittleEndian(this Endian endian) => endian == Endian.Little;
+        public static bool IsBigEndian(this Endian endian) => endian == Endian.Big;
+
         public static EndianAttribute? GetEndianAttribute(this MemberInfo info, bool inherit = true) => info.GetCustomAttribute<EndianAttribute>(inherit);
 
-        public static IReadOnlyDictionary<Type, int> UnsupportedTypes = new Type[]
+        public static readonly IReadOnlyDictionary<Type, int> UnsupportedTypes = new Type[]
         {
             typeof(string),
             typeof(decimal),
@@ -25,39 +28,40 @@ namespace Lytec.Common.Data
         /// <param name="data"></param>
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
         /// <returns></returns>
-        public static byte[] FixEndian(this byte[] data, Type type, Endian? defaultEndian = null, int offset = 0)
+        public static void FixEndian(this Span<byte> data, Type type, Endian? defaultEndian = null)
         {
-            var newdata = data.ToArray();
+            var newdata = data;
 
             var typeEndian = type.GetEndianAttribute(true) is EndianAttribute attr1
                 ? attr1.Endian : (defaultEndian ?? LocalEndian);
 
-            bool isSimpleType(Type t) => t.IsEnum || t.IsPrimitive || UnsupportedTypes.ContainsKey(t);
+            bool isSimpleType(Type t) => t.IsEnum || t.IsPrimitive || !UnsupportedTypes.ContainsKey(t);
 
-            void proc(int offset1, Type t, int size, Endian endian)
+            void proc(Span<byte> wbuf, Type t, Endian endian)
             {
-                if (size <= 1 || UnsupportedTypes.ContainsKey(t))
+                if (wbuf.Length <= 1 || UnsupportedTypes.ContainsKey(t))
                     return;
                 if (isSimpleType(t))
                 {
                     if (endian != LocalEndian)
-                        Array.Reverse(newdata, offset + offset1, size);
+                        wbuf.Reverse();
                 }
                 else
                 {
-                    newdata.FixEndian(t, endian, offset + offset1);
+                    wbuf.FixEndian(t, endian);
                 }
             }
 
+            var offset = 0;
             if (isSimpleType(type))
             {
                 if (!UnsupportedTypes.ContainsKey(type) && typeEndian != LocalEndian)
-                    Array.Reverse(newdata, offset, Marshal.SizeOf(type.IsEnum ? type.GetEnumUnderlyingType() : type));
+                    newdata[offset..(type.IsEnum ? type.GetEnumUnderlyingType() : type).GetStructSize()].Reverse();
             }
             else if (type.IsArray)
             {
                 var et = type.GetElementType()!;
-                var es = Marshal.SizeOf(et);
+                var es = et.GetStructSize();
                 var endian = typeEndian;
                 if (et.GetCustomAttribute<EndianAttribute>() is EndianAttribute attr2)
                     endian = attr2.Endian;
@@ -65,7 +69,7 @@ namespace Lytec.Common.Data
                 {
                     var count = newdata.Length / es;
                     for (var i = 0; i < count; i++)
-                        proc(i * es, et, es, endian);
+                        proc(newdata[(offset + i * es)..es], et, endian);
                 }
             }
             else
@@ -89,7 +93,7 @@ namespace Lytec.Common.Data
                         if (f.FieldType.IsEnum)
                         {
                             var t = Enum.GetUnderlyingType(f.FieldType);
-                            proc(fieldOffset, t, Marshal.SizeOf(t), endian);
+                            proc(newdata[fieldOffset..t.GetStructSize()], t, endian);
                         }
                         else if (f.FieldType.IsArray)
                         {
@@ -98,20 +102,40 @@ namespace Lytec.Common.Data
                                 if (marshalAs.Value == UnmanagedType.ByValArray)
                                 {
                                     var et = f.FieldType.GetElementType()!;
-                                    var es = Marshal.SizeOf(et);
+                                    var es = et.GetStructSize();
                                     if (es > 1)
                                         for (var i = 0; i < marshalAs.SizeConst; i++)
-                                            proc(fieldOffset + i * es, et, es, endian);
+                                            proc(newdata[(fieldOffset + i * es)..es], et, endian);
                                 }
-                                else proc(fieldOffset, typeof(IntPtr), Marshal.SizeOf<IntPtr>(), endian);
+                                else proc(newdata[fieldOffset..StructHelper.GetStructSize<IntPtr>()], typeof(IntPtr), endian);
                             }
                         }
-                        else proc(fieldOffset, f.FieldType, Marshal.SizeOf(f.FieldType), endian);
+                        else proc(newdata[fieldOffset..f.FieldType.GetStructSize()], f.FieldType, endian);
                     }
                 }
             }
+        }
 
-            return newdata;
+        /// <summary>
+        /// 修正字节序
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="data"></param>
+        /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
+        /// <returns></returns>
+        public static void FixEndian<T>(this Span<byte> data, Endian? defaultEndian = null) => data.FixEndian(typeof(T), defaultEndian);
+
+        /// <summary>
+        /// 修正字节序
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="data"></param>
+        /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
+        /// <returns></returns>
+        public static byte[] FixEndian(this byte[] data, Type type, Endian? defaultEndian = null, int offset = 0)
+        {
+            new Span<byte>(data)[offset..].FixEndian(type, defaultEndian);
+            return data;
         }
 
         /// <summary>

@@ -18,10 +18,10 @@ public static class Hamming16_8
     /// <returns></returns>
     public static IEnumerable<int> GetDataBitPos(int len)
     {
-        var p = 1;
+        var p = 1ul;
         for (var i = 1; i < len; i++)
         {
-            if (i == p)
+            if ((ulong)i == p)
                 p <<= 1;
             else yield return i;
         }

@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+
+    <Authors>K</Authors>
+    <Company>Lytec</Company>
+    <Copyright>Copyright (C) Lytec 2003-2026</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Costura.Fody" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>compile; runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LyanLib\Common.SourceGenerators\Lytec.Common.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\LyanLib\Common\Lytec.Common.csproj" />
+    <ProjectReference Include="..\LyanLib\NetStandard20Compatibility\Lytec.NetStandard20Compatibility.csproj" />
+    <ProjectReference Include="..\LyanLib\NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />
+  </ItemGroup>
+
+    <!-- 在构建主项目之前，先确保分析器依赖项已复制到位 -->
+    <!-- 此目标在“重新编译”时无实际作用，仅为增量编译准备依赖项 -->
+    <Target Name="EnsureAnalyzerDependenciesLocal" AfterTargets="ResolveAssemblyReferences">
+        <ItemGroup>
+            <!-- 定义需要从分析器输出目录复制过来的所有dll文件 -->
+            <_FilesToCopy Include="..\LyanLib\Common.Generators\bin\$(Configuration)\netstandard2.0\*.dll" />
+            <_FilesToCopy Include="..\LyanLib\Common.Analyzer\bin\$(Configuration)\netstandard2.0\*.dll" />
+        </ItemGroup>
+
+        <!-- 执行复制任务 -->
+        <Copy SourceFiles="@(_FilesToCopy)" DestinationFolder="$(OutputPath)\..\netstandard2.0\" SkipUnchangedFiles="true" />
+    </Target>
+
+</Project>

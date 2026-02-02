@@ -6,33 +6,21 @@ namespace Lytec.Common.Serialization
 {
     public interface IDeserializer<out T>
     {
-        T? Deserialize(IEnumerable<byte> b);
+        T? Deserialize(IEnumerable<byte> data);
+        T? Deserialize(ReadOnlySpan<byte> data);
+    }
+
+    public interface IVariableLengthDeserializer<out T> : IDeserializer<T>
+    {
+        T? Deserialize(IEnumerable<byte> data, out int DeserializedLength);
+        T? Deserialize(ReadOnlySpan<byte> data, out int DeserializedLength);
     }
 
     public interface ISequenceDeserializer<out T> : IDeserializer<T>
     {
-        T? Deserialize(byte data, out bool ok);
-        T? Deserialize(IEnumerable<byte> data, out int DeserializedLength, out bool ok)
-#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-        {
-            var len = 0;
-            T? p = default;
-            ok = false;
-            foreach (var b in data)
-            {
-                len++;
-                p = Deserialize(b, out ok);
-                if (ok)
-                    break;
-            }
-            DeserializedLength = len;
-            return p;
-        }
-#else
-        ;
-#endif
-
+        T? Deserialize(byte data);
         void Reset();
     }
 
+    public interface ISequenceVLDeserializer<out T> : ISequenceDeserializer<T>, IVariableLengthDeserializer<T> { }
 }

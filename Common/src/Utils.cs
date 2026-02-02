@@ -843,6 +843,8 @@ namespace Lytec.Common
             }
         }
 
+        public static bool IsPrimitiveOrEnum(this Type t) => t.IsPrimitive || t.IsEnum;
+
         public static bool IsSubtypeOf<T>(this Type t) => t.IsSubtypeOf(typeof(T));
 
         public static bool IsSubtypeObjectOf<T>(this T t, Type baseType) => t!.GetType().IsSubtypeOf(baseType);

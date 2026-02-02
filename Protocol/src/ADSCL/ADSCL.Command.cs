@@ -91,7 +91,7 @@ namespace Lytec.Protocol
                             Thread.Sleep(20);
                             if (conf.TryGetAnswer(out var r, extTimeout))
                             {
-                                var answer = deserializer.Deserialize(r);
+                                var answer = deserializer.Deserialize(r.AsReadOnlySpan());
                                 if (answer == null
                                     || !cmd.IsMyAnswer(answer)
                                     || !answer.IsPasswordAccepted)
@@ -151,8 +151,8 @@ namespace Lytec.Protocol
             if (!ret)
                 return false;
             Configs = new AllConfigs(
-                bytes.Take(LEDConfig.SizeConst).ToStruct<LEDConfig>(),
-                bytes.Skip(LEDConfig.SizeConst).ToStruct<NetConfig>()
+                bytes.AsSpan()[..LEDConfig.SizeConst].ToStruct<LEDConfig>(),
+                bytes.AsSpan()[LEDConfig.SizeConst..].ToStruct<NetConfig>()
                 );
             return true;
         }

@@ -5,11 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis" PrivateAssets="all" />
     <ProjectReference Include="..\Common\Lytec.Common.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.IO.Ports" />
-  </ItemGroup>
-
 </Project>

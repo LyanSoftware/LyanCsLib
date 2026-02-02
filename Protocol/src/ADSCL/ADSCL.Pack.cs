@@ -102,7 +102,7 @@ namespace Lytec.Protocol
                 return buf.ToArray();
             }
 
-            public class Deserializer : IDeserializer<TImpl>, ISequenceDeserializer<TImpl>
+            public class Deserializer : ISequenceVLDeserializer<TImpl>
             {
                 public static readonly Deserializer Default = new Deserializer();
 
@@ -232,17 +232,18 @@ namespace Lytec.Protocol
                             RecvTimeoutTimer?.Stop();
                             p = new TImpl();
                             var offset = 0;
-                            p.Identifier = Cache.Take(Cache[offset] == RecvIdentifier[offset] ? RecvIdentifier.Length : SendIdentifier.Length).ToArray();
+                            var span = new ReadOnlySpan<byte>(Cache.ToArray());
+                            p.Identifier = (span[offset] == RecvIdentifier[offset] ? RecvIdentifier : SendIdentifier).ToArray();
                             offset += p.Identifier.Length;
-                            p.AddrCode = Cache[offset++];
-                            p.PackIndex = Cache.ToStruct<ushort>(offset, DefaultEndian);
+                            p.AddrCode = span[offset++];
+                            p.PackIndex = span[offset..].ToStruct<ushort>(DefaultEndian);
                             offset += sizeof(ushort);
-                            p.Password = Cache.ToStruct<int>(offset, DefaultEndian);
+                            p.Password = span[offset..].ToStruct<int>(DefaultEndian);
                             offset += sizeof(int);
                             offset += sizeof(ushort); // DataLen
-                            p.Data = DataLen > 0 ? ((IFactory<IDeserializer<TData>>)new TData()).Create().Deserialize(Cache.Skip(offset).Take(DataLen)) : default;
+                            p.Data = DataLen > 0 ? ((IFactory<IDeserializer<TData>>)new TData()).Create().Deserialize(span[offset..DataLen]) : default;
                             offset += DataLen;
-                            p.CheckSum = Cache.ToStruct<ushort>(offset, Endian.Big);
+                            p.CheckSum = span[offset..].ToStruct<ushort>(Endian.Big);
                             Reset();
                             break;
                         default:
@@ -266,9 +267,22 @@ namespace Lytec.Protocol
                     }
                     return null;
                 }
+                public virtual TImpl? Deserialize(ReadOnlySpan<byte> d, out int DeserializedLength)
+                {
+                    Reset();
+                    DeserializedLength = 0;
+                    foreach (var b in d)
+                    {
+                        var p = Deserialize(b);
+                        DeserializedLength++;
+                        if (p != null)
+                            return p;
+                    }
+                    return null;
+                }
 
-                public virtual TImpl? Deserialize(IEnumerable<byte> b)
-                => Deserialize(b, out _);
+                public virtual TImpl? Deserialize(IEnumerable<byte> data)
+                => Deserialize(data, out _);
 
                 public TImpl? Deserialize(byte data, out bool ok)
                 {
@@ -283,6 +297,16 @@ namespace Lytec.Protocol
                     ok = p != null;
                     return p;
                 }
+
+                public TImpl? Deserialize(ReadOnlySpan<byte> data)
+                => Deserialize(data, out _);
+
+                public TImpl? Deserialize(ReadOnlySpan<byte> data, out int DeserializedLength, out bool ok)
+                {
+                    var p = Deserialize(data, out DeserializedLength);
+                    ok = p != null;
+                    return p;
+                }
             }
 
             public static Func<Deserializer> CreateDeserializer { get; set; } = () => new Deserializer();
@@ -291,6 +315,9 @@ namespace Lytec.Protocol
             public static TImpl? Deserialize(IEnumerable<byte> d, out int DeserializedLength) => CreateDeserializer().Deserialize(d, out DeserializedLength);
 
             IDeserializer<TImpl> IFactory<IDeserializer<TImpl>>.Create() => CreateDeserializer();
+#if NET6_0_OR_GREATER
+            static IDeserializer<TImpl> IFactory<IDeserializer<TImpl>>.CreateInstance() => CreateDeserializer();
+#endif
         }
 
         public class Pack : Pack<Pack, CommandPack>
@@ -348,12 +375,31 @@ namespace Lytec.Protocol
                         Arg3 = b.ToArray(),
                     };
                 }
+
+                public CommandPack? Deserialize(ReadOnlySpan<byte> data)
+                {
+                    if (data.Length < 12)
+                        return null;
+                    var cmd = data[..4];
+                    var arg1 = data[4..4];
+                    var arg2 = data[8..4];
+                    return new CommandPack()
+                    {
+                        Command = cmd.ToStruct<int>(Endian.Little),
+                        Arg1 = arg1.ToStruct<int>(Endian.Little),
+                        Arg2 = arg2.ToStruct<int>(Endian.Little),
+                        Arg3 = data[12..].ToArray(),
+                    };
+                }
             }
             static readonly Deserializer _Deserializer = new Deserializer();
             IDeserializer<CommandPack> IFactory<IDeserializer<CommandPack>>.Create() => CreateDeserializer();
+#if NET6_0_OR_GREATER
+            static IDeserializer<TImpl> IFactory<IDeserializer<TImpl>>.CreateInstance() => CreateDeserializer();
+#endif
             public virtual IDeserializer<CommandPack> CreateDeserializer() => _Deserializer;
 
-            public CommandPack? Deserialize(byte[] bytes) => CreateDeserializer().Deserialize(bytes);
+            public CommandPack? Deserialize(byte[] bytes) => CreateDeserializer().Deserialize(bytes.AsReadOnlySpan());
 
             public virtual CommandPack Clone() => new CommandPack(Command, Arg1, Arg2, Arg3?.ToArray());
 

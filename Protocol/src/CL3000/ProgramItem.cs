@@ -6,7 +6,7 @@ namespace Lytec.Protocol.CL3000;
 
 [Serializable]
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-[LittleEndian]
+[Endian(Endian.Little)]
 public struct ClockType
 {
     public byte Second;
@@ -21,7 +21,7 @@ public struct ClockType
 
 [Serializable]
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-[LittleEndian]
+[Endian(Endian.Little)]
 public class PicFileHdr
 {
     public byte Type;          //Picture file type 0-single color 1-double color
@@ -84,7 +84,7 @@ public enum Weekday
 /// </summary>
 [Serializable]
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-[LittleEndian]
+[Endian(Endian.Little)]
 public struct ProgramSchedule
 {
     /// <summary>
@@ -157,7 +157,7 @@ public struct ProgramSchedule
 /// </summary>
 [Serializable]
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-[LittleEndian]
+[Endian(Endian.Little)]
 public struct ProgramItem
 {
     /// <summary>

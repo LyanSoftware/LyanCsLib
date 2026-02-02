@@ -303,8 +303,8 @@ public static partial class WinFormUtils
     public static object UIAction<T>(this T control, Action action, bool lazy = false) where T : Control
     => lazy ? control.BeginInvoke(action) : control.Invoke((Delegate)action);
 
-    public static TResult Invoke<T, TResult>(this T control, Func<TResult> action) where T : Control
-    => (TResult)control.Invoke(action);
+    public static T Invoke<T>(this Control control, Func<T> action)
+    => (T)control.Invoke(action);
 
     protected class AsyncResult : IAsyncResult
     {

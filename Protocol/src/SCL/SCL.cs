@@ -52,16 +52,9 @@ public static partial class SCL
     static SCL()
     {
         var encs =
-#if NET6_0_OR_GREATER || !(NET || NETCOREAPP)
             Encoding.GetEncodings()
             .Select(i => (i.CodePage, Encoding: Encoding.GetEncoding(i.CodePage)))
             .OrderBy(i => i.CodePage)
-#else
-                Enumerable.Range(0, ushort.MaxValue)
-                .Select(cp => (CodePage: cp, Encoding: CodePagesEncodingProvider.Instance.GetEncoding(cp)))
-                .Where(v => v.Encoding != null)
-                .Select(i => (i.CodePage, i.Encoding))
-#endif
             .Where(i => i.Encoding.IsSingleByte || i.Encoding.GetType().Name.ToUpper().Contains("DBCS"))
             .ToDictionary(i => i.CodePage, i => i.Encoding);
         var enc = Encoding.Default;

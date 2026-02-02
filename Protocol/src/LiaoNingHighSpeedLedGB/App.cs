@@ -23,9 +23,7 @@ namespace Lytec.Protocol.LiaoNingHighSpeedLedGB;
 
 public class Result<T> : JsonResult
 {
-#if NET
     [MemberNotNullWhen(true, nameof(Value))]
-#endif
     public bool Ok { get; set; } = false;
     public T? Value { get; set; }
     public Result(JsonResult result) : base(result) { }
@@ -34,6 +32,12 @@ public class Result<T> : JsonResult
         Ok = true;
         Value = value;
     }
+    public static Result<T> CreateErrorResult(JsonResult result, T? value = default)
+    => new Result<T>(result)
+    {
+        Ok = false,
+        Value = value,
+    };
 }
 
 public class App
@@ -219,7 +223,7 @@ public class App
 
     public Result<T> Ok<T>(JsonResult result, T value) => new(result, value);
     public Result<T> Ok<T>(T value) => new(OkResult, value);
-    public Result<T> Error<T>(JsonResult result, T value) => new(result, value) { Ok = false };
+    public Result<T> Error<T>(JsonResult result, T? value) => Result<T>.CreateErrorResult(result, value);
     public Result<T> Error<T>(JsonResult result) => new(result);
 
     public async Task<Result<T>> Request<T>(string url, bool usePost, IJsonData? parameters, Func<JsonResult, T> procAnswer)

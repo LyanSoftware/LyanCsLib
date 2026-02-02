@@ -148,12 +148,11 @@ public static partial class SCL
     public static bool GetSpStruct<T>(ISendAndGetAnswerConfig config, bool isSerialPort, SpStructIndex index, [NotNullWhen(true)] out T? Data, string? password = null)
     {
         Data = default;
-        var t = typeof(T).GenericTypeArguments[0];
-        if (!GetSpStructData(config, isSerialPort, index, out var data, Marshal.SizeOf(t), password))
+        if (!GetSpStructData(config, isSerialPort, index, out var data, typeof(T).GetStructSize(), password))
             return false;
         try
         {
-            Data = (T)data.ToStruct(t);
+            Data = data.ToStruct<T>();
             return true;
         }
         catch (Exception)

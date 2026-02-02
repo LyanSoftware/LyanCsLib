@@ -286,7 +286,7 @@ namespace Lytec.Protocol.LiaoNingHighSpeedLedGB
 
         record BadPixelList(IReadOnlyList<(int X, int Y, int Color)> List, int Count, string Time);
 
-        public async Task<Result<PixelErrorData?>> getBadPixels()
+        public async Task<Result<PixelErrorData>> getBadPixels()
         {
             var sz = await queryResolution();
             if (!sz.Ok || sz.Value == null)
