@@ -186,7 +186,7 @@ namespace Lytec.Common.Data
             {
                 p = Marshal.AllocHGlobal(size);
                 var buf = new byte[size];
-                bytes.CopyTo(buf);
+                bytes[..size].CopyTo(buf);
                 Marshal.Copy(buf.FixEndian(type, defaultEndian), 0, p, buf.Length);
                 t = Marshal.PtrToStructure(p, type)!;
             }

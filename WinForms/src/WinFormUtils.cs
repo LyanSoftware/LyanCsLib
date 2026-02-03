@@ -452,4 +452,10 @@ public static partial class WinFormUtils
 
     public static void SetTextMode(this RichTextBox box, RichTextMode mode)
     => PInvoke.SendMessage(new(box.Handle), PInvoke.EM_SETTEXTMODE, (uint)mode, IntPtr.Zero);
+
+    public static void SetOrSkipSameText(this Control ctrl, string text)
+    {
+        if (ctrl.Text != text)
+            ctrl.Text = text;
+    }
 }
