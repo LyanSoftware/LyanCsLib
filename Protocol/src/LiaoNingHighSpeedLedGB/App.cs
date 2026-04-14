@@ -86,6 +86,7 @@ public class App
     public JsonResult NotConnectedError => new JsonResult(10004, i18n("未连接到设备"), new JsonObj());
     public JsonResult UnauthorizedError => new JsonResult(10004, i18n("未登录"), new JsonObj());
     public JsonResult RequestError => new JsonResult(10004, i18n("请求出错"), new JsonObj());
+    public JsonResult RequestTimeoutError => new JsonResult(10004, i18n("请求超时"), new JsonObj());
 
     public HttpClient? Client { get; protected set; }
     public bool IsConnected => Client != null;
@@ -155,7 +156,8 @@ public class App
                 }
                 msg += $"\r\n{err}";
                 Logger.LogError(err, msg);
-
+                if (err is TimeoutException)
+                    return RequestTimeoutError;
             }
             return RequestError;
         }
@@ -513,7 +515,7 @@ public class App
         LogAction();
         return Request("/api/led/uploadPlaylist", true, new JsonObj(("data", playlist.Serialize())), _ => true);
     }
-    
+
     public Task<Result<bool>> uploadPlaylist(IJsonData playlist)
     {
         LogAction();
