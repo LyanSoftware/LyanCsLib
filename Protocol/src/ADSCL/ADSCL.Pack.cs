@@ -315,7 +315,7 @@ namespace Lytec.Protocol
             public static TImpl? Deserialize(IEnumerable<byte> d, out int DeserializedLength) => CreateDeserializer().Deserialize(d, out DeserializedLength);
 
             IDeserializer<TImpl> IFactory<IDeserializer<TImpl>>.Create() => CreateDeserializer();
-#if NET6_0_OR_GREATER
+#if NET7_0_OR_GREATER
             static IDeserializer<TImpl> IFactory<IDeserializer<TImpl>>.CreateInstance() => CreateDeserializer();
 #endif
         }
@@ -394,8 +394,8 @@ namespace Lytec.Protocol
             }
             static readonly Deserializer _Deserializer = new Deserializer();
             IDeserializer<CommandPack> IFactory<IDeserializer<CommandPack>>.Create() => CreateDeserializer();
-#if NET6_0_OR_GREATER
-            static IDeserializer<TImpl> IFactory<IDeserializer<TImpl>>.CreateInstance() => CreateDeserializer();
+#if NET7_0_OR_GREATER
+            static IDeserializer<CommandPack> IFactory<IDeserializer<CommandPack>>.CreateInstance() => new Deserializer();
 #endif
             public virtual IDeserializer<CommandPack> CreateDeserializer() => _Deserializer;
 

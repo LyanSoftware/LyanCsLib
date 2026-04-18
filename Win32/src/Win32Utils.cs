@@ -129,11 +129,9 @@ public static partial class Win32Utils
     /// <returns></returns>
     public static bool IsRunningAsAdministrator()
     {
-        using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
-        {
-            WindowsPrincipal principal = new WindowsPrincipal(identity);
-            return principal.IsInRole(WindowsBuiltInRole.Administrator);
-        }
+        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        WindowsPrincipal principal = new WindowsPrincipal(identity);
+        return principal.IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     /// <summary>
@@ -167,7 +165,9 @@ public static partial class Win32Utils
                 info.Verb = "runas";
                 info.UseShellExecute = true;
             }
-            var process = System.Diagnostics.Process.Start(info);
+            var process = (System.Diagnostics.Process?)System.Diagnostics.Process.Start(info);
+            if (process == null)
+                return false;
             if (!process.WaitForExit(timeout))
             {
                 process.Kill();
@@ -209,7 +209,7 @@ public static partial class Win32Utils
         return TryGetFullPathByProbingExtensions(command);
     }
 
-    private static string[] LoadExecutableExtensions() => Environment.GetEnvironmentVariable("PATHEXT").Split(';');
+    private static string[] LoadExecutableExtensions() => Environment.GetEnvironmentVariable("PATHEXT")?.Split(';') ?? Array.Empty<string>();
 
     private static Dictionary<string, string> LoadAppPaths()
     {

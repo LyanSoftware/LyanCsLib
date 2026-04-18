@@ -784,13 +784,13 @@ public static partial class SCL
         {
             if (GetRouteData1stPart(config, isSerialPort, out var routeBytes, password))
                 return false;
-            Array.Copy(routeBytes, route, routeBytes!.Length);
+            Array.Copy(routeBytes!, route, routeBytes!.Length);
         }
         if (parts.HasFlag(PowerDotCheckInfoParts.Route2ndPart))
         {
             if (GetRouteData2ndPart(config, isSerialPort, out var routeBytes, password))
                 return false;
-            Array.Copy(routeBytes, 0, route, 1024, routeBytes!.Length);
+            Array.Copy(routeBytes!, 0, route, 1024, routeBytes!.Length);
         }
         var rinfo = new RouteInfo(ledcfg, RouteData.Deserialize(route));
         byte[] faultDotsBytes = Array.Empty<byte>();
@@ -823,8 +823,7 @@ public static partial class SCL
             return false;
         int paddr;
         int maxsize;
-        var isHex = true;
-        var reboot = false;
+        bool isHex, reboot;
         switch (type)
         {
             case ProgramFileType.Play:

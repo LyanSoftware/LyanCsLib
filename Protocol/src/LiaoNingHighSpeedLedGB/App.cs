@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Mime;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lytec.Common;
@@ -95,7 +96,11 @@ public class App
         if (IsConnected)
             return true;
         ServicePointManager.SetTcpKeepAlive(keepAlive, 30000, 30000);
-        Client = new HttpClient(new WinHttpHandler())
+        HttpMessageHandler handler;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            handler = new WinHttpHandler();
+        else handler = new HttpClientHandler();
+        Client = new HttpClient(handler)
         {
             BaseAddress = new UriBuilder("http", addr, port).Uri,
             Timeout = TimeSpan.FromSeconds(10),
@@ -173,7 +178,7 @@ public class App
         if (url.IsNullOrEmpty())
         {
             Logger?.LogError(i18n("Url不能为空"));
-            throw new ArgumentException();
+            throw new ArgumentException(null, nameof(url));
         }
         if (!IsConnected || Client == null)
         {
@@ -187,7 +192,7 @@ public class App
         var req = new HttpRequestMessage
         {
             Method = usePost ? HttpMethod.Post : HttpMethod.Get,
-            RequestUri = new Uri(Client.BaseAddress, url),
+            RequestUri = new Uri(Client.BaseAddress ?? new(""), url),
             Content = content,
         };
         if (Logger != null)

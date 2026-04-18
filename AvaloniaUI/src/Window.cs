@@ -41,6 +41,9 @@ public static class Utils
         window.Icon = null;
         if (XPlat.CurrentPlatform == XPlat.Platform.Windows)
         {
+#if NET6_0_OR_GREATER
+#pragma warning disable CA1416 // 仅在Windows上可用
+#endif
             var phandle = window.TryGetPlatformHandle();
             var handle = phandle?.Handle ?? IntPtr.Zero;
             if (handle == IntPtr.Zero)
@@ -49,6 +52,9 @@ public static class Utils
             var style = Win32PI.GetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE);
             Win32PI.SetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE, style | (int)WINDOW_EX_STYLE.WS_EX_DLGMODALFRAME);
             Win32PI.SendMessage(hwnd, Win32PI.WM_SETICON, 0, 0);
+#if NET6_0_OR_GREATER
+#pragma warning restore CA1416 // 仅在Windows上可用
+#endif
         }
     }
 

@@ -31,11 +31,21 @@ namespace Lytec.SerialPort
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 return System.IO.Ports.SerialPort.GetPortNames().Select(n => new SerialPortInfo(n)).ToList();
+#if NET6_0_OR_GREATER
+#pragma warning disable CA1416 // 仅在Windows上可用
+#endif
             using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_PnPEntity WHERE Caption like '%(COM%'");
             var names = System.IO.Ports.SerialPort.GetPortNames().ToDictionary(n => n);
+#if NET6_0_OR_GREATER
+#pragma warning disable CA1507 // 使用nameof代替字符串
+#endif
             var captions = searcher.Get().Cast<ManagementBaseObject>().Select(p => p["Caption"].ToString()).ToList();
+#if NET6_0_OR_GREATER
+#pragma warning restore CA1507 // 使用nameof代替字符串
+#endif
             return captions
-                .Select(c => Win32SerialPortNameRegex.Match(c))
+                .Where(c => c != null)
+                .Select(c => Win32SerialPortNameRegex.Match(c!))
                 .Where(m => m.Success)
                 .Select(m => new
                 {
@@ -49,6 +59,9 @@ namespace Lytec.SerialPort
                 .ToList()
                 .OrderBy(i => Convert.ToInt32(i.Name.Replace("COM", "")))
                 .ToList();
+#if NET6_0_OR_GREATER
+#pragma warning restore CA1416 // 仅在Windows上可用
+#endif
         }
     }
 
