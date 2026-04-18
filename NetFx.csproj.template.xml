@@ -1,13 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <TargetFramework>net472</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>latest</LangVersion>
+    <!-- 保留生成的代码文件 -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 
+    <ApplicationIcon>lyan.ico</ApplicationIcon>
+    <AssemblyName>Project1</AssemblyName>
+    <Title>Project1</Title>
     <Authors>K</Authors>
     <Company>Lytec</Company>
     <Copyright>Copyright (C) Lytec 2003-2026</Copyright>
+    <Version>0.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +22,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>compile; runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
   <ItemGroup>
