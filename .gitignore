@@ -12,3 +12,6 @@
 # VSCode
 .vscode/*
 !.vscode/*.shared.json
+
+# MSBuild (.NET SDK)
+msbuild.binlog
