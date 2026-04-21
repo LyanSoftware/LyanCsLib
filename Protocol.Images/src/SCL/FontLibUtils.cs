@@ -283,7 +283,8 @@ public static class FontLibUtils
                 Size = info.FontSize,
                 Subpixel = info.Antialias,
                 Edging = info.Antialias ? SKFontEdging.SubpixelAntialias : SKFontEdging.Alias,
-                Hinting = info.Antialias ? SKFontHinting.Full : SKFontHinting.None,
+                Hinting = SKFontHinting.Full,
+                EmbeddedBitmaps = true,
             };
             var paint = new SKPaint()
             {
