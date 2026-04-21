@@ -15,8 +15,10 @@ namespace Lytec.Image
 
         public bool UseFontFile { get; set; }
 
-        /// <summary> 字库字符尺寸（高度，像素） </summary>
-        public int Size { get; set; }
+        /// <summary> 字库字符宽度（像素） </summary>
+        public int Width { get; set; }
+        /// <summary> 字库字符高度（像素） </summary>
+        public int Height { get; set; }
 
         /// <summary> 基于字体字号（像素） </summary>
         public int FontSize { get; set; }

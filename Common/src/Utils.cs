@@ -129,9 +129,9 @@ namespace Lytec.Common
             if (str.IsNullOrWhiteSpace())
                 throw new FormatException();
             if (str.StartsWith("0x", true, null))
-                return Convert.ToUInt64(str.Substring(2), 16);
+                return Convert.ToUInt64(str[2..], 16);
             if (str.StartsWith("0b", true, null))
-                return Convert.ToUInt64(str.Substring(2), 2);
+                return Convert.ToUInt64(str[2..], 2);
             return decimal.Parse(str);
         }
 

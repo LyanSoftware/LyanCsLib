@@ -6,9 +6,9 @@ using SysEncoding = System.Text.Encoding;
 
 namespace Lytec.Common.Text.Encoding
 {
-    public static class VietnameseEncodingProvider
+    public class VietnameseEncodingProvider : CustomSBCSEncodingProvider
     {
-        public static readonly ushort[] VSCIITable = new ushort[]
+        public static readonly int[] VSCIITable = new int[]
         {
             0x0000, 0x00DA, 0x1EE4, 0x0003, 0x1EEA, 0x1EEC, 0x1EEE, 0x0007, 0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
             0x0010, 0x1EE8, 0x1EF0, 0x1EF2, 0x1EF6, 0x1EF8, 0x00DD, 0x1EF4, 0x0018, 0x0019, 0x001A, 0x001B, 0x001C, 0x001D, 0x001E, 0x001F,
@@ -28,7 +28,7 @@ namespace Lytec.Common.Text.Encoding
             0x1ED6, 0x1EE7, 0x0169, 0x00FA, 0x1EE5, 0x1EEB, 0x1EED, 0x1EEF, 0x1EE9, 0x1EF1, 0x1EF3, 0x1EF7, 0x1EF9, 0x00FD, 0x1EF5, 0x1ED0,
         };
 
-        public static readonly ushort[] VISCIITable = new ushort[]
+        public static readonly int[] VISCIITable = new int[]
         {
             0x0000, 0x0001, 0x1EB2, 0x0003, 0x0004, 0x1EB4, 0x1EAA, 0x0007, 0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
             0x0010, 0x0011, 0x0012, 0x0013, 0x1EF6, 0x0015, 0x0016, 0x0017, 0x0018, 0x1EF8, 0x001A, 0x001B, 0x001C, 0x001D, 0x1EF4, 0x001F,
@@ -49,7 +49,7 @@ namespace Lytec.Common.Text.Encoding
         };
 
         // 0x00, 0x0A, 0x0D, 0x1B, 0x3F, 0x60这几个码位有特殊作用, 最好保持原样
-        public static readonly ushort[] CustomTable = new ushort[]
+        public static readonly int[] CustomTable = new int[]
         {
             // Part 1, 120 chars
             0x0000, 0x0110, 0x0111, 0x0102, 0x0103, 0x00C2, 0x00E2, 0x00CA,
@@ -83,101 +83,40 @@ namespace Lytec.Common.Text.Encoding
             0x0060,
         };
 
-        public static readonly ushort[] CustomTablePart1 = CustomTable.Take(120).Concat(Enumerable.Repeat<ushort>(0, 256)).Take(256).ToArray();
-        public static readonly ushort[] CustomTablePart2 = CustomTable.Skip(120).Concat(Enumerable.Repeat<ushort>(0, 256)).Take(256).ToArray();
+        public static readonly int[] CustomTablePart1 = CustomTable.Take(120).Concat(Enumerable.Repeat<int>(0, 256)).Take(256).ToArray();
+        public static readonly int[] CustomTablePart2 = CustomTable.Skip(120).Concat(Enumerable.Repeat<int>(0, 256)).Take(256).ToArray();
 
         public static readonly SysEncoding VSCII = new SBCSVSCIIEncoding();
         public static readonly SysEncoding VISCII = new SBCSVISCIIEncoding();
         public static readonly SysEncoding CustomPart1 = new SBCSCustomPart1Encoding();
         public static readonly SysEncoding CustomPart2 = new SBCSCustomPart2Encoding();
 
-        protected abstract class Encoding : SysEncoding
-        {
-            protected abstract ushort[] GetTable();
-            public char[] TableData { get; }
-            public Dictionary<char, byte> Table { get; }
-
-            protected abstract string GenericName { get; }
-
-            public override string BodyName => GenericName;
-            public override string HeaderName => GenericName;
-            public override string WebName => GenericName;
-            public override string EncodingName => GenericName;
-
-            public override int CodePage => -1;
-
-            public Encoding()
-            {
-                TableData = GetTable().Select(c => (char)c).ToArray();
-                Table = Enumerable.Range(0, 0x100)
-                    .Select(d => (byte)d)
-                    .Where(d => TableData[d] != 0)
-                    .ToDictionary(d => TableData[d], d => d);
-            }
-
-            public override int GetByteCount(char[] chars, int index, int count)
-            => chars.Skip(index)
-                .Take(count)
-                .Count();
-
-            public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
-            {
-                var count = 0;
-                foreach (var c in chars.Skip(charIndex).Take(charCount))
-                {
-                    bytes[byteIndex + count] = Table.ContainsKey(c) ? Table[c] : (byte)'?';
-                    count++;
-                }
-                return count;
-            }
-
-            public override int GetCharCount(byte[] bytes, int index, int count)
-            => bytes.Skip(index)
-                .Take(count)
-                .Count();
-
-            public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex)
-            {
-                var count = 0;
-                foreach (var c in bytes.Skip(byteIndex).Take(byteCount))
-                {
-                    chars[charIndex + count] = TableData[c];
-                    count++;
-                }
-                return count;
-            }
-
-            public override int GetMaxByteCount(int charCount) => 1;
-
-            public override int GetMaxCharCount(int byteCount) => 1;
-        }
-
-        private class SBCSVSCIIEncoding : Encoding
+        private class SBCSVSCIIEncoding : CustomSBCSEncoding<SBCSVSCIIEncoding>
         {
             protected override string GenericName => "x-viet-tcvn5712";
             public override string EncodingName => "Vietnamese (VSCII)";
-            protected override ushort[] GetTable() => VSCIITable;
+            protected override int[] GetTable() => VSCIITable;
         }
 
-        private class SBCSVISCIIEncoding : Encoding
+        private class SBCSVISCIIEncoding : CustomSBCSEncoding<SBCSVISCIIEncoding>
         {
             protected override string GenericName => "viscii";
             public override string EncodingName => "Vietnamese (VISCII)";
-            protected override ushort[] GetTable() => VISCIITable;
+            protected override int[] GetTable() => VISCIITable;
         }
 
-        private class SBCSCustomPart1Encoding : Encoding
+        private class SBCSCustomPart1Encoding : CustomSBCSEncoding<SBCSCustomPart1Encoding>
         {
             protected override string GenericName => "x-viet-custom-part-1";
             public override string EncodingName => "Vietnamese (Custom Part 1)";
-            protected override ushort[] GetTable() => CustomTablePart1;
+            protected override int[] GetTable() => CustomTablePart1;
         }
 
-        private class SBCSCustomPart2Encoding : Encoding
+        private class SBCSCustomPart2Encoding : CustomSBCSEncoding<SBCSCustomPart2Encoding>
         {
             protected override string GenericName => "x-viet-custom-part-2";
             public override string EncodingName => "Vietnamese (Custom Part 2)";
-            protected override ushort[] GetTable() => CustomTablePart2;
+            protected override int[] GetTable() => CustomTablePart2;
         }
     }
 }

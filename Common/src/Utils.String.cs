@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using Lytec.Common.Data;
 
 namespace Lytec.Common
 {
@@ -51,5 +53,7 @@ namespace Lytec.Common
             return data.ToArray();
         }
 
+        public static int[] ToUtf32CharArray(this string str)
+        => Encoding.UTF32.GetBytes(str).ToStruct<int[]>();
     }
 }
