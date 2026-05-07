@@ -1,5 +1,7 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -11,7 +13,7 @@ namespace Lytec.Common.Data
 {
     public static partial class StructHelper
     {
-        public static IDictionary<Type, int> SizeCaches { get; set; } = new Dictionary<Type, int>();
+        public static IDictionary<Type, int> SizeCaches { get; set; } = new ConcurrentDictionary<Type, int>();
 
         public static class SizeCache<T>
         {
@@ -58,29 +60,82 @@ namespace Lytec.Common.Data
         [return: NotNull]
         public static byte[] ToBytes(this object t, Type type, Endian? defaultEndian = null)
         {
+            int TryWriteSimpleBytes(Span<byte> buf, object v)
+            {
+                var len = 0;
+                switch (v)
+                {
+                    case byte u8:
+                        buf[0] = u8;
+                        len = 1;
+                        break;
+                    case sbyte i8:
+                        buf[0] = (byte)i8;
+                        len = 1;
+                        break;
+                    case ushort u16:
+                        MemoryMarshal.Write(buf, ref u16);
+                        len = 2;
+                        break;
+                    case short i16:
+                        MemoryMarshal.Write(buf, ref i16);
+                        len = 2;
+                        break;
+                    case uint u32:
+                        MemoryMarshal.Write(buf, ref u32);
+                        len = 4;
+                        break;
+                    case int i32:
+                        MemoryMarshal.Write(buf, ref i32);
+                        len = 4;
+                        break;
+                    case ulong u64:
+                        MemoryMarshal.Write(buf, ref u64);
+                        len = 8;
+                        break;
+                    case long i64:
+                        MemoryMarshal.Write(buf, ref i64);
+                        len = 8;
+                        break;
+                }
+                if (len > 1 && (defaultEndian ?? EndianUtils.LocalEndian) != EndianUtils.LocalEndian)
+                    buf.Reverse();
+                return len;
+            }
+
             switch (t)
             {
                 case IPAddress ip:
                     return ip.GetAddressBytes();
+                case Array arr:
+                    {
+                        var et = type.GetElementType();
+                        var count = arr.Length;
+                        var buf = new List<byte[]>();
+                        for (var i = 0; i < count; i++)
+                            buf.Add(ToBytes(arr.GetValue(i), et, defaultEndian));
+                        var buf2 = new byte[buf.Sum(v => v.Length)];
+                        for (int i = 0, off = 0; i < buf.Count; i++, off += buf[i].Length)
+                            Array.Copy(buf[i], 0, buf2, off, buf[i].Length);
+                        return buf2;
+                    }
                 case IEnumerable objs:
                     return (from object o in objs
                             from b in o.ToBytes(o.GetType())
                             select b).ToArray();
             }
-            object to = t;
             if (type.IsEnum)
-            {
-                type = type.GetEnumUnderlyingType();
-                to = Convert.ChangeType(t, type);
-            }
+                t = Convert.ChangeType(t, type.GetEnumUnderlyingType());
             int size = type.GetStructSize();
             var bytes = new byte[size];
+            if (TryWriteSimpleBytes(bytes, t) > 0)
+                return bytes;
 
             IntPtr p = default;
             try
             {
                 p = Marshal.AllocHGlobal(bytes.Length);
-                Marshal.StructureToPtr(to, p, false);
+                Marshal.StructureToPtr(t, p, false);
                 Marshal.Copy(p, bytes, 0, bytes.Length);
             }
             finally
@@ -88,6 +143,8 @@ namespace Lytec.Common.Data
                 if (p != default)
                     Marshal.FreeHGlobal(p);
             }
+            if (size == 1)
+                return bytes;
             return bytes.FixEndian(type, defaultEndian);
         }
 
