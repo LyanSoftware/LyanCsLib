@@ -293,6 +293,8 @@ public static class FontLibUtils
                 TextSize = font.Size,
                 Color = fgc,
                 FilterQuality = info.Antialias ? SKFilterQuality.High : SKFilterQuality.None,
+                Style = info.StrokeWidth > 0 ? SKPaintStyle.StrokeAndFill : SKPaintStyle.Fill,
+                StrokeWidth = info.StrokeWidth,
             };
             var recommendedLineHeight = paint.GetFontMetrics(out var fm);
             var baseline = -fm.Ascent;

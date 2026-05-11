@@ -27,6 +27,8 @@ namespace Lytec.Image
 
         public SKFontStyleSlant Slant { get; set; } = SKFontStyleSlant.Upright;
 
+        public float StrokeWidth { get; set; } = 0;
+
         public FontOptions Options { get; set; } = FontOptions.None;
 
         public bool Underline => Options.HasFlag(FontOptions.Underline);
