@@ -113,7 +113,11 @@ namespace Lytec.Common.Data
                         var count = arr.Length;
                         var buf = new List<byte[]>();
                         for (var i = 0; i < count; i++)
-                            buf.Add(ToBytes(arr.GetValue(i), et, defaultEndian));
+                        {
+                            var el = arr.GetValue(i);
+                            if (el != null)
+                                buf.Add(ToBytes(el, et!, defaultEndian));
+                        }
                         var buf2 = new byte[buf.Sum(v => v.Length)];
                         for (int i = 0, off = 0; i < buf.Count; i++, off += buf[i].Length)
                             Array.Copy(buf[i], 0, buf2, off, buf[i].Length);

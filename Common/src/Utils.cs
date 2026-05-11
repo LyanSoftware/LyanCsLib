@@ -409,7 +409,7 @@ namespace Lytec.Common
 
         public static void Clear<T>(this ConcurrentQueue<T> queue)
         {
-            while (queue.Count > 0)
+            while (queue.IsEmpty)
                 queue.TryDequeue(out _);
         }
 
@@ -463,7 +463,7 @@ namespace Lytec.Common
                 }
                 else current++;
             }
-            return current < end ? source.Substring(start, current - start) : "";
+            return current < end ? source[start..current] : "";
         }
 
         public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this IEnumerable<(TKey Key, TValue Value)> origin) where TKey : notnull
