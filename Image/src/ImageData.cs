@@ -21,7 +21,7 @@ namespace Lytec.Image
         public IEnumerator<Color> GetEnumerator() => (IEnumerator<Color>)Pixels.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => Pixels.GetEnumerator();
 
-        protected virtual int GetPixelOffset(int x, int y) => x + y * Height;
+        protected virtual int GetPixelOffset(int x, int y) => x + y * Width;
 
         public Color this[Point point]
         {
