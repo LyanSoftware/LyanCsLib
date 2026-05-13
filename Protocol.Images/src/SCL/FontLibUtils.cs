@@ -472,27 +472,30 @@ public static class FontLibUtils
         var filemaxblock = (int)Math.Floor(MaxFileSize / (float)(byte2Count * chrsize));
         return (int)Math.Ceiling(byte1Count / (float)filemaxblock);
     }
-    public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, Encoding encoding, byte byte1Start = 0xA0, byte byte1End = 0xFF, byte byte2Start = 0xA0, bool split = false, bool average = true)
+    public record ExportDBCSArgs(Encoding Encoding, byte Byte1Start = 0xA0, byte Byte1End = 0xFF, byte Byte2Start = 0xA0, bool Split = false, bool Average = true);
+    public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, Action<(int Current, int Total)>? progress)
+    => ExportDBCS(font, args, progress != null ? new Progress<(int, int)>(progress) : null);
+    public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, IProgress<(int Current, int Total)>? progress = null)
     {
         const byte byte2End = Byte2End;
-        var byte1Count = byte1End - byte1Start + 1;
-        var byte2Count = byte2End - byte2Start + 1;
+        var byte1Count = args.Byte1End - args.Byte1Start + 1;
+        var byte2Count = byte2End - args.Byte2Start + 1;
         var chrsize = font.GetSCLFormatBytesCountPerChar();
         var blocksize = byte2Count * chrsize;
-        var filemaxblock = split ? (int)Math.Floor(MaxFileSize / (float)blocksize) : byte1Count;
-        var filecount = split ? (int)Math.Ceiling(byte1Count / (float)filemaxblock) : 1;
-        if (split && average)
+        var filemaxblock = args.Split ? (int)Math.Floor(MaxFileSize / (float)blocksize) : byte1Count;
+        var filecount = args.Split ? (int)Math.Ceiling(byte1Count / (float)filemaxblock) : 1;
+        if (args.Split && args.Average)
             filemaxblock = (int)Math.Ceiling(byte1Count / (float)filecount);
 
-        for (int block = byte1Start; block <= byte1End; block += filemaxblock)
+        for (int block = args.Byte1Start; block <= args.Byte1End; block += filemaxblock)
         {
             var buff = new byte[filemaxblock * blocksize];
             var offset = 0;
             for (var b1 = block; b1 < (block + filemaxblock); b1++)
             {
-                for (int b2 = byte2Start; b2 <= byte2End; b2++)
+                for (int b2 = args.Byte2Start; b2 <= byte2End; b2++)
                 {
-                    var str = encoding.GetString(new byte[] { (byte)b1, (byte)b2 });
+                    var str = args.Encoding.GetString(new byte[] { (byte)b1, (byte)b2 });
                     var chr = str.GetUtf32Char();
                     if (chr != 0 && chr != Rune.ReplacementChar.Value)
                     {
@@ -501,15 +504,16 @@ public static class FontLibUtils
                     }
                     offset += chrsize;
                 }
+                progress?.Report((b1 - args.Byte1Start, byte1Count));
             }
             yield return new FontLib(
                 font,
-                encoding,
+                args.Encoding,
                 false,
                 font.Width,
                 font.Height,
-                (byte1End + 1 - block) * byte2Count,
-                new(encoding, (byte)block, byte1End, byte2Start, byte2End),
+                (args.Byte1End + 1 - block) * byte2Count,
+                new(args.Encoding, (byte)block, args.Byte1End, args.Byte2Start, byte2End),
                 buff);
         }
     }
