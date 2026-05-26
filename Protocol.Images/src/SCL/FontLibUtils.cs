@@ -475,7 +475,7 @@ public static class FontLibUtils
     public record ExportDBCSArgs(Encoding Encoding, byte Byte1Start = 0xA0, byte Byte1End = 0xFF, byte Byte2Start = 0xA0, bool Split = false, bool Average = true);
     public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, Action<(int Current, int Total)>? progress)
     => ExportDBCS(font, args, progress != null ? new Progress<(int, int)>(progress) : null);
-    public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, IProgress<(int Current, int Total)>? progress = null)
+    public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, IProgress<(int Current, int Total)>? progress = null, int maxThreads = -1)
     {
         const byte byte2End = Byte2End;
         var byte1Count = args.Byte1End - args.Byte1Start + 1;
@@ -487,25 +487,28 @@ public static class FontLibUtils
         if (args.Split && args.Average)
             filemaxblock = (int)Math.Ceiling(byte1Count / (float)filecount);
 
+        if (maxThreads <= 0)
+            maxThreads = Math.Max(Environment.ProcessorCount + maxThreads, 1);
         for (int block = args.Byte1Start; block <= args.Byte1End; block += filemaxblock)
         {
             var buff = new byte[filemaxblock * blocksize];
             var offset = 0;
             for (var b1 = block; b1 < (block + filemaxblock); b1++)
             {
-                for (int b2 = args.Byte2Start; b2 <= byte2End; b2++)
+                Parallel.For(args.Byte2Start, byte2End + 1, new ParallelOptions() { MaxDegreeOfParallelism = maxThreads }, b2 =>
                 {
                     var str = args.Encoding.GetString(new byte[] { (byte)b1, (byte)b2 });
                     var chr = str.GetUtf32Char();
                     if (chr != 0 && chr != Rune.ReplacementChar.Value)
                     {
                         using var bmp = font.GetCharImageWithString(str, b1 | (b2 << 8));
-                        ExportToSCLFormat_FillCharBitmap(bmp, buff, offset);
+                        ExportToSCLFormat_FillCharBitmap(bmp, buff, offset + (b2 - args.Byte2Start) * chrsize);
                     }
-                    offset += chrsize;
-                }
+                });
+                offset += byte2Count * chrsize;
                 progress?.Report((b1 - args.Byte1Start, byte1Count));
             }
+            progress?.Report((byte1Count, byte1Count));
             yield return new FontLib(
                 font,
                 args.Encoding,
