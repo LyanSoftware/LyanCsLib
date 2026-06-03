@@ -21,4 +21,13 @@
     <PackageReference Include="newbeeui" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!--Public AOT-->
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <StripSymbols>true</StripSymbols>
+    <!--<NoWarn>IL2057;IL2026;IL2104;IL3053</NoWarn>-->
+    <TrimMode>full</TrimMode>
+  </PropertyGroup>
+
 </Project>
