@@ -456,6 +456,17 @@ public class Records : ISerializable, IReadOnlyList<Record>
 
 public static class Utils
 {
+    public static void Save(this DataBlock src, string filename, int startAddress)
+    => new DataBlock[] { src }.Save(filename, startAddress);
+    
+    public static void Save(this DataBlock src, Stream stream, int startAddress)
+    => new DataBlock[] { src }.Save(stream, startAddress);
+    
+    public static void Save(this DataBlock src, string filename, IStartAddress? startAddress = null)
+    => new DataBlock[] { src }.Save(filename, startAddress);
+    
+    public static void Save(this DataBlock src, Stream stream, IStartAddress? startAddress = null)
+    => new DataBlock[] { src }.Save(stream, startAddress);
 
     public static void Save(this IEnumerable<DataBlock> src, string filename, int startAddress)
     => src.Save(filename, (IStartAddress)new StartLinearAddress(startAddress));
