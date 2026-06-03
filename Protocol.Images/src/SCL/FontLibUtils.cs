@@ -475,7 +475,7 @@ public static class FontLibUtils
     public record ExportDBCSArgs(Encoding Encoding, byte Byte1Start = 0xA0, byte Byte1End = 0xFF, byte Byte2Start = 0xA0, bool Split = false, bool Average = true);
     public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, Action<(int Current, int Total)>? progress)
     => ExportDBCS(font, args, progress != null ? new Progress<(int, int)>(progress) : null);
-    public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, IProgress<(int Current, int Total)>? progress = null, int maxThreads = -1)
+    public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, IProgress<(int Current, int Total)>? progress = null, int maxThreads = 1)
     {
         const byte byte2End = Byte2End;
         var byte1Count = args.Byte1End - args.Byte1Start + 1;
