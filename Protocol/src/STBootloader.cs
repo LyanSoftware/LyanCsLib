@@ -294,6 +294,8 @@ public class STBootloader
     }
 
     public const Parity Parity = System.IO.Ports.Parity.Even;
+    public const int DataBits = 8;
+    public const StopBits StopBits = System.IO.Ports.StopBits.One;
     public const int MinBaudrate = 9600;
     public const int RecommendedBaudrate = 38400;
     public const int MaxBaudrate = 115200;
