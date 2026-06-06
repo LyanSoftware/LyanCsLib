@@ -434,38 +434,6 @@ namespace Lytec.Common
             return true;
         }
 
-        public static string GetClosedSubstring(this string source, string startText, string endText, int start = 0, int end = -1)
-        {
-            if (start < 0)
-                start += source.Length;
-            if (end < 0)
-                end += source.Length + 1;
-            if (end < start)
-                (start, end) = (end, start);
-            else if (end == start)
-                return "";
-            while (!source.CompareTo(startText, start))
-                start++;
-            var current = start + startText.Length;
-            for (var sub = 0; current < end;)
-            {
-                if (source.CompareTo(startText, current))
-                {
-                    sub++;
-                    current += startText.Length;
-                }
-                else if (source.CompareTo(endText, current))
-                {
-                    sub--;
-                    current += endText.Length;
-                    if (sub < 0)
-                        break;
-                }
-                else current++;
-            }
-            return current < end ? source[start..current] : "";
-        }
-
         public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this IEnumerable<(TKey Key, TValue Value)> origin) where TKey : notnull
         => origin.ToDictionary(kv => kv.Key, kv => kv.Value);
 
