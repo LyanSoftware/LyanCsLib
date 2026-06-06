@@ -381,8 +381,8 @@ namespace Lytec.Protocol
                     if (data.Length < 12)
                         return null;
                     var cmd = data[..4];
-                    var arg1 = data[4..4];
-                    var arg2 = data[8..4];
+                    var arg1 = data.Slice(4, 4);
+                    var arg2 = data.Slice(8, 4);
                     return new CommandPack()
                     {
                         Command = cmd.ToStruct<int>(Endian.Little),
