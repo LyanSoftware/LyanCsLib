@@ -57,7 +57,7 @@ namespace Lytec.Common.Data
             if (isSimpleType(type))
             {
                 if (!UnsupportedTypes.ContainsKey(type) && typeEndian != LocalEndian)
-                    data[offset..(type.IsEnum ? type.GetEnumUnderlyingType() : type).GetStructSize()].Reverse();
+                    data.Slice(offset, (type.IsEnum ? type.GetEnumUnderlyingType() : type).GetStructSize()).Reverse();
             }
             else if (type.IsArray)
             {
@@ -70,7 +70,7 @@ namespace Lytec.Common.Data
                 {
                     var count = data.Length / es;
                     for (var i = 0; i < count; i++)
-                        proc(data[(offset + i * es)..es], et, endian);
+                        proc(data.Slice((offset + i * es), es), et, endian);
                 }
             }
             else
@@ -94,7 +94,7 @@ namespace Lytec.Common.Data
                         if (f.FieldType.IsEnum)
                         {
                             var t = Enum.GetUnderlyingType(f.FieldType);
-                            proc(data[fieldOffset..t.GetStructSize()], t, endian);
+                            proc(data.Slice(fieldOffset, t.GetStructSize()), t, endian);
                         }
                         else if (f.FieldType.IsArray)
                         {
@@ -106,12 +106,12 @@ namespace Lytec.Common.Data
                                     var es = et.GetStructSize();
                                     if (es > 1)
                                         for (var i = 0; i < marshalAs.SizeConst; i++)
-                                            proc(data[(fieldOffset + i * es)..es], et, endian);
+                                            proc(data.Slice((fieldOffset + i * es), es), et, endian);
                                 }
-                                else proc(data[fieldOffset..StructHelper.GetStructSize<IntPtr>()], typeof(IntPtr), endian);
+                                else proc(data.Slice(fieldOffset, StructHelper.GetStructSize<IntPtr>()), typeof(IntPtr), endian);
                             }
                         }
-                        else proc(data[fieldOffset..f.FieldType.GetStructSize()], f.FieldType, endian);
+                        else proc(data.Slice(fieldOffset, f.FieldType.GetStructSize()), f.FieldType, endian);
                     }
                 }
             }

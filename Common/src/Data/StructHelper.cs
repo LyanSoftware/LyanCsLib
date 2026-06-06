@@ -377,7 +377,7 @@ namespace Lytec.Common.Data
                 MemoryMarshal.Write(span[(i * elsize)..], ref data[i]);
             if (elsize > 1 && (endian ?? EndianUtils.LocalEndian) != EndianUtils.LocalEndian)
                 for (var offset = 0; offset < data.Length; offset += elsize)
-                    span[offset..elsize].Reverse();
+                    span.Slice(offset, elsize).Reverse();
             return buf;
         }
 
@@ -394,7 +394,7 @@ namespace Lytec.Common.Data
             {
                 for (var i = 0; i < buf.Length; i++)
                     buf[i] = needfix ? data[buf.Length - 1 - i + offset] : data[offset + i];
-                list.Add(MemoryMarshal.Read<T>(data[offset..elsize]));
+                list.Add(MemoryMarshal.Read<T>(data.Slice(offset, elsize)));
             }
             return list.ToArray();
         }
