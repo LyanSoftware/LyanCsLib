@@ -91,15 +91,23 @@ namespace Lytec.Protocol
                             Thread.Sleep(20);
                             if (conf.TryGetAnswer(out var r, extTimeout))
                             {
-                                var answer = deserializer.Deserialize(r.AsReadOnlySpan());
-                                if (answer == null
-                                    || !cmd.IsMyAnswer(answer)
-                                    || !answer.IsPasswordAccepted)
-                                    continue;
-                                Answer = answer;
-                                if (CheckIsSuccess == null)
-                                    CheckIsSuccess = p => p.Data != null && p.Data.Arg2 != FalseValue;
-                                return Answer != null && CheckIsSuccess(Answer);
+                                foreach (var b in r)
+                                {
+                                    var answer = deserializer.Deserialize(b);
+                                    if (answer == null)
+                                        continue;
+                                    if (!cmd.IsMyAnswer(answer))
+                                    {
+                                        deserializer.Reset();
+                                        continue;
+                                    }
+                                    if (!answer.IsPasswordAccepted)
+                                        return false;
+                                    if (CheckIsSuccess == null)
+                                        CheckIsSuccess = p => p.Data != null && p.Data.Arg2 != FalseValue;
+                                    Answer = answer;
+                                    return CheckIsSuccess(answer);
+                                }
                             }
                         }
                     }

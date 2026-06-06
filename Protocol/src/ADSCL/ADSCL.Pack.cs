@@ -211,8 +211,8 @@ namespace Lytec.Protocol
                                     Cache.Add(d);
                                     RcvLen++;
                                     StepLen++;
-                                    if ((Cache[0] == RecvIdentifier[0] && StepLen >= RecvIdentifier.Length)
-                                        || StepLen >= SendIdentifier.Length)
+                                    if ((StepLen >= RecvIdentifier.Length && Cache.SequenceEqual(RecvIdentifier))
+                                        || (StepLen >= SendIdentifier.Length && Cache.SequenceEqual(SendIdentifier)))
                                         MoveStep(Step + 1);
                                 }
                                 break;
@@ -241,7 +241,7 @@ namespace Lytec.Protocol
                             p.Password = span[offset..].ToStruct<int>(DefaultEndian);
                             offset += sizeof(int);
                             offset += sizeof(ushort); // DataLen
-                            p.Data = DataLen > 0 ? ((IFactory<IDeserializer<TData>>)new TData()).Create().Deserialize(span[offset..DataLen]) : default;
+                            p.Data = DataLen > 0 ? ((IFactory<IDeserializer<TData>>)new TData()).Create().Deserialize(span.Slice(offset, DataLen)) : default;
                             offset += DataLen;
                             p.CheckSum = span[offset..].ToStruct<ushort>(Endian.Big);
                             Reset();
