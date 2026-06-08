@@ -193,7 +193,7 @@ public class Command
 
     public static bool ResetBrightFixTable(ISendAndGetAnswerConfig conf)
     {
-        return Erase(conf, BrightFixTableAddress, BrightFixTable.TableSize);
+        return Erase(conf, BrightFixTableAddress, BrightFixTable.TableSize.SizeAlignTo(FlashPageSize));
     }
 
     public static bool GetConfigs(ISendAndGetAnswerConfig conf, [NotNullWhen(true)] out string? Configs)
