@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LyanLib\Common.SourceGenerators\Lytec.Common.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\LyanLib\Common.Generators\Lytec.Common.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\LyanLib\Common\Lytec.Common.csproj" />
     <ProjectReference Include="..\LyanLib\NetStandard20Compatibility\Lytec.NetStandard20Compatibility.csproj" />
     <ProjectReference Include="..\LyanLib\NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />

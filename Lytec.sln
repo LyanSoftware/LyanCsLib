@@ -44,7 +44,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WinFormsTest", "WinFormsTes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.AnalyzerUtils", "AnalyzerUtils\Lytec.AnalyzerUtils.csproj", "{A772E000-FF2E-4742-956F-AC1EA5133E4E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Common.SourceGenerators", "Common.SourceGenerators\Lytec.Common.SourceGenerators.csproj", "{22612132-7659-42D1-B186-9295B8F3463F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Common.Generators", "Common.Generators\Lytec.Common.Generators.csproj", "{22612132-7659-42D1-B186-9295B8F3463F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
