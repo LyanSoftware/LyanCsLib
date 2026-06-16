@@ -57,7 +57,7 @@ public class AutoSerializeGenerator : ISourceGenerator
         if (endianAttrSymbol == null || objImplSymbol == null || objAttrSymbol == null || dataAttrSymbol == null)
             return;
 
-        Dictionary<INamedTypeSymbol, ObjData> types = new();
+        Dictionary<INamedTypeSymbol, ObjData> types = new(SymbolEqualityComparer.Default);
         foreach (var syntaxTree in context.Compilation.SyntaxTrees)
         {
             var model = context.Compilation.GetSemanticModel(syntaxTree);
