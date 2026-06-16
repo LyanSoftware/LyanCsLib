@@ -5,7 +5,7 @@ using System.Windows.Forms;
 
 namespace Lytec.WinForms
 {
-    public class Dialog : Form, IFormDialog
+    public class Dialog : LyForm, IFormDialog
     {
         public enum OnEscKeyDownAction
         {
