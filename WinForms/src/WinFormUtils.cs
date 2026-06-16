@@ -17,7 +17,7 @@ namespace Lytec.WinForms;
 
 public static partial class WinFormUtils
 {
-    private static Lazy<Icon?> _defaultFormIcon
+    private static readonly Lazy<Icon?> _defaultFormIcon
     = new(() => typeof(Form)
                     .GetProperty("DefaultIcon", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
                     .GetValue(null, null)
