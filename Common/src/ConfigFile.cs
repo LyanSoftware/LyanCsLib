@@ -138,7 +138,7 @@ namespace Lytec.Common
         public Func<bool, string> Serialize { get; set; }
 
         [JsonIgnore]
-        public static Func<string, TImpl?> Deserialize { get; set; } = data => JsonConvert.DeserializeObject<TImpl>(data);
+        public static Func<string, TImpl?> Deserialize { get; set; } = JsonConvert.DeserializeObject<TImpl>;
 
         public string SaveToMemory(bool indented = true) => Serialize(indented);
 
