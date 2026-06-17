@@ -5,6 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Nullable" />
+    <PackageReference Include="IsExternalInit" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Protocol\Lytec.Protocol.csproj" />
     <ProjectReference Include="..\Image\Lytec.Image.csproj" />
   </ItemGroup>
