@@ -6,6 +6,4 @@ namespace Lytec.Common.Data;
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
 public class AutoSerializeObjectAttribute : Attribute
 {
-    public const string DefaultSerializeMethodName = "Serialize";
-    public string? SerializeMethodName { get; set; } = DefaultSerializeMethodName;
 }
