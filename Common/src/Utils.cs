@@ -158,17 +158,19 @@ namespace Lytec.Common
         public static void ForceLoadBaseClass<T>() => typeof(T).BaseType?.ForceLoadClass();
         public static void ForceLoadBaseClass(this Type t) => t.BaseType?.ForceLoadClass();
 
-        public static IDictionary<Type, string> NestedClassNames { get; set; } = new Dictionary<Type, string>();
+        public static IDictionary<Type, string> NestedClassNames { get; set; } = new ConcurrentDictionary<Type, string>();
         public static string GetNestedClassName(this Type t)
         {
             if (!NestedClassNames.ContainsKey(t))
             {
+                var ot = t;
                 var names = new List<string>() { t.Name };
                 while (t.IsNested)
                 {
                     t = t.DeclaringType!;
                     names.Add(t.Name);
                 }
+                t = ot;
                 NestedClassNames[t] = names.AsEnumerable().Reverse().JoinToString(sep: ".");
             }
             return NestedClassNames[t];
