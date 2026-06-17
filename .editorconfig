@@ -1,4 +1,4 @@
-root = true                 # 本文件所在路径为项目根目录
+﻿root = true                 # 本文件所在路径为项目根目录
 
 [*]                         # 对于所有文件
 charset = utf-8             # 文件编码
@@ -33,3 +33,6 @@ dotnet_diagnostic.IDE0220.severity = none
 
 # IDE0066:将 switch 语句转换为表达式
 dotnet_diagnostic.IDE0066.severity = none
+
+# RS2008: 启用分析器发布跟踪
+dotnet_diagnostic.RS2008.severity = none
