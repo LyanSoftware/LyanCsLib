@@ -10,4 +10,6 @@ namespace Lytec.Analyzer;
 public static class SyntaxNodeUtils
 {
     public static bool IsPartialType(this SyntaxNode node) => node is TypeDeclarationSyntax td && td.Modifiers.Any(SyntaxKind.PartialKeyword);
+
+    public static bool IsStaticType(this SyntaxNode node) => node is TypeDeclarationSyntax td && td.Modifiers.Any(SyntaxKind.StaticKeyword);
 }

@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using Org.BouncyCastle.Crypto.Tls;
 
 namespace Lytec.Analyzer;
 
@@ -17,12 +16,30 @@ public static class SymbolUtils
 
     public static bool IsEqualsTo(this ISymbol? a, ISymbol? b) => SymbolEqualityComparer.Default.Equals(a, b);
 
-    public static string GetFullName(this INamedTypeSymbol symbol)
+    public static string GetFiltedMetadataName(this INamedTypeSymbol type)
+    => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+        .Replace("global::", "")
+        .Replace('<', '[')
+        .Replace('>', ']')
+        .Replace(" ", "");
+
+    public static string GetFullyQualifiedString(this ISymbol symbol) => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+    public static string GetFullName(this ISymbol symbol)
     {
         const string globalns = "global::";
-        var name = symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var name = symbol.GetFullyQualifiedString();
         return name.StartsWith(globalns) ? name[globalns.Length..] : name;
     }
+
+    public static bool HasAttr(this ISymbol symbol, string name) => symbol.GetAttributes().Any(a => a.AttributeClass?.GetFullName() == name);
+    public static bool HasAttr(this ISymbol symbol, Type type) => symbol.HasAttr(type.FullName);
+    public static bool HasAttr<T>(this ISymbol symbol) where T : Attribute => symbol.HasAttr(typeof(T));
+
+    public static bool HasAttr(this ISymbol symbol, string name, Compilation compilation)
+    => symbol.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, compilation.GetTypeByMetadataName(name)));
+    public static bool HasAttr(this ISymbol symbol, Type type, Compilation compilation) => symbol.HasAttr(type.FullName, compilation);
+    public static bool HasAttr<T>(this ISymbol symbol, Compilation compilation) where T : Attribute => symbol.HasAttr(typeof(T), compilation);
 
     public static bool IsSubtypeOf(this INamedTypeSymbol symbol, INamedTypeSymbol type)
     {
@@ -53,7 +70,7 @@ public static class SymbolUtils
         }
         return false;
     }
-    
+
     public static bool IsPrimitiveOrEnum(this ITypeSymbol symbol)
     {
         switch (symbol.SpecialType)
@@ -110,7 +127,7 @@ public static class SymbolUtils
             case SpecialType.System_Double:
                 return sizeof(double);
         }
-        return -1;
+        throw new NotSupportedException();
     }
 
     public static bool IsPointer(this ITypeSymbol symbol) => symbol.TypeKind == TypeKind.Pointer;
@@ -122,11 +139,15 @@ public static class SymbolUtils
         return symbol.TypeKind.ToString().ToLowerInvariant();
     }
 
-    public static bool HasNoArgsConstructor(this INamedTypeSymbol t, bool onlyPublic = false)
+    /// <summary>
+    /// 判断类型是否具有可访问的无参构造函数。
+    /// </summary>
+    /// <param name="type">要检查的类型符号</param>
+    /// <param name="minAccessibility">最低允许的访问级别，默认为 Public。
+    /// 如果为 NotApplicable，表示不限制访问性，只要存在无参构造即可。</param>
+    /// <returns>存在满足条件的无参构造返回 true，否则 false。</returns>
+    public static bool HasNoArgsConstructor(this INamedTypeSymbol t, Accessibility minAccessibility = Accessibility.Public)
     {
-        if (t.IsStruct())
-            return true;
-
         if (t.IsInterface() ||
             t.IsDelegate() ||
             t.IsEnum() ||
@@ -135,28 +156,64 @@ public static class SymbolUtils
             return false;
         }
 
-        var cs = t.Constructors;
+        // 如果没有显式定义任何构造函数，编译器会生成隐式无参构造
+        // 但仅对 class、struct、record class、record struct 有效
+        // 且隐式构造函数始终是 public
+        if (!t.Constructors.Any())
+            return true;
 
-        if (cs.IsEmpty)
+        // 查找显式定义的无参构造函数
+        var ctor = t.Constructors.FirstOrDefault(c => c.Parameters.Length == 0);
+
+        if (ctor != null)
         {
-            if (!t.IsRecord)
-                return true;
-            return !t.GetMembers()
-                .OfType<IPropertySymbol>()
-                .Any(m => m.DeclaredAccessibility == Accessibility.Public && m.IsImplicitlyDeclared);
+            // 检查该构造函数的可访问性是否满足最低要求
+            return IsAccessible(ctor.DeclaredAccessibility, minAccessibility);
         }
-        else
-        {
-            foreach (var constructor in cs)
-            {
-                // 如果要求仅公共构造函数，检查可访问性
-                if (onlyPublic && constructor.DeclaredAccessibility != Accessibility.Public)
-                    continue;
 
-                if (constructor.Parameters.Length == 0)
-                    return true;
-            }
-            return false;
+        // 存在其他带参数的构造函数，但没有无参构造
+        return false;
+    }
+
+    /// <summary>
+    /// 判断一个访问级别是否满足最低要求。
+    /// </summary>
+    public static bool IsAccessible(this Accessibility accessibility, Accessibility min)
+    {
+        switch (min)
+        {
+            case Accessibility.NotApplicable:
+                return true;
+            // 根据常见需求，仅支持 Public 和 Internal 两种门槛
+            // 如果需要支持更多级别（Protected、Private），可扩展此方法
+            case Accessibility.Public:
+                return accessibility == Accessibility.Public;
+            case Accessibility.Internal:
+                return accessibility == Accessibility.Public || accessibility == Accessibility.Internal;
+            default:
+                // 其他未处理的情况默认返回 false
+                return false;
         }
     }
+
+    public static IEnumerable<string> GetConstraints(this ITypeParameterSymbol typeParameter)
+    {
+        if (typeParameter.HasNotNullConstraint)
+            yield return "notnull";
+
+        if (typeParameter.HasReferenceTypeConstraint)
+            yield return "class";
+
+        if (typeParameter.HasUnmanagedTypeConstraint)
+            yield return "unmanaged";
+        else if (typeParameter.HasValueTypeConstraint)
+            yield return "struct";
+
+        foreach (var constraintType in typeParameter.ConstraintTypes)
+            yield return constraintType.GetFullyQualifiedString();
+
+        if (typeParameter.HasConstructorConstraint)
+            yield return "new()";
+    }
+
 }
