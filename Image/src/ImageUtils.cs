@@ -72,7 +72,7 @@ namespace Lytec.Image
             // 将图像转换为非预乘RGBA8888
             using var bmp = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul));
             using (SKCanvas canvas = new SKCanvas(bmp))
-                canvas.DrawImage(img, 0, 0);
+                canvas.DrawImage(img, 0, 0, SKSamplingOptions.Default);
             var pixels = bmp.Bytes;
             var rowBytes = bmp.RowBytes;   // 每行字节数（可能因内存对齐而大于 Width * 4）
             return new ImageData(w, h, pos =>

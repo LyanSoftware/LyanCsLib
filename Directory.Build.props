@@ -13,6 +13,6 @@
     <LegacyTargetFrameworks>netstandard2.0;netstandard2.1</LegacyTargetFrameworks>
     <AnalyzerTargetFrameworks>netstandard2.0</AnalyzerTargetFrameworks>
     <AvaloniaVersion>11.3.6</AvaloniaVersion>
-    <SkiaSharpVersion>2.88.9</SkiaSharpVersion>
+    <SkiaSharpVersion>[4.148.0,5.0)</SkiaSharpVersion>
   </PropertyGroup>
 </Project>

@@ -18,7 +18,7 @@ public static class FontLibUtils
     public static Expression<Func<CharImg, bool>> GetCharImg(int chr)
     => cg => cg.Char == chr;
 
-    static CharImg? GetCharImg(this FontInfo font, int chr, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
+    static CharImg? GetCharImg(this FontInfo font, int chr)
     {
         try
         {
@@ -33,15 +33,15 @@ public static class FontLibUtils
     => font.GetCharImage(str.GetUtf32Char(index), FontFileTypefaces);
     public static SKBitmap GetCharImage(this FontInfo font, int chr, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
     {
-        var img = font.GetCharImg(chr, FontFileTypefaces);
+        var img = font.GetCharImg(chr);
         return img == default ? font.GenerateCharImage(font.GetFont(chr, FontFileTypefaces), chr) : SKBitmap.Decode(img.ImageData);
     }
 
     public static SKBitmap GetCharImageWithString(this FontInfo font, string renderStr, string str, int index = 0, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
-    => font.GetCharImageWithString(renderStr, str.GetUtf32Char(0), FontFileTypefaces);
+    => font.GetCharImageWithString(renderStr, str.GetUtf32Char(index), FontFileTypefaces);
     public static SKBitmap GetCharImageWithString(this FontInfo font, string renderStr, int chr, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
     {
-        var img = font.GetCharImg(chr, FontFileTypefaces);
+        var img = font.GetCharImg(chr);
         return img == default ? font.GenerateStrImage(renderStr, FontFileTypefaces) : SKBitmap.Decode(img.ImageData);
     }
 
@@ -93,12 +93,16 @@ public static class FontLibUtils
                 return null;
         }
         else font = SKTypeface.FromFamilyName(lib.Font, lib.Weight, SKFontStyleWidth.Normal, lib.Slant);
-        if (font?.GetGlyph(chr) == 0)
+        if (font != null)
         {
-            // 字体回退
-            if (!lib.UseFontFile)
-                font.Dispose();
-            font = FontManager.MatchCharacter(chr);
+            using var f = new SKFont(font);
+            if (f.GetGlyph(chr) == 0)
+            {
+                // 字体回退
+                if (!lib.UseFontFile)
+                    font.Dispose();
+                font = FontManager.MatchCharacter(chr);
+            }
         }
         return font;
     }
@@ -128,21 +132,17 @@ public static class FontLibUtils
             Size = info.FontSize,
             Subpixel = info.Antialias,
             Edging = info.Antialias ? SKFontEdging.SubpixelAntialias : SKFontEdging.Alias,
-            Hinting = info.Antialias ? SKFontHinting.Full : SKFontHinting.None,
+            Hinting = info.Antialias ? SKFontHinting.Slight : SKFontHinting.Full,
         };
         using var paint = new SKPaint()
         {
             IsAntialias = info.Antialias,
-            Typeface = font.Typeface,
-            TextSize = font.Size,
             Color = fgc,
-            FilterQuality = info.Antialias ? SKFilterQuality.High : SKFilterQuality.None,
         };
-        var recommendedLineHeight = paint.GetFontMetrics(out var fm);
+        var recommendedLineHeight = font.GetFontMetrics(out var fm);
         var baseline = -fm.Ascent;
         var lineHeight = -fm.Ascent + fm.Descent;
-        var bounds = new SKRect();
-        var chrw = paint.MeasureText(txt, ref bounds);
+        var chrw = font.MeasureText(txt, out var bounds);
         if (chrw <= 0)
             return blank();
         //var top = info.Overline ? 0 : (bounds.Top + baseline);
@@ -158,7 +158,7 @@ public static class FontLibUtils
         using (var canvas = new SKCanvas(tbmp))
         {
             canvas.Clear(bgc);
-            canvas.DrawText(txt, 0, baseline, font, paint);
+            canvas.DrawText(txt, 0, baseline, SKTextAlign.Left, font, paint);
             if (info.Underline)
             {
                 var ly = baseline + (fm.UnderlinePosition ?? 0);
@@ -199,7 +199,7 @@ public static class FontLibUtils
                 bounds.Width > bmp.Width ? bmp.Width : (bmp.Width - bounds.Width) / 2 + bounds.Width,
                 bounds.Height > bmp.Height ? bmp.Height : (bmp.Height - bounds.Height) / 2 + bounds.Height
                 );
-            canvas.DrawBitmap(tbmp, bounds, dst, paint);
+            canvas.DrawBitmap(tbmp, bounds, dst, info.SamplingOptions, paint);
         }
         return bmp;
     }
@@ -209,6 +209,7 @@ public static class FontLibUtils
         public bool IsDisposed { get; private set; }
 
 
+#pragma warning disable IDE1006 // 命名样式
         public int chr;
         public SKFont font { get; }
         public SKPaint paint { get; }
@@ -218,6 +219,7 @@ public static class FontLibUtils
         public float lineHeight;
         public SKRect bounds;
         public float chrw;
+#pragma warning restore IDE1006 // 命名样式
 
         public RenderCharInfoCache(SKFont font, SKPaint paint)
         {
@@ -289,18 +291,14 @@ public static class FontLibUtils
             var paint = new SKPaint()
             {
                 IsAntialias = info.Antialias,
-                Typeface = font.Typeface,
-                TextSize = font.Size,
                 Color = fgc,
-                FilterQuality = info.Antialias ? SKFilterQuality.High : SKFilterQuality.None,
                 Style = info.StrokeWidth > 0 ? SKPaintStyle.StrokeAndFill : SKPaintStyle.Fill,
                 StrokeWidth = info.StrokeWidth,
             };
-            var recommendedLineHeight = paint.GetFontMetrics(out var fm);
+            var recommendedLineHeight = font.GetFontMetrics(out var fm);
             var baseline = -fm.Ascent;
             var lineHeight = -fm.Ascent + fm.Descent;
-            var bounds = new SKRect();
-            var chrw = paint.MeasureText(txt, ref bounds);
+            var chrw = font.MeasureText(txt, out var bounds);
             if (chrw <= 0)
                 continue;
             //var top = info.Overline ? 0 : (bounds.Top + baseline);
@@ -343,7 +341,7 @@ public static class FontLibUtils
                 var dx = 0f;
                 foreach (var v in cache)
                 {
-                    canvas.DrawText(char.ConvertFromUtf32(v.chr), dx, baseline, v.font, v.paint);
+                    canvas.DrawText(char.ConvertFromUtf32(v.chr), dx, baseline, SKTextAlign.Left, v.font, v.paint);
                     dx += v.chrw;
                     if (info.Underline)
                     {
@@ -386,7 +384,7 @@ public static class FontLibUtils
                     bounds.Width > bmp.Width ? bmp.Width : (bmp.Width - bounds.Width) / 2 + bounds.Width,
                     bounds.Height > bmp.Height ? bmp.Height : (bmp.Height - bounds.Height) / 2 + bounds.Height
                     );
-                canvas.DrawBitmap(tbmp, bounds, dst);
+                canvas.DrawBitmap(tbmp, bounds, dst, info.SamplingOptions);
             }
             return bmp;
         }
