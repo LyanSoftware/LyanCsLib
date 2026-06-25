@@ -77,7 +77,7 @@ public class BuilderForGenerator : IIncrementalGenerator
                 }
                 
                 // 检查容器是否 static（所有声明都不能 static）
-                if (!type.DeclaringSyntaxReferences.All(d => d.GetSyntax() is ClassDeclarationSyntax c && c.IsPartialType()))
+                if (!type.DeclaringSyntaxReferences.All(d => d.GetSyntax() is ClassDeclarationSyntax c && !c.IsStaticType()))
                 {
                     foreach (var attr in attrs)
                     {
@@ -100,7 +100,7 @@ public class BuilderForGenerator : IIncrementalGenerator
                     }
 
                     // 验证目标类型是否有可访问的无参构造器
-                    if (!type.HasNoArgsConstructor(BuilderAccessibility))
+                    if (!target.HasNoArgsConstructor(BuilderAccessibility))
                     {
                         spc.ReportDiagnostic(Diagnostic.Create(
                             TargetTypeMissingNoArgsConstructor,
@@ -217,8 +217,8 @@ public class BuilderForGenerator : IIncrementalGenerator
     {
         foreach (var member in target.GetMembers())
         {
-            // 检查是否标记了 [IgnoreDataMember]
-            if (member.HasAttr<IgnoreDataMemberAttribute>(compilation))
+            // 检查是否标记了 [BuilderIgnore]
+            if (member.HasAttr<BuilderIgnoreAttribute>(compilation))
                 continue;
 
             // [Obsolete]
