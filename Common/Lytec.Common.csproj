@@ -6,8 +6,8 @@
 
   <ItemGroup>
     <ProjectReference Condition="'$(TargetFramework)' == 'netstandard2.0'" Include="..\NetStandard20Compatibility\Lytec.NetStandard20Compatibility.csproj" />
-    <!--<ProjectReference Condition="'$(TargetFramework)' == 'netstandard2.0'" Include="..\NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />-->
-    <!--<ProjectReference Condition="'$(TargetFramework)' == 'netstandard2.1'" Include="..\NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />-->
+    <ProjectReference Condition="'$(TargetFramework)' == 'netstandard2.0'" Include="..\NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />
+    <ProjectReference Condition="'$(TargetFramework)' == 'netstandard2.1'" Include="..\NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />
   </ItemGroup>
 
   <ItemGroup>

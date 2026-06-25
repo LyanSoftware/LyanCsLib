@@ -18,4 +18,8 @@
 
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="IsExternalInit" />
+  </ItemGroup>
+
 </Project>
