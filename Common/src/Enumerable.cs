@@ -119,21 +119,6 @@ public static partial class EnumerableUtils
     => list.JoinToString(null, sep);
 
     public static string JoinToString<T>(this IEnumerable<T> list, Func<T, string>? toString, string sep = ",")
-    {
-        if (toString == null)
-            toString = t => t?.ToString() ?? "";
-        var isFirst = true;
-        var sb = new StringBuilder();
-        var addSep = !sep.IsNullOrEmpty();
-        foreach (var str in list.Select(toString))
-        {
-            if (isFirst)
-                isFirst = false;
-            else if (addSep)
-                sb.Append(sep);
-            sb.Append(str);
-        }
-        return sb.ToString();
-    }
+    => string.Join(sep, list.Select(toString ?? (t => t?.ToString() ?? "")));
 
 }
