@@ -12,7 +12,7 @@ public class RentedArray<T> : IDisposable
     public Memory<T> Memory => Array;
     public bool ClearOnReturn { get; set; } = false;
     private ArrayPool<T> Pool { get; }
-    public RentedArray(int minSize, ArrayPool<T> pool = null)
+    public RentedArray(int minSize, ArrayPool<T>? pool = null)
     {
         Pool = pool ?? ArrayPool<T>.Shared;
         Array = Pool.Rent(minSize);
