@@ -46,8 +46,8 @@ public class ImageData : IReadOnlyList<Color>
     public ImageData(int width, int height, Func<Point, Color> getPixel)
         : this(width, height)
     {
-        for (var x = 0; x < width; x++)
-            for (var y = 0; y < height; y++)
+        for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
                 this[x, y] = getPixel(new Point(x, y));
     }
 
@@ -61,7 +61,7 @@ public class ImageData : IReadOnlyList<Color>
 
     public byte[] Serialize()
     {
-        var buf = new List<byte>(8 + Count * 32);
+        var buf = new List<byte>(8 + Count * 4);
         buf.AddRange(Width.ToBytes(SerializationEndian));
         buf.AddRange(Height.ToBytes(SerializationEndian));
         foreach (var px in Pixels)
