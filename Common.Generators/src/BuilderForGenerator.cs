@@ -21,7 +21,7 @@ public class BuilderForGenerator : IIncrementalGenerator
         category: "Syntax",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
-    
+
     private static readonly DiagnosticDescriptor BuilderContainerIsStatic = new(
         id: "LYTEC_COMMON_BUILDER_002",
         title: "Syntax error",
@@ -30,10 +30,10 @@ public class BuilderForGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor TargetTypeMissingNoArgsConstructor = new(
+    private static readonly DiagnosticDescriptor TargetTypeConstructorMissing = new(
         id: "LYTEC_COMMON_BUILDER_003",
         title: "Usage error",
-        messageFormat: "Target type {0} must have an accessible parameterless constructor",
+        messageFormat: "Target type {0} must have an accessible constructor",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -46,7 +46,7 @@ public class BuilderForGenerator : IIncrementalGenerator
     {
         Debug.WriteLine("BuilderFor Generator Debug Init");
 
-        var infos = context.SyntaxProvider.ForAttr<BuilderForAttribute>(node => node is ClassDeclarationSyntax or StructDeclarationSyntax);
+        var infos = context.SyntaxProvider.ForAttr<BuilderForAttribute>(node => node is ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax);
 
         context.RegisterSourceOutput(context.CompilationProvider.Combine(infos), (spc, source) =>
         {
@@ -62,8 +62,14 @@ public class BuilderForGenerator : IIncrementalGenerator
                 if (!type.DeclaringSyntaxReferences.All(d =>
                 {
                     var decl = d.GetSyntax();
-                    return (decl is ClassDeclarationSyntax c && c.IsPartialType())
-                        || (decl is StructDeclarationSyntax s && s.IsPartialType());
+                    switch (decl)
+                    {
+                        case ClassDeclarationSyntax:
+                        case StructDeclarationSyntax:
+                        case RecordDeclarationSyntax:
+                            return decl.IsPartialType();
+                        default: return false;
+                    }
                 }))
                 {
                     foreach (var attr in attrs)
@@ -75,9 +81,9 @@ public class BuilderForGenerator : IIncrementalGenerator
                     }
                     continue;
                 }
-                
+
                 // 检查容器是否 static（所有声明都不能 static）
-                if (!type.DeclaringSyntaxReferences.All(d => d.GetSyntax() is ClassDeclarationSyntax c && !c.IsStaticType()))
+                if (!type.DeclaringSyntaxReferences.All(d => !d.GetSyntax().IsStaticType()))
                 {
                     foreach (var attr in attrs)
                     {
@@ -99,11 +105,11 @@ public class BuilderForGenerator : IIncrementalGenerator
                         continue;
                     }
 
-                    // 验证目标类型是否有可访问的无参构造器
-                    if (!target.HasNoArgsConstructor(BuilderAccessibility))
+                    // 验证目标类型是否有可访问的构造器
+                    if (SelectConstructor(target, compilation) is null)
                     {
                         spc.ReportDiagnostic(Diagnostic.Create(
-                            TargetTypeMissingNoArgsConstructor,
+                            TargetTypeConstructorMissing,
                             attr.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
                             target.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
                         continue;
@@ -131,6 +137,12 @@ public class BuilderForGenerator : IIncrementalGenerator
             return new Options(IncludeInternals: includeInternals, IncludeObsolete: includeObsolete);
         }
     }
+
+    private record BuilderMember(string Name, ITypeSymbol Type);
+
+    private record ConstructorArgument(string Name, string ParameterName, ITypeSymbol Type);
+
+    private record ConstructorPlan(IMethodSymbol Constructor, ImmutableArray<ConstructorArgument> Arguments);
 
     private static string GenerateSource(
         INamedTypeSymbol container,
@@ -174,8 +186,20 @@ public class BuilderForGenerator : IIncrementalGenerator
         var builderName = GetDeclarationName(container);
         var targetTypeName = GetTypeName(target);
         var members = GetSettableMembers(target, options, compilation).ToArray();
+        var constructorPlan = SelectConstructor(target, compilation);
+        var constructorArguments = constructorPlan?.Arguments.ToArray() ?? Array.Empty<ConstructorArgument>();
+        var constructorMemberNames = new HashSet<string>(
+            constructorArguments.Select(argument => argument.Name),
+            StringComparer.OrdinalIgnoreCase);
+        var initializerMembers = members
+            .Where(member => !constructorMemberNames.Contains(member.Name))
+            .ToArray();
+        var builderMembers = DistinctByName(constructorArguments
+                .Select(argument => new BuilderMember(argument.Name, argument.Type))
+                .Concat(initializerMembers))
+            .ToArray();
 
-        foreach (var member in members)
+        foreach (var member in builderMembers)
         {
             sb.Append("        private ")
                 .Append(GetTypeName(member.Type))
@@ -184,10 +208,10 @@ public class BuilderForGenerator : IIncrementalGenerator
                 .AppendLine(" = default!;");
         }
 
-        if (members.Length > 0)
+        if (builderMembers.Length > 0)
             sb.AppendLine();
 
-        foreach (var member in members)
+        foreach (var member in builderMembers)
         {
             sb.Append("        public ").Append(builderName).Append(" With").Append(member.Name)
                 .Append("(").Append(GetTypeName(member.Type)).Append(" value)").AppendLine();
@@ -200,20 +224,32 @@ public class BuilderForGenerator : IIncrementalGenerator
 
         sb.Append("        public ").Append(targetTypeName).AppendLine(" Build()");
         sb.AppendLine("        {");
-        sb.Append("            return new ").Append(targetTypeName).AppendLine();
-        sb.AppendLine("            {");
+        sb.Append("            return new ").Append(targetTypeName).Append("(");
+        sb.Append(string.Join(", ", constructorArguments.Select(argument => GetFieldName(argument.Name))));
+        sb.Append(")");
 
-        foreach (var member in members)
+        if (initializerMembers.Length == 0)
         {
-            sb.Append("                ").Append(member.Name).Append(" = ").Append(GetFieldName(member.Name)).AppendLine(",");
+            sb.AppendLine(";");
+        }
+        else
+        {
+            sb.AppendLine();
+            sb.AppendLine("            {");
+
+            foreach (var member in initializerMembers)
+            {
+                sb.Append("                ").Append(member.Name).Append(" = ").Append(GetFieldName(member.Name)).AppendLine(",");
+            }
+
+            sb.AppendLine("            };");
         }
 
-        sb.AppendLine("            };");
         sb.AppendLine("        }");
         sb.AppendLine();
     }
 
-    private static IEnumerable<(string Name, ITypeSymbol Type)> GetSettableMembers(INamedTypeSymbol target, Options options, Compilation compilation)
+    private static IEnumerable<BuilderMember> GetSettableMembers(INamedTypeSymbol target, Options options, Compilation compilation)
     {
         foreach (var member in target.GetMembers())
         {
@@ -235,13 +271,81 @@ public class BuilderForGenerator : IIncrementalGenerator
             {
                 case IPropertySymbol { IsStatic: false, IsIndexer: false, SetMethod: not null } property
                     when IsAccessible(property.SetMethod!.DeclaredAccessibility):
-                    yield return (member.Name, property.Type);
+                    if (property.IsIndexer)
+                        continue;
+                    yield return new BuilderMember(member.Name, property.Type);
                     break;
 
                 case IFieldSymbol { IsStatic: false, IsReadOnly: false, IsConst: false } field:
-                    yield return (member.Name, field.Type);
+                    yield return new BuilderMember(member.Name, field.Type);
                     break;
             }
+        }
+    }
+
+    private static ConstructorPlan? SelectConstructor(INamedTypeSymbol target, Compilation compilation)
+    {
+        var constructors = target.InstanceConstructors
+            .Where(constructor => IsAccessible(constructor.DeclaredAccessibility))
+            .ToArray();
+
+        if (constructors.Length == 0)
+            return null;
+
+        var markedConstructors = constructors
+            .Where(constructor => constructor.HasAttr<BuilderConstructorAttribute>(compilation))
+            .ToArray();
+
+        var constructor = markedConstructors.Length > 0
+            ? markedConstructors
+                .OrderByDescending(c => c.Parameters.Length)
+                .First()
+            : constructors
+                .OrderByDescending(c => c.Parameters.Length)
+                .First();
+
+        return CreateConstructorPlan(target, constructor);
+    }
+
+    private static ConstructorPlan CreateConstructorPlan(INamedTypeSymbol target, IMethodSymbol constructor)
+    {
+        var members = target.GetMembers()
+            .OfType<IPropertySymbol>()
+            .Where(property => !property.IsStatic && !property.IsIndexer)
+            .Cast<ISymbol>()
+            .Concat(target.GetMembers().OfType<IFieldSymbol>().Where(field => !field.IsStatic))
+            .ToArray();
+
+        var arguments = constructor.Parameters
+            .Select(parameter =>
+            {
+                var matchingMember = members.FirstOrDefault(member =>
+                    string.Equals(member.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) &&
+                    member switch
+                    {
+                        IPropertySymbol property => SymbolEqualityComparer.Default.Equals(property.Type, parameter.Type),
+                        IFieldSymbol field => SymbolEqualityComparer.Default.Equals(field.Type, parameter.Type),
+                        _ => false
+                    });
+
+                return new ConstructorArgument(
+                    matchingMember?.Name ?? ToPascalCase(parameter.Name),
+                    parameter.Name,
+                    parameter.Type);
+            })
+            .ToImmutableArray();
+
+        return new ConstructorPlan(constructor, arguments);
+    }
+
+    private static IEnumerable<BuilderMember> DistinctByName(IEnumerable<BuilderMember> members)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var member in members)
+        {
+            if (names.Add(member.Name))
+                yield return member;
         }
     }
 
@@ -271,6 +375,14 @@ public class BuilderForGenerator : IIncrementalGenerator
             return "_value";
 
         return "_" + char.ToLowerInvariant(memberName[0]) + memberName[1..];
+    }
+
+    private static string ToPascalCase(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "Value";
+
+        return char.ToUpperInvariant(name[0]) + name[1..];
     }
 
     private static string GetTypeName(ITypeSymbol type) => type.GetFullyQualifiedString();
