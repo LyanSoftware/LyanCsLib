@@ -18,7 +18,10 @@
 
   <ItemGroup>
     <!-- Take a public dependency on Json.Net. Consumers of this generator will get a reference to this package -->
-    <ProjectReference Include="..\Common\Lytec.Common.csproj" GeneratePathProperty="true" />
+    <ProjectReference Include="..\Common\Lytec.Common.csproj" GeneratePathProperty="true"
+                      PrivateAssets="all"
+                      ReferenceOutputAssembly="false"
+                      />
     <ProjectReference Include="..\AnalyzerUtils\Lytec.AnalyzerUtils.csproj" GeneratePathProperty="true" />
 
     <!-- Package the Newtonsoft.Json dependency alongside the generator assembly -->
