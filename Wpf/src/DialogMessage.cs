@@ -20,13 +20,13 @@ using Lytec.Common.Generators;
 
 namespace Lytec.Wpf;
 
-public partial class OpenFileDialogRequest : RequestMessage<string[]>
+public partial class OpenFileDialogRequest : AsyncRequestMessage<string[]>
 {
     public bool AllowMultiSelect { get; set; } = false;
     public string Filter { get; set; } = "*.*|*.*";
 }
 
-public class SaveFileDialogRequest : RequestMessage<string>
+public class SaveFileDialogRequest : AsyncRequestMessage<string>
 {
     public string Filter { get; set; } = "*.*|*.*";
     public string DefaultFileName { get; set; } = "";
@@ -74,7 +74,7 @@ public enum MsgBoxIcon
     Information = 0x40,
 }
 
-public class MsgBoxRequest : RequestMessage<DlgResult>
+public class MsgBoxRequest : AsyncRequestMessage<DlgResult>
 {
     public string Text { get; set; } = "";
     public string Caption { get; set; } = "";
@@ -151,17 +151,6 @@ public static class MsgBuilderUtils
     }
 }
 
-public static class MsgUtils
-{
-    public static bool GetResponse<TResult>(this RequestMessage<TResult> msg, [NotNullWhen(true)] out TResult? Result)
-    {
-        Result = default;
-        if (msg.HasReceivedResponse)
-            Result = msg.Response;
-        return msg.HasReceivedResponse;
-    }
-}
-
 [BuilderFor(typeof(OpenFileDialogRequest))]
 public partial class OpenFileRequestBuilder : IMsgBuilder<OpenFileDialogRequest> { }
 
@@ -178,6 +167,8 @@ public partial class MsgBoxRequestBuilder : IMsgBuilder<MsgBoxRequest>
             .WithCaption(i18n("Info"))
             .WithIcon(MsgBoxIcon.Information);
     }
+    public static MsgBoxRequestBuilder CreateInfoBox(string text, Func<string, string>? i18n = null)
+    => CreateInfoBox(i18n).WithText(text);
     public static MsgBoxRequestBuilder CreateWarnBox(Func<string, string>? i18n = null)
     {
         i18n ??= str => str;
@@ -185,6 +176,8 @@ public partial class MsgBoxRequestBuilder : IMsgBuilder<MsgBoxRequest>
             .WithCaption(i18n("Warning"))
             .WithIcon(MsgBoxIcon.Warning);
     }
+    public static MsgBoxRequestBuilder CreateWarnBox(string text, Func<string, string>? i18n = null)
+    => CreateWarnBox(i18n).WithText(text);
     public static MsgBoxRequestBuilder CreateErrBox(Func<string, string>? i18n = null)
     {
         i18n ??= str => str;
@@ -192,4 +185,15 @@ public partial class MsgBoxRequestBuilder : IMsgBuilder<MsgBoxRequest>
             .WithCaption(i18n("Error"))
             .WithIcon(MsgBoxIcon.Error);
     }
+    public static MsgBoxRequestBuilder CreateErrBox(string text, Func<string, string>? i18n = null)
+    => CreateErrBox(i18n).WithText(text);
+    public static MsgBoxRequestBuilder CreateQuestionBox(Func<string, string>? i18n = null)
+    {
+        i18n ??= str => str;
+        return new MsgBoxRequestBuilder()
+            .WithCaption(i18n("Question"))
+            .WithIcon(MsgBoxIcon.Question);
+    }
+    public static MsgBoxRequestBuilder CreateQuestionBox(string text, Func<string, string>? i18n = null)
+    => CreateQuestionBox(i18n).WithText(text);
 }
