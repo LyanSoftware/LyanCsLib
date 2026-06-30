@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 using SkiaSharp;
 
 namespace Lytec.Image;
 
+[JsonConverter(typeof(ColorJsonConverter))]
 public readonly partial struct Color : IEquatable<Color>
 {
     public byte R { get; }
