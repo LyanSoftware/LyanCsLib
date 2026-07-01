@@ -104,7 +104,7 @@ namespace Lytec.Common
             if (obj.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) is FieldInfo field
                 && field.GetValue(obj) is MulticastDelegate func)
                 foreach (Delegate dlg in func.GetInvocationList())
-                    dlg.Method.Invoke(dlg.Target, new object?[] { obj, e });
+                    dlg.Method.Invoke(dlg.Target, new object?[] { obj, e ?? EventArgs.Empty });
         }
 
         public static Type[] GetGenericArguments(this Type t, Type baseType)
