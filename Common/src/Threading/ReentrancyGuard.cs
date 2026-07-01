@@ -32,7 +32,7 @@ public static class ReentrancyGuard
     /// <param name="instance">当前类的实例（传入 this）</param>
     /// <param name="action">业务逻辑</param>
     /// <param name="methodName">方法名（由编译器自动传入）</param>
-    public static async Task ExecuteGuardedAsync<T>(T instance, Func<Task> action, [CallerMemberName] string methodName = "")
+    public static async Task ExecuteGuarded<T>(T instance, Func<Task> action, [CallerMemberName] string methodName = "")
     {
         // 对于引用类型，instance 不可能为 null
         // 但为了安全，可以加 null 检查
@@ -59,7 +59,7 @@ public static class ReentrancyGuard
     /// <param name="declaringType">所在类型</param>
     /// <param name="action">业务逻辑</param>
     /// <param name="methodName">方法名（由编译器自动传入）</param>
-    public static async Task ExecuteGuardedAsync(Type declaringType, Func<Task> action, [CallerMemberName] string methodName = "")
+    public static async Task ExecuteGuarded(Type declaringType, Func<Task> action, [CallerMemberName] string methodName = "")
     {
         string key = $"{declaringType.FullName}.{methodName}";
         await ExecuteInternalAsync(key, action);
