@@ -147,7 +147,7 @@ public static partial class WinFormUtils
             dgv.CommitEdit(DataGridViewDataErrorContexts.Commit);
     };
 
-    public static void SetToExecutableFileIcon(this Form form) => form.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+    public static void SetToExecutableFileIcon(this Form form) => form.Icon = Icon.ExtractAssociatedIcon(EnvInfo.ProcessPath);
 
     /// <summary>
     /// 根据内容自动计算下拉框宽度

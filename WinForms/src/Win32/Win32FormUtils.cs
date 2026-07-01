@@ -1,3 +1,4 @@
+using Lytec.Common;
 using Lytec.Win32;
 using Microsoft.Win32;
 using System;
@@ -23,7 +24,7 @@ public static partial class Win32FormUtils
     /// <param name="timeout">超时时间</param>
     /// <returns></returns>
     public static bool AddFirewallException(this IWin32Window _, string? name = null, int timeout = 30000)
-    => Win32Utils.AddFirewallException(Application.ExecutablePath, name, timeout);
+    => Win32Utils.AddFirewallException(EnvInfo.ProcessPath, name, timeout);
 
     /// <summary>
     /// 设置阻止系统关闭时的提示信息
