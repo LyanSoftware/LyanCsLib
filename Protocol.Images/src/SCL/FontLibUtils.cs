@@ -219,6 +219,7 @@ public static class FontLibUtils
         public float lineHeight;
         public SKRect bounds;
         public float chrw;
+        public float strokew;
 #pragma warning restore IDE1006 // 命名样式
 
         public RenderCharInfoCache(SKFont font, SKPaint paint)
@@ -292,8 +293,7 @@ public static class FontLibUtils
             {
                 IsAntialias = info.Antialias,
                 Color = fgc,
-                Style = info.StrokeWidth > 0 ? SKPaintStyle.StrokeAndFill : SKPaintStyle.Fill,
-                StrokeWidth = info.StrokeWidth,
+                Style = SKPaintStyle.Fill,
             };
             var recommendedLineHeight = font.GetFontMetrics(out var fm);
             var baseline = -fm.Ascent;
@@ -320,6 +320,7 @@ public static class FontLibUtils
                 lineHeight = lineHeight,
                 bounds = bounds,
                 chrw = chrw,
+                strokew = info.StrokeWidth,
             });
         }
         if (cache.Count < 1)
@@ -341,7 +342,32 @@ public static class FontLibUtils
                 var dx = 0f;
                 foreach (var v in cache)
                 {
-                    canvas.DrawText(char.ConvertFromUtf32(v.chr), dx, baseline, SKTextAlign.Left, v.font, v.paint);
+                    if (v.strokew != 0)
+                    {
+                        var sw = v.paint.StrokeWidth;
+                        var style = v.paint.Style;
+                        var c = v.paint.Color;
+                        if (v.strokew > 0)
+                        {
+                            v.paint.Style = SKPaintStyle.StrokeAndFill;
+                            v.paint.StrokeWidth = v.strokew;
+                            canvas.DrawText(char.ConvertFromUtf32(v.chr), dx, baseline, SKTextAlign.Left, v.font, v.paint);
+                        }
+                        else
+                        {
+                            v.paint.StrokeWidth = 0;
+                            v.paint.Style = SKPaintStyle.Fill;
+                            canvas.DrawText(char.ConvertFromUtf32(v.chr), dx, baseline, SKTextAlign.Left, v.font, v.paint);
+                            v.paint.Style = SKPaintStyle.Stroke;
+                            v.paint.Color = bgc;
+                            v.paint.StrokeWidth = -v.strokew;
+                            canvas.DrawText(char.ConvertFromUtf32(v.chr), dx, baseline, SKTextAlign.Left, v.font, v.paint);
+                        }
+                        v.paint.StrokeWidth = sw;
+                        v.paint.Color = c;
+                        v.paint.Style = style;
+                    }
+                    else canvas.DrawText(char.ConvertFromUtf32(v.chr), dx, baseline, SKTextAlign.Left, v.font, v.paint);
                     dx += v.chrw;
                     if (info.Underline)
                     {
