@@ -20,13 +20,13 @@ using Lytec.Common.Generators;
 
 namespace Lytec.Wpf;
 
-public partial class OpenFileDialogRequest : AsyncRequestMessage<string[]>
+public partial class OpenFileDialogRequest : RequestMessage<Task<string[]>>
 {
     public bool AllowMultiSelect { get; set; } = false;
     public string Filter { get; set; } = "*.*|*.*";
 }
 
-public class SaveFileDialogRequest : AsyncRequestMessage<string>
+public class SaveFileDialogRequest : RequestMessage<Task<string>>
 {
     public string Filter { get; set; } = "*.*|*.*";
     public string DefaultFileName { get; set; } = "";
@@ -74,7 +74,7 @@ public enum MsgBoxIcon
     Information = 0x40,
 }
 
-public class MsgBoxRequest : AsyncRequestMessage<DlgResult>
+public class MsgBoxRequest : RequestMessage<Task<DlgResult>>
 {
     public string Text { get; set; } = "";
     public string Caption { get; set; } = "";
@@ -87,19 +87,19 @@ public class MsgBoxRequest : AsyncRequestMessage<DlgResult>
         .Cast<MsgBoxBtns>()
         .DistinctBy(x => (int)x)
         .ToDictionary(x => (MsgBoxBtn)(int)x);
-    
+
     private static readonly IReadOnlyDictionary<MsgBoxIcon, MsgBoxIcons> Icons
     = Enum.GetValues(typeof(MsgBoxIcons))
         .Cast<MsgBoxIcons>()
         .DistinctBy(x => (int)x)
         .ToDictionary(x => (MsgBoxIcon)(int)x);
-    
+
     private static readonly IReadOnlyDictionary<MsgBoxDefBtn, MsgBoxDefBtns> DefBtns
     = Enum.GetValues(typeof(MsgBoxDefBtns))
         .Cast<MsgBoxDefBtns>()
         .DistinctBy(x => (int)x)
         .ToDictionary(x => (MsgBoxDefBtn)(int)x);
-    
+
     private static readonly IReadOnlyDictionary<DialogResult, DlgResult> Rets
     = Enum.GetValues(typeof(DlgResult))
         .Cast<DlgResult>()
@@ -127,6 +127,17 @@ public class MsgBoxRequest : AsyncRequestMessage<DlgResult>
         var handle = new WindowInteropHelper(owner).Handle;
         // 将句柄包装为 IWin32Window
         return ShowDialog(System.Windows.Forms.Control.FromHandle(handle));
+    }
+}
+
+public static class MsgUtils
+{
+    public static bool GetResponse<TResult>(this RequestMessage<TResult> msg, [NotNullWhen(true)] out TResult? Result)
+    {
+        Result = default;
+        if (msg.HasReceivedResponse)
+            Result = msg.Response;
+        return msg.HasReceivedResponse;
     }
 }
 
