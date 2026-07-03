@@ -146,6 +146,11 @@ public interface IMsgBuilder<TMessage> where TMessage : class
     public TMessage Build();
 }
 
+public interface IMsgBoxRequester
+{
+    public string Translate(string key);
+}
+
 public static class MsgBuilderUtils
 {
     public static TMessage BuildAndSend<TMessage>(this IMsgBuilder<TMessage> builder)
@@ -160,6 +165,40 @@ public static class MsgBuilderUtils
     {
         return WeakReferenceMessenger.Default.Send(builder.Build(), token);
     }
+
+    public static MsgBoxRequestBuilder InfoBoxRequest(this IMsgBoxRequester r, string text)
+    => MsgBoxRequestBuilder.CreateInfoBox(text, r.Translate);
+    public static MsgBoxRequestBuilder InfoBoxRequest(this IMsgBoxRequester r)
+    => MsgBoxRequestBuilder.CreateInfoBox(r.Translate);
+    public static MsgBoxRequestBuilder ErrBoxRequest(this IMsgBoxRequester r, string text)
+    => MsgBoxRequestBuilder.CreateErrBox(text, r.Translate);
+    public static MsgBoxRequestBuilder ErrBoxRequest(this IMsgBoxRequester r)
+    => MsgBoxRequestBuilder.CreateErrBox(r.Translate);
+    public static MsgBoxRequestBuilder WarnBoxRequest(this IMsgBoxRequester r, string text)
+    => MsgBoxRequestBuilder.CreateWarnBox(text, r.Translate);
+    public static MsgBoxRequestBuilder WarnBoxRequest(this IMsgBoxRequester r)
+    => MsgBoxRequestBuilder.CreateWarnBox(r.Translate);
+    public static MsgBoxRequestBuilder QuestionBoxRequest(this IMsgBoxRequester r, string text)
+    => MsgBoxRequestBuilder.CreateQuestionBox(text, r.Translate);
+    public static MsgBoxRequestBuilder QuestionBoxRequest(this IMsgBoxRequester r)
+    => MsgBoxRequestBuilder.CreateQuestionBox(r.Translate);
+
+    public static MsgBoxRequest InfoBox(this IMsgBoxRequester r, string text)
+    => r.InfoBoxRequest(text).BuildAndSend();
+    public static MsgBoxRequest InfoBox(this IMsgBoxRequester r)
+    => r.InfoBoxRequest().BuildAndSend();
+    public static MsgBoxRequest ErrBox(this IMsgBoxRequester r, string text)
+    => r.ErrBoxRequest(text).BuildAndSend();
+    public static MsgBoxRequest ErrBox(this IMsgBoxRequester r)
+    => r.ErrBoxRequest().BuildAndSend();
+    public static MsgBoxRequest WarnBox(this IMsgBoxRequester r, string text)
+    => r.WarnBoxRequest(text).BuildAndSend();
+    public static MsgBoxRequest WarnBox(this IMsgBoxRequester r)
+    => r.WarnBoxRequest().BuildAndSend();
+    public static MsgBoxRequest QuestionBox(this IMsgBoxRequester r, string text)
+    => r.QuestionBoxRequest(text).BuildAndSend();
+    public static MsgBoxRequest QuestionBox(this IMsgBoxRequester r)
+    => r.QuestionBoxRequest().BuildAndSend();
 }
 
 [BuilderFor(typeof(OpenFileDialogRequest))]
