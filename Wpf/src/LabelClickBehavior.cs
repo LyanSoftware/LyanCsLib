@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Automation.Peers;
 using System.Windows.Automation.Provider;
+using Lytec.Common;
 
 namespace Lytec.Wpf;
 
@@ -25,19 +26,8 @@ public static class LabelClickBehavior
         if (sender is Label label)
         {
             label.Target?.Focus();
-            // label.Target.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-            switch (label.Target)
-            {
-                case RadioButton rb:
-                    rb.IsChecked = true;
-                    break;
-                case ToggleButton tb:
-                    tb.IsChecked = !tb.IsChecked;
-                    break;
-                case Button btn:
-                    (new ButtonAutomationPeer(btn).GetPattern(PatternInterface.Invoke) as IInvokeProvider)?.Invoke();
-                    break;
-            }
+            if (label.Target is ButtonBase btn)
+                btn.PerformClick();
         }
     };
 
