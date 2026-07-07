@@ -87,5 +87,29 @@ namespace Lytec.Image
             using var img = SKImage.FromBitmap(bmp);
             return img.GetImageData();
         }
+
+        public static void Deconstruct(this SKPoint p, out float X, out float Y)
+        => (X, Y) = (p.X, p.Y);
+
+        public static void Deconstruct(this SKPointI p, out int X, out int Y)
+        => (X, Y) = (p.X, p.Y);
+
+        public static void Deconstruct(this SKSize sz, out float Width, out float Height)
+        => (Width, Height) = (sz.Width, sz.Height);
+
+        public static void Deconstruct(this SKSizeI sz, out int Width, out int Height)
+        => (Width, Height) = (sz.Width, sz.Height);
+
+        public static void Deconstruct(this SKRect r, out float Left, out float Top, out float Right, out float Bottom)
+        => (Left, Top, Right, Bottom) = (r.Left, r.Top, r.Right, r.Bottom);
+        
+        public static void Deconstruct(this SKRectI r, out int Left, out int Top, out int Right, out int Bottom)
+        => (Left, Top, Right, Bottom) = (r.Left, r.Top, r.Right, r.Bottom);
+
+        public static void Deconstruct(this SKRect r, out SKPoint Location, out SKSize Size)
+        => (Location, Size) = (r.Location, r.Size);
+
+        public static void Deconstruct(this SKRectI r, out SKPointI Location, out SKSizeI Size)
+        => (Location, Size) = (r.Location, r.Size);
     }
 }

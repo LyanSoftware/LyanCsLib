@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using Lytec.Common.Data;
 using SkiaSharp;
+using Point = SkiaSharp.SKPointI;
 
 namespace Lytec.Image;
 
