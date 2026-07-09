@@ -140,7 +140,7 @@ namespace Lytec.Protocol.Images.SCL
         public int MaxWidth => this.Max(g => g.Width);
         public int MaxHeight => this.Max(g => g.Height);
 
-        public byte[] Encode(XMPColorType type)
+        public byte[] Encode(XMPColorType type, bool addFileHeader = true)
         {
             var ro = 0;
             var go = 0;
@@ -210,6 +210,7 @@ namespace Lytec.Protocol.Images.SCL
                     throw new InvalidOperationException();
             }
             var data = new List<byte[]>();
+            if (addFileHeader)
             {
                 // 文件头
                 var buf = new List<byte>(10);
