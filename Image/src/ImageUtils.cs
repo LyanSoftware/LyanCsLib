@@ -38,6 +38,26 @@ namespace Lytec.Image
             return true;
         }
 
+        public static SKBitmap ToPremuled(this SKImage src, bool disposeSource = false)
+        {
+            // 将图像转换为预乘RGBA8888
+            var bmp = new SKBitmap(new SKImageInfo(src.Width, src.Height, SKColorType.Bgra8888, SKAlphaType.Premul));
+            using SKCanvas canvas = new SKCanvas(bmp);
+            canvas.Clear(SKColors.Transparent);
+            canvas.DrawImage(src, 0, 0, SKSamplingOptions.Default);
+            if (disposeSource)
+                src.Dispose();
+            return bmp;
+        }
+        
+        public static SKBitmap ToPremuled(this SKBitmap src, bool disposeSource = false)
+        {
+            using var img = SKImage.FromBitmap(src);
+            if (disposeSource)
+                src.Dispose();
+            return img.ToPremuled();
+        }
+        
         public static SKBitmap ToSKBitmap(this ImageData img)
         {
             var width = img.Width;
@@ -65,7 +85,7 @@ namespace Lytec.Image
             return bmp;
         }
 
-        public static ImageData GetImageData(this SKImage img)
+        public static ImageData GetImageData(this SKImage img, bool disposeSource = false)
         {
             var w = img.Width;
             var h = img.Height;
@@ -75,6 +95,8 @@ namespace Lytec.Image
                 canvas.DrawImage(img, 0, 0, SKSamplingOptions.Default);
             var pixels = bmp.Bytes;
             var rowBytes = bmp.RowBytes;   // 每行字节数（可能因内存对齐而大于 Width * 4）
+            if (disposeSource)
+                img.Dispose();
             return new ImageData(w, h, pos =>
             {
                 var offset = pos.Y * rowBytes + pos.X * 4;
@@ -82,9 +104,11 @@ namespace Lytec.Image
             });
         }
 
-        public static ImageData GetImageData(this SKBitmap bmp)
+        public static ImageData GetImageData(this SKBitmap bmp, bool disposeSource = false)
         {
             using var img = SKImage.FromBitmap(bmp);
+            if (disposeSource)
+                bmp.Dispose();
             return img.GetImageData();
         }
 
