@@ -20,16 +20,18 @@ using Lytec.Common.Generators;
 
 namespace Lytec.Wpf;
 
-public partial class OpenFileDialogRequest : RequestMessage<Task<string[]>>
+public class OpenFileDialogRequest : RequestMessage<Task<string[]>>
 {
     public bool AllowMultiSelect { get; set; } = false;
     public string Filter { get; set; } = "*.*|*.*";
+    public string? FileName { get; set; }
 }
 
 public class SaveFileDialogRequest : RequestMessage<Task<string>>
 {
     public string Filter { get; set; } = "*.*|*.*";
     public string DefaultFileName { get; set; } = "";
+    public string DefaultExt { get; set; } = "";
 }
 
 public enum MsgBoxBtn
