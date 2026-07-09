@@ -129,7 +129,10 @@ namespace Lytec.Common.Data
                             select b).ToArray();
             }
             if (type.IsEnum)
-                t = Convert.ChangeType(t, type.GetEnumUnderlyingType());
+            {
+                type = type.GetEnumUnderlyingType();
+                t = Convert.ChangeType(t, type);
+            }
             int size = type.GetStructSize();
             var bytes = new byte[size];
             if (TryWriteSimpleBytes(bytes, t) > 0)
