@@ -198,45 +198,30 @@ public static partial class SCL
         public MacAddress Mac => MacPacks[0];
         public MacAddress MacAddress => MacPacks[0];
 
-        public bool IsADSCL => CardTypeString switch
+        public CardType? CardType => CardTypeString switch
         {
-            "CHECK25"
-            or "CE2500"
-            or "CE2600"
-            or "CE2610"
-            or "CE2620"
-            or "ADSL250"
-            or "AD250"
-            or "AD2500"
-            or "AD251"
-            or "AD2510"
-            or "AD252"
-            or "AD2520"
-            or "ADSL280"
-            or "AD280"
-            or "AD2800"
-            or "AD281"
-            or "AD2810"
-            or "AD282"
-            or "AD2820"
-            or "AD290"
-            or "AD2900"
-            or "AD291"
-            or "AD2910"
-            or "AD292"
-            or "AD2920"
+            "CHECK25" or "CE2500" => SCL.CardType.CHECK2500,
+            "CE2600" or "CE2610" or "CE2620" => SCL.CardType.CHECK2600,
+            "ADSL250" or "AD250" or "AD2500" or "AD251" or "AD2510" or "AD252" or "AD2520" => SCL.CardType.ADSCL2500,
+            "ADSL280" or "AD280" or "AD2800" or "AD281" or "AD2810" or "AD282" or "AD2820" => SCL.CardType.ADSCL2800,
+            "ADSL290" or "AD290" or "AD2900" or "AD291" or "AD2910" or "AD292" or "AD2920" => SCL.CardType.ADSCL2900,
+            _ => null,
+        };
+
+        public bool IsADSCL => CardType switch
+        {
+            SCL.CardType.CHECK2500
+            or SCL.CardType.CHECK2600
+            or SCL.CardType.ADSCL2500
+            or SCL.CardType.ADSCL2800
+            or SCL.CardType.ADSCL2900
             => true,
             _ => false,
         };
         
-        public bool IsCheck => CardTypeString switch
+        public bool IsCheck => CardType switch
         {
-            "CHECK25"
-            or "CE2500"
-            or "CE2600"
-            or "CE2610"
-            or "CE2620"
-            => true,
+            SCL.CardType.CHECK2500 or SCL.CardType.CHECK2600 => true,
             _ => false,
         };
 
