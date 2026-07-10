@@ -131,9 +131,8 @@ public static class FontLibUtils
             Typeface = typeface,
             Size = info.FontSize,
             Subpixel = info.Antialias,
-            Edging = info.Antialias ? SKFontEdging.SubpixelAntialias : SKFontEdging.Alias,
-            Hinting = info.Antialias ? SKFontHinting.Slight : SKFontHinting.Full,
         };
+        font.SetAntiAlias(info.Antialias);
         using var paint = new SKPaint()
         {
             IsAntialias = info.Antialias,
@@ -285,10 +284,9 @@ public static class FontLibUtils
                 Typeface = typeface,
                 Size = info.FontSize,
                 Subpixel = info.Antialias,
-                Edging = info.Antialias ? SKFontEdging.SubpixelAntialias : SKFontEdging.Alias,
-                Hinting = SKFontHinting.Full,
                 EmbeddedBitmaps = true,
             };
+            font.SetAntiAlias(info.Antialias);
             var paint = new SKPaint()
             {
                 IsAntialias = info.Antialias,
