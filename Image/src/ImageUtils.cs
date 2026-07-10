@@ -135,5 +135,16 @@ namespace Lytec.Image
 
         public static void Deconstruct(this SKRectI r, out SKPointI Location, out SKSizeI Size)
         => (Location, Size) = (r.Location, r.Size);
+
+        public static void SetAntiAlias(this SKFont font, bool value)
+        {
+            font.Edging = value ? SKFontEdging.Antialias : SKFontEdging.Alias;
+            font.Hinting = value ? SKFontHinting.Slight : SKFontHinting.Full;
+        }
+        public static void SetAntiAlias(this SKFont font, SKFontEdging edging, SKFontHinting hinting)
+        {
+            font.Edging = edging;
+            font.Hinting = hinting;
+        }
     }
 }
