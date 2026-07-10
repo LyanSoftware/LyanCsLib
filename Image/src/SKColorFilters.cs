@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using SkiaSharp;
 
@@ -43,17 +44,17 @@ public static class SKColorFilters
         var gTable = BuildChannelTable(gBits);
         var bTable = BuildChannelTable(bBits);
         var aTable = new byte[256];
-        for (byte i = 0; i < aTable.Length; i++)
-            aTable[i] = i;
-        return SKColorFilter.CreateTable(rTable, gTable, bTable, aTable);
+        for (var i = 0; i < aTable.Length; i++)
+            aTable[i] = (byte)i;
+        return SKColorFilter.CreateTable(aTable, rTable, gTable, bTable);
 
         static byte[] BuildChannelTable(int bits)
         {
             var table = new byte[256];
             if (bits >= 8)
             {
-                for (byte i = 0; i < table.Length; i++)
-                    table[i] = i;
+                for (var i = 0; i < table.Length; i++)
+                    table[i] = (byte)i;
             }
             else if (bits > 0)
             {
@@ -65,7 +66,7 @@ public static class SKColorFilters
                     // 四舍五入到最近的级别
                     int level = (i * maxlv + 127) / 255;
                     // 映射回 0~255
-                    int value = (level * 255 + maxlv / 2) / maxlv; ;
+                    int value = (level * 255 + maxlv / 2) / maxlv;
                     table[i] = (byte)value;
                 }
             }
