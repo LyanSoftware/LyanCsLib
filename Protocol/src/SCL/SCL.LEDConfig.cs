@@ -575,6 +575,7 @@ public static partial class SCL
             set => CheckConfig = BitHelper.SetValue(CheckConfig, (int)value, 28, 4);
         }
         public CardType CardType { get; set; }
+        public bool HasGrayscale => CardType == CardType.ADSCL2800;
         public byte AutoBrightMaxLevel { get; set; }
         public byte AutoBrightMinLevel { get; set; }
 
