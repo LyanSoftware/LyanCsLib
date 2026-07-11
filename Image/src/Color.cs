@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using Newtonsoft.Json;
 using SkiaSharp;
@@ -7,6 +8,7 @@ using SkiaSharp;
 namespace Lytec.Image;
 
 [JsonConverter(typeof(ColorJsonConverter))]
+[DebuggerDisplay("{" + nameof(DebugView) + ",nq}")]
 public readonly partial struct Color : IEquatable<Color>
 {
     public byte R { get; }
@@ -49,6 +51,11 @@ public readonly partial struct Color : IEquatable<Color>
 
     public static bool operator ==(Color left, Color right) => left.Equals(right);
     public static bool operator !=(Color left, Color right) => !(left == right);
+
+    public override string ToString() => $"#{A:X2}{R:X2}{G:X2}{B:X2}";
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    public string DebugView => ToString();
 
     public byte GrayScale => (byte)(R * 0.299 + G * 0.587 + B * 0.114);
 }
