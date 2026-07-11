@@ -180,8 +180,14 @@ namespace Lytec.Protocol.Images.SCL
     {
         public const Endian Endian = Lytec.Common.Data.Endian.Little;
 
-        public int MaxWidth => this.Max(g => g.Width);
-        public int MaxHeight => this.Max(g => g.Height);
+        public int MaxWidth { get; set; }
+        public int MaxHeight { get; set; }
+
+        public void RecalcMaxSize()
+        {
+            MaxWidth = this.Max(g => g.Width);
+            MaxHeight = this.Max(g => g.Height);
+        }
 
         public byte[] Encode(XMPColorType type, bool addFileHeader = true)
         {
@@ -259,8 +265,8 @@ namespace Lytec.Protocol.Images.SCL
                 var buf = new List<byte>(10);
                 buf.Add((byte)type.GetCode());
                 buf.Add((byte)Count);
-                buf.AddRange(((ushort)MaxHeight).ToBytes(Endian));
-                buf.AddRange(((ushort)MaxWidth).ToBytes(Endian));
+                buf.AddRange(((ushort)maxh).ToBytes(Endian));
+                buf.AddRange(((ushort)maxw).ToBytes(Endian));
                 switch (type)
                 {
                     case XMPColorType.RG88:
@@ -384,7 +390,11 @@ namespace Lytec.Protocol.Images.SCL
             }
         }
 
+        public record DecodeInfo(XMPColorType ColorType);
+
         public static bool Decode(byte[] data, [NotNullWhen(true)] out XMPFile? xmp)
+        => Decode(data, out xmp, out _);
+        public static bool Decode(byte[] data, [NotNullWhen(true)] out XMPFile? xmp, [NotNullWhen(true)] out DecodeInfo? Info)
         {
             xmp = null;
             if (data.Length < 7)
@@ -392,6 +402,8 @@ namespace Lytec.Protocol.Images.SCL
 
             var offset = 0;
             var type = XMPUtils.ToColorType(data[offset++]);
+            if (type == XMPColorType.Invalid || type == XMPColorType.Unknown)
+                throw new InvalidDataException();
             int count = data[offset++];
             var maxh = data.ToStruct<ushort>(offset, Endian);
             offset += 2;
@@ -557,18 +569,22 @@ namespace Lytec.Protocol.Images.SCL
                 xmp.Add(img);
             }
 
+            Info = new DecodeInfo(type);
             return true;
         }
 
         public static bool TryDecode(byte[] data, [NotNullWhen(true)] out XMPFile? xmp)
+        => TryDecode(data, out xmp, out _);
+        public static bool TryDecode(byte[] data, [NotNullWhen(true)] out XMPFile? xmp, [NotNullWhen(true)] out DecodeInfo? Info)
         {
             try
             {
-                return Decode(data, out xmp);
+                return Decode(data, out xmp, out Info);
             }
             catch (Exception)
             {
                 xmp = null;
+                Info = null;
                 return false;
             }
         }
