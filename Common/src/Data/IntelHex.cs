@@ -76,7 +76,7 @@ public interface IStartAddress : ISerializable
     Record Encode();
 }
 
-[DebuggerDisplay("{" + nameof(DebugView) + "}")]
+[DebuggerDisplay("{" + nameof(DebugView) + ",nq}")]
 [Serializable]
 [Endian(DefaultEndian)]
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -84,6 +84,7 @@ public readonly struct StartLinearAddress : IStartAddress
 {
     public uint Value { get; }
 
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     public string DebugView => $"0x{Value:X8}";
 
     public StartLinearAddress(uint value) => Value = value;
@@ -101,7 +102,7 @@ public readonly struct StartLinearAddress : IStartAddress
     public static implicit operator uint(StartLinearAddress value) => value.Value;
 }
 
-[DebuggerDisplay("{" + nameof(DebugView) + "}")]
+[DebuggerDisplay("{" + nameof(DebugView) + ",nq}")]
 [Serializable]
 [Endian(DefaultEndian)]
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -111,6 +112,7 @@ public readonly struct StartSegmentAddress : IStartAddress
 
     public ushort InstructionPointer { get; }
 
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     public string DebugView => $"Code Segment: 0x{CodeSegment:X4}, Instruction Pointer : 0x{InstructionPointer:X4}";
 
     public StartSegmentAddress(ushort codeSegment, ushort instructionPointer)
@@ -130,7 +132,7 @@ public readonly struct StartSegmentAddress : IStartAddress
     public byte[] Serialize() => this.ToBytes();
 }
 
-[DebuggerDisplay("{" + nameof(DebugView) + "}")]
+[DebuggerDisplay("{" + nameof(DebugView) + ",nq}")]
 public readonly struct Record : ISerializable
 {
     public const string NewLine = StaticData.NewLine;
@@ -146,6 +148,7 @@ public readonly struct Record : ISerializable
 
     public byte[] Data { get; }
 
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     public string DebugView
     {
         get
@@ -225,7 +228,7 @@ public readonly struct Record : ISerializable
 
 }
 
-[DebuggerDisplay("{" + nameof(DebugView) + "}")]
+[DebuggerDisplay("{" + nameof(DebugView) + ",nq}")]
 public readonly struct DataBlock
 {
     public int Address { get; }
@@ -235,6 +238,7 @@ public readonly struct DataBlock
 
     public int EndAddress => Address + Length;
 
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     public string DebugView => $"0x{Address:X8}: {Data.Length} bytes, Next: 0x{Address + Data.Length:X8}";
 
     public DataBlock(int address, params byte[] data)
