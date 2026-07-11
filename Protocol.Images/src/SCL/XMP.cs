@@ -6,19 +6,23 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Lytec.Common.Data;
 using Lytec.Image;
+using SkiaSharp;
 
 namespace Lytec.Protocol.Images.SCL
 {
     public enum XMPColorType
     {
-        FontLib = -2,
-        FontLib_SC3000 = -3,
-        RG88 = -1,
-        RGB565 = 0,
-        RGB565SameSize = 2,
-        RG11 = 1,
-        RGB111 = 3,
-        RGBx8888 = 8,
+        Unknown = -1,
+        Invalid = 0,
+
+        FontLib,
+        FontLib_SC3000,
+        RG88,
+        RGB565,
+        RGB565SameSize,
+        RG11,
+        RGB111,
+        RGBx8888,
 
         SuperComm_FullColor = RGB565,
         SuperComm_FullColorSameSize = RGB565SameSize,
@@ -29,6 +33,26 @@ namespace Lytec.Protocol.Images.SCL
 
     public static class XMPUtils
     {
+        public static int GetCode(this XMPColorType type) => type switch
+        {
+            XMPColorType.RGB565 => 0,
+            XMPColorType.RGB565SameSize => 2,
+            XMPColorType.RG11 => 1,
+            XMPColorType.RGB111 => 3,
+            XMPColorType.RGBx8888 => 8,
+            _ => -1,
+        };
+
+        public static XMPColorType ToColorType(int code) => code switch
+        {
+            0 => XMPColorType.RGB565,
+            2 => XMPColorType.RGB565SameSize,
+            1 => XMPColorType.RG11,
+            3 => XMPColorType.RGB111,
+            8 => XMPColorType.RGBx8888,
+            _ => XMPColorType.Unknown,
+        };
+
         public static bool HasDataHeader(this XMPColorType type)
         {
             switch (type)
@@ -131,6 +155,25 @@ namespace Lytec.Protocol.Images.SCL
                 else return (x * ((h + bytePixels - 1) / bytePixels) + y / bytePixels, y % bytePixels * pxBits);
             }
         }
+
+        public static int GetFrameSize(this XMPColorType type, int w, int h, bool addFrameHeader)
+        => type switch
+        {
+            XMPColorType.FontLib => (h + 7) / 8 * w,
+            XMPColorType.FontLib_SC3000 => (w + 7) / 8 * h,
+            XMPColorType.RG88 => w * h * 2 + (addFrameHeader ? 4 : 0),
+            XMPColorType.RGB565 => w * h * 2 + (addFrameHeader ? 4 : 0),
+            XMPColorType.RGB565SameSize => w * h * 2,
+            XMPColorType.RG11 => (h + 3) / 4 * w + (addFrameHeader ? 4 : 0),
+            XMPColorType.RGB111 => (h + 1) / 2 * w + (addFrameHeader ? 4 : 0),
+            XMPColorType.RGBx8888 => w * h * 4 + (addFrameHeader ? 4 : 0),
+            _ => throw new ArgumentException(),
+        };
+
+        public static int GetFileSize(this XMPColorType type, int w, int h, bool addFrameHeader, bool addFileHeader)
+        => GetFrameSize(type, w, h, addFrameHeader) + (addFileHeader ? 6 : 0);
+        public static int GetFileSize(this XMPColorType type, IEnumerable<SKSizeI> sizes, bool addFrameHeader, bool addFileHeader)
+        => sizes.Sum(sz => GetFrameSize(type, sz.Width, sz.Height, addFrameHeader)) + (addFileHeader ? 6 : 0);
     }
 
     public class XMPFile : List<ImageData>
@@ -214,7 +257,7 @@ namespace Lytec.Protocol.Images.SCL
             {
                 // 文件头
                 var buf = new List<byte>(10);
-                buf.Add((byte)type);
+                buf.Add((byte)type.GetCode());
                 buf.Add((byte)Count);
                 buf.AddRange(((ushort)MaxHeight).ToBytes(Endian));
                 buf.AddRange(((ushort)MaxWidth).ToBytes(Endian));
@@ -348,7 +391,7 @@ namespace Lytec.Protocol.Images.SCL
                 throw new IndexOutOfRangeException();
 
             var offset = 0;
-            var type = ((XMPColorType)data[offset++]);
+            var type = XMPUtils.ToColorType(data[offset++]);
             int count = data[offset++];
             var maxh = data.ToStruct<ushort>(offset, Endian);
             offset += 2;
