@@ -49,4 +49,6 @@ public readonly partial struct Color : IEquatable<Color>
 
     public static bool operator ==(Color left, Color right) => left.Equals(right);
     public static bool operator !=(Color left, Color right) => !(left == right);
+
+    public byte GrayScale => (byte)(R * 0.299 + G * 0.587 + B * 0.114);
 }
