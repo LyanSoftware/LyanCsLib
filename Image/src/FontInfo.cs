@@ -41,6 +41,6 @@ namespace Lytec.Image
 
         public bool Antialias => Options.HasFlag(FontOptions.Antialias);
 
-        public SKSamplingOptions SamplingOptions => Antialias ? new(SKFilterMode.Linear) : new(SKFilterMode.Nearest);
+        public SKSamplingOptions SamplingOptions => Antialias ? SKSamplingOptionsPreset.Linear : SKSamplingOptionsPreset.Nearest;
     }
 }
