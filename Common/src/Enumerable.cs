@@ -30,13 +30,21 @@ public static partial class EnumerableUtils
     }
 
     public static int IndexOf<T>(this IReadOnlyList<T> source, T item)
-    => source.TakeWhile(i => Comparer<T>.Default.Compare(i, item) != 0).Count();
+    {
+        var index = source.TakeWhile(i => Comparer<T>.Default.Compare(i, item) != 0).Count();
+        return index == source.Count ? -1 : index;
+    }
 
     public static int IndexOf<T>(this IReadOnlyList<T> source, Predicate<T> comparer)
-    => source.TakeWhile(i => !comparer(i)).Count();
+    {
+        var index = source.TakeWhile(i => !comparer(i)).Count();
+        return index == source.Count ? -1 : index;
+    }
 
     private static int IndexOf<T>(IList<T> source, IReadOnlyList<T> data)
     {
+        if (data.Count == 0)
+            return -1;
         for (var i = 0; i + data.Count - 1 < source.Count; i++)
         {
             for (var j = 0; j < data.Count; j++)
@@ -52,6 +60,8 @@ public static partial class EnumerableUtils
 
     private static int IndexOf<T>(IReadOnlyList<T> source, IList<T> data)
     {
+        if (data.Count == 0)
+            return -1;
         for (var i = 0; i + data.Count - 1 < source.Count; i++)
         {
             for (var j = 0; j < data.Count; j++)
@@ -67,6 +77,8 @@ public static partial class EnumerableUtils
 
     private static int IndexOf<T>(IReadOnlyList<T> source, IReadOnlyList<T> data)
     {
+        if (data.Count == 0)
+            return -1;
         for (var i = 0; i + data.Count - 1 < source.Count; i++)
         {
             for (var j = 0; j < data.Count; j++)
@@ -82,6 +94,8 @@ public static partial class EnumerableUtils
 
     private static int IndexOf<T>(IList<T> source, IList<T> data)
     {
+        if (data.Count == 0)
+            return -1;
         for (var i = 0; i + data.Count - 1 < source.Count; i++)
         {
             for (var j = 0; j < data.Count; j++)
