@@ -29,6 +29,7 @@ public static class SKColorFilters
     public static SKColorFilter RGB111 { get; } = CreateQuantization(1, 1, 1);
     public static SKColorFilter RG11 { get; } = CreateQuantization(1, 1, 0);
     public static SKColorFilter RGB565 { get; } = CreateQuantization(5, 6, 5);
+    public static SKColorFilter RG56 { get; } = CreateQuantization(5, 6, 0);
 
     /// <summary>
     /// 创建颜色量化滤镜，将每个通道映射到指定的位数。
