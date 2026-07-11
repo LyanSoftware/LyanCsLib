@@ -315,7 +315,7 @@ namespace Lytec.Protocol
             public IList<IDictionary<string, ADSCL.Xmp>> Fonts { get; set; } = new List<IDictionary<string, ADSCL.Xmp>>();
             public ADSCL.Xmp? BgImage { get; set; }
 
-            public static readonly string[] FontChars_Normal = Enumerable.Range(0, 10).Select(i => '0' + i)
+            public static string[] FontChars_Normal { get; } = Enumerable.Range(0, 10).Select(i => '0' + i)
                 .Append('+')
                 .Append('-')
                 .Append(' ')
@@ -325,7 +325,7 @@ namespace Lytec.Protocol
                 .Select(c => ((char)c).ToString())
                 .ToArray();
             
-            public static readonly string[] FontChars_Digit = Enumerable.Range(0, 10).Select(i => '0' + i)
+            public static string[] FontChars_Digit { get; } = Enumerable.Range(0, 10).Select(i => '0' + i)
                 .Append('+')
                 .Append('-')
                 .Append(' ')
