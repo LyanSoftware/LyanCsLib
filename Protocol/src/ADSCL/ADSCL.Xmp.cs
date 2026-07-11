@@ -226,7 +226,7 @@ namespace Lytec.Protocol
                             throw new NotSupportedException();
                     }
                 }
-                var buf = new byte[head.Length + GetDataSize(type, addHeader)];
+                var buf = new byte[head.Length + GetDataSize(type, false)];
                 Array.Copy(head, buf, head.Length);
                 var offset = head.Length;
                 Action<int, int, Rgba8888Color> setPixel;
@@ -258,7 +258,7 @@ namespace Lytec.Protocol
                         setPixel = (x, y, c) => Array.Copy(new byte[] { c.R, c.G }, 0, buf, offset + (x * h + y) * 2, 2);
                         break;
                     case XmpType.RGBA8888:
-                        setPixel = (x, y, c) => Array.Copy(c.Value.ToBytes(Endian.Little), 0, buf, offset + (y * w + x) * 2, 4);
+                        setPixel = (x, y, c) => Array.Copy(c.Value.ToBytes(Endian.Little), 0, buf, offset + (y * w + x) * 4, 4);
                         break;
                     default:
                         throw new NotSupportedException();
