@@ -478,7 +478,7 @@ public static partial class SCL
             CommandCode == other.CommandCode &&
             Arg1 == other.Arg1 &&
             Arg2 == other.Arg2 &&
-            EqualityComparer<byte[]>.Default.Equals(Arg3, other.Arg3);
+            Arg3.SequenceEqual(other.Arg3);
 
         public override int GetHashCode()
         {
@@ -490,7 +490,8 @@ public static partial class SCL
             hashCode = hashCode * -1521134295 + CommandCode.GetHashCode();
             hashCode = hashCode * -1521134295 + Arg1.GetHashCode();
             hashCode = hashCode * -1521134295 + Arg2.GetHashCode();
-            hashCode = hashCode * -1521134295 + EqualityComparer<byte[]>.Default.GetHashCode(Arg3);
+            foreach (var value in Arg3)
+                hashCode = hashCode * -1521134295 + value.GetHashCode();
             return hashCode;
         }
 
