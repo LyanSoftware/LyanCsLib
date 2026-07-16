@@ -4,6 +4,7 @@ using Lytec.Common.Data;
 using Lytec.Common.Communication;
 using System.Diagnostics.CodeAnalysis;
 using Lytec.Common;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Lytec.Protocol
 {
@@ -201,6 +202,23 @@ namespace Lytec.Protocol
 
         public static bool SaveTo(ISendAndGetAnswerConfig config, int addr, int length, string? password = null, int extTimeout = 0)
         => Exec(config, out _, new CommandPack((int)CommandCode.SaveTo, addr, length), password, r => r.Data != null && r.Data.Arg2 == length, extTimeout);
+
+        public static bool GetFileSize(ISendAndGetAnswerConfig config, DiskDriver disk, string filepath, out int FileSize, string? password = null, int extTimeout = 0)
+        {
+            FileSize = -1;
+            if (Exec(
+                config,
+                out var p,
+                new CommandPack((int)CommandCode.LoadFileToBuff, (int)disk | (3 << 2), 0, new byte[4].Concat(ToFixedLengthString(filepath, 32)).ToArray()),
+                password,
+                r => r.Data != null && r.Data.Arg2 != 0 && r.Data.Arg2 != FalseValue,
+                extTimeout))
+            {
+                FileSize = p.Data!.Arg2;
+                return true;
+            }
+            return false;
+        }
 
         public static bool GetFileMD5(ISendAndGetAnswerConfig config, DiskDriver disk, string filepath, [NotNullWhen(true)] out string? md5, string? password = null, int extTimeout = 0)
         {
