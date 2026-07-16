@@ -164,18 +164,7 @@ namespace Lytec.Common.Data
         /// <returns></returns>
         [return: NotNull]
         public static T ToStruct<T>(this ReadOnlySpan<byte> bytes, Endian? defaultEndian = null)
-        {
-            var t = typeof(T);
-            var obj = bytes.ToStruct(t, defaultEndian);
-            if (t.IsArray)
-            {
-                var arr = (object[])obj;
-                var ts = Array.CreateInstance(t.GetElementType()!, arr.Length);
-                Array.Copy(arr, ts, arr.Length);
-                return (T)(object)ts;
-            }
-            return (T)obj;
-        }
+        => (T)bytes.ToStruct(typeof(T), defaultEndian);
 
         /// <summary>
         /// byte[]转结构体
@@ -228,7 +217,9 @@ namespace Lytec.Common.Data
                 var arr = new object[bytes.Length / elSize];
                 for (var i = 0; i < arr.Length; i++)
                     arr[i] = bytes[(i * elSize)..].ToStruct(elt, defaultEndian);
-                return arr;
+                var ts = Array.CreateInstance(elt, arr.Length);
+                Array.Copy(arr, ts, arr.Length);
+                return ts;
             }
             if (type == typeof(IPAddress))
             {
@@ -237,6 +228,12 @@ namespace Lytec.Common.Data
 #else
                 return new IPAddress(bytes.ToArray());
 #endif
+            }
+            Type? nullablet = null;
+            if (type.IsNullable(out var nut))
+            {
+                nullablet = type;
+                type = nut;
             }
             if (type.IsEnum)
                 type = type.GetEnumUnderlyingType();
@@ -253,6 +250,8 @@ namespace Lytec.Common.Data
                 bytes[..size].CopyTo(buf);
                 Marshal.Copy(buf.FixEndian(type, defaultEndian), 0, p, buf.Length);
                 t = Marshal.PtrToStructure(p, type)!;
+                if (nullablet != null)
+                    t = Activator.CreateInstance(nullablet, t);
             }
             finally
             {
