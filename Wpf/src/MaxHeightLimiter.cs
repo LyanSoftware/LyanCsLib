@@ -5,37 +5,148 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace Lytec.Wpf;
 
 public static class MaxHeightLimiter
 {
     public static readonly DependencyProperty TargetProperty =
-        DependencyProperty.RegisterAttached("Target", typeof(FrameworkElement), typeof(MaxHeightLimiter),
+        DependencyProperty.RegisterAttached(
+            "Target",
+            typeof(FrameworkElement),
+            typeof(MaxHeightLimiter),
             new PropertyMetadata(null, OnTargetChanged));
 
-    public static void SetTarget(DependencyObject obj, FrameworkElement value) => obj.SetValue(TargetProperty, value);
-    public static FrameworkElement GetTarget(DependencyObject obj) => (FrameworkElement)obj.GetValue(TargetProperty);
+    private static readonly DependencyProperty StateProperty =
+        DependencyProperty.RegisterAttached(
+            "State",
+            typeof(State),
+            typeof(MaxHeightLimiter));
 
-    private static void OnTargetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    public static void SetTarget(
+        DependencyObject obj,
+        FrameworkElement? value)
+        => obj.SetValue(TargetProperty, value);
+
+    public static FrameworkElement? GetTarget(DependencyObject obj)
+        => (FrameworkElement?)obj.GetValue(TargetProperty);
+
+    private static void OnTargetChanged(
+        DependencyObject d,
+        DependencyPropertyChangedEventArgs e)
     {
-        if (d is Panel panel && e.NewValue is FrameworkElement target)
+        if (d is not Panel panel)
+            return;
+
+        // 清理旧的监听，避免重复订阅。
+        if (panel.GetValue(StateProperty) is State oldState)
         {
-            void Update()
+            oldState.Dispose();
+            panel.ClearValue(StateProperty);
+        }
+
+        if (e.NewValue is not FrameworkElement target)
+            return;
+
+        var state = new State(panel, target);
+        panel.SetValue(StateProperty, state);
+        state.Attach();
+    }
+
+    private sealed class State : IDisposable
+    {
+        private readonly Panel panel;
+        private readonly FrameworkElement target;
+
+        private bool updatePending;
+        private bool disposed;
+
+        public State(Panel panel, FrameworkElement target)
+        {
+            this.panel = panel;
+            this.target = target;
+        }
+
+        public void Attach()
+        {
+            panel.Loaded += OnChanged;
+            panel.SizeChanged += OnChanged;
+
+            foreach (var child in panel.Children
+                         .OfType<FrameworkElement>())
             {
-                double max = 0;
-                foreach (UIElement child in panel.Children)
-                {
-                    if (child == target || child is not FrameworkElement fe) continue;
-                    fe.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                    max = Math.Max(max, fe.DesiredSize.Height);
-                }
-                target.MaxHeight = max;
+                if (child != target)
+                    child.SizeChanged += OnChanged;
             }
 
-            panel.Loaded += (_, _) => Update();
-            panel.LayoutUpdated += (_, _) => Update();
-            panel.SizeChanged += (_, _) => Update();
+            QueueUpdate();
+        }
+
+        private void OnChanged(object? sender, EventArgs e)
+        {
+            QueueUpdate();
+        }
+
+        private void QueueUpdate()
+        {
+            if (disposed || updatePending)
+                return;
+
+            updatePending = true;
+
+            panel.Dispatcher.BeginInvoke(
+                DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    updatePending = false;
+
+                    if (!disposed)
+                        Update();
+                }));
+        }
+
+        private void Update()
+        {
+            if (!panel.IsLoaded)
+                return;
+
+            var maxHeight = panel.Children
+                .OfType<FrameworkElement>()
+                .Where(x =>
+                    x != target &&
+                    x.Visibility != Visibility.Collapsed)
+                .Select(x => x.ActualHeight)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            if (maxHeight <= 0)
+                return;
+
+            // 防止浮点抖动和无意义的布局失效。
+            if (double.IsPositiveInfinity(target.MaxHeight) ||
+                Math.Abs(target.MaxHeight - maxHeight) > 0.5)
+            {
+                target.MaxHeight = maxHeight;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (disposed)
+                return;
+
+            disposed = true;
+
+            panel.Loaded -= OnChanged;
+            panel.SizeChanged -= OnChanged;
+
+            foreach (var child in panel.Children
+                         .OfType<FrameworkElement>())
+            {
+                if (child != target)
+                    child.SizeChanged -= OnChanged;
+            }
         }
     }
 }
