@@ -7,7 +7,7 @@ using Lytec.Common.Data;
 
 namespace Lytec.Common.Algorithm
 {
-    public static class AlgorithmExtensions
+    public static partial class AlgorithmExtensions
     {
         static IDictionary<Type, Func<HashAlgorithm?>> HashAlgorithmFactoryCache { get; } = new Dictionary<Type, Func<HashAlgorithm?>>();
         public static HashAlgorithm? CreateHashAlgorithm(Type type)
@@ -41,29 +41,34 @@ namespace Lytec.Common.Algorithm
         public static byte[] GetHash<TAlgorithm>(this IEnumerable<byte> bytes) where TAlgorithm : HashAlgorithm
         => CreateHashAlgorithm(typeof(TAlgorithm))?.ComputeHash(bytes) ?? throw new NotSupportedException();
 
+        [GenerateHashAlgorithmExtensions]
         public static MD5 GetMd5() => MD5.Create();
 
         public static byte[] GetMd5(this byte[] bytes)
-        => GetMd5(bytes, 0, bytes.Length);
+        => GetMd5().ComputeHash(bytes, 0, bytes.Length);
         public static byte[] GetMd5(this byte[] bytes, int count)
-        => GetMd5(bytes, 0, count);
+        => GetMd5().ComputeHash(bytes, 0, count);
         public static byte[] GetMd5(this byte[] bytes, int offset, int count)
-        => MD5.Create().ComputeHash(bytes, offset, count);
+        => GetMd5().ComputeHash(bytes, offset, count);
         public static byte[] GetMd5(this Stream stream)
-        => MD5.Create().ComputeHash(stream);
+        => GetMd5().ComputeHash(stream);
         public static byte[] GetMd5(this IEnumerable<byte> bytes)
-        => MD5.Create().ComputeHash(bytes);
+        => GetMd5().ComputeHash(bytes);
+
+        public static ushort ConvertCrc16_CCITT_XMODEMResult(byte[] bytes) => bytes.ToStruct<ushort>();
+        [GenerateHashAlgorithmExtensions(nameof(ConvertCrc16_CCITT_XMODEMResult))]
+        public static CheckSum.CRC16.CCITT_XMODEM GetCrc16_CCITT_XMODEM(ushort init = 0) => new CheckSum.CRC16.CCITT_XMODEM(init);
 
         public static ushort GetCrc16_CCITT_XMODEM(this byte[] bytes, ushort init = 0)
-        => GetCrc16_CCITT_XMODEM(bytes, 0, bytes.Length, init);
+        => ConvertCrc16_CCITT_XMODEMResult(GetCrc16_CCITT_XMODEM(init).ComputeHash(bytes, 0, bytes.Length));
         public static ushort GetCrc16_CCITT_XMODEM(this byte[] bytes, int count, ushort init = 0)
-        => GetCrc16_CCITT_XMODEM(bytes, 0, count, init);
+        => ConvertCrc16_CCITT_XMODEMResult(GetCrc16_CCITT_XMODEM(init).ComputeHash(bytes, 0, count));
         public static ushort GetCrc16_CCITT_XMODEM(this byte[] bytes, int offset, int count, ushort init = 0)
-        => new CheckSum.CRC16.CCITT_XMODEM(init).ComputeHash(bytes, offset, count).ToStruct<ushort>();
+        => ConvertCrc16_CCITT_XMODEMResult(GetCrc16_CCITT_XMODEM(init).ComputeHash(bytes, offset, count));
         public static ushort GetCrc16_CCITT_XMODEM(this Stream stream, ushort init = 0)
-        => new CheckSum.CRC16.CCITT_XMODEM(init).ComputeHash(stream).ToStruct<ushort>();
+        => ConvertCrc16_CCITT_XMODEMResult(GetCrc16_CCITT_XMODEM(init).ComputeHash(stream));
         public static ushort GetCrc16_CCITT_XMODEM(this IEnumerable<byte> bytes, ushort init = 0)
-        => new CheckSum.CRC16.CCITT_XMODEM(init).ComputeHash(bytes).ToStruct<ushort>();
+        => ConvertCrc16_CCITT_XMODEMResult(GetCrc16_CCITT_XMODEM(init).ComputeHash(bytes));
 
     }
 }
