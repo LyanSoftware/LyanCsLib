@@ -15,7 +15,7 @@ public static class EnvInfo
         if (Environment.ProcessPath != null)
             return Environment.ProcessPath;
 #else
-        var p = typeof(Environment).GetProperty("ProcessPath", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        var p = typeof(Environment).GetProperty("ProcessPath", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         if (p?.GetValue(null) is string v)
             return v;
 #endif
