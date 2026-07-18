@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 
-namespace Lytec.NetStandard20Compatibility;
+namespace Lytec.Common;
 
 public static class ReflectionExtensions
 {
