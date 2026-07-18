@@ -46,6 +46,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.AnalyzerUtils", "Anal
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Common.Generators", "Common.Generators\Lytec.Common.Generators.csproj", "{22612132-7659-42D1-B186-9295B8F3463F}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Common.Generated", "Common.Generated\Lytec.Common.Generated.csproj", "{FEB67227-040C-4BC3-8A0D-603AB1297483}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Wpf", "Wpf\Lytec.Wpf.csproj", "{FDD50CE1-1932-4C35-90B4-6D7484CC10C6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.NewBeeUIUtils", "NewBeeUIUtils\Lytec.NewBeeUIUtils.csproj", "{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -116,6 +122,18 @@ Global
 		{22612132-7659-42D1-B186-9295B8F3463F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{22612132-7659-42D1-B186-9295B8F3463F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{22612132-7659-42D1-B186-9295B8F3463F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FEB67227-040C-4BC3-8A0D-603AB1297483}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEB67227-040C-4BC3-8A0D-603AB1297483}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEB67227-040C-4BC3-8A0D-603AB1297483}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEB67227-040C-4BC3-8A0D-603AB1297483}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FDD50CE1-1932-4C35-90B4-6D7484CC10C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FDD50CE1-1932-4C35-90B4-6D7484CC10C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FDD50CE1-1932-4C35-90B4-6D7484CC10C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FDD50CE1-1932-4C35-90B4-6D7484CC10C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
