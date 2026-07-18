@@ -20,7 +20,7 @@ public static class EnvInfo
             return v;
 #endif
 #pragma warning disable CA1839 // 使用 “Environment.ProcessPath”
-        return Process.GetCurrentProcess().MainModule!.FileName;
+        return Process.GetCurrentProcess().MainModule!.FileName!;
 #pragma warning restore CA1839 // 使用 “Environment.ProcessPath”
     }
 }

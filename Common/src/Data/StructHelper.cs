@@ -251,7 +251,7 @@ namespace Lytec.Common.Data
                 Marshal.Copy(buf.FixEndian(type, defaultEndian), 0, p, buf.Length);
                 t = Marshal.PtrToStructure(p, type)!;
                 if (nullablet != null)
-                    t = Activator.CreateInstance(nullablet, t);
+                    t = Activator.CreateInstance(nullablet, t)!;
             }
             finally
             {

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using Lytec.Common;
 using Lytec.Common.Data;
 
 namespace Lytec.Common.Algorithm
