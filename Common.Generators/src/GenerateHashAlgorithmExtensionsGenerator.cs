@@ -11,10 +11,10 @@ namespace Lytec.Common.Generators;
 [Generator]
 public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGenerator
 {
-    private static readonly DiagnosticDescriptor FactoryMustBeStatic = new(
+    private static readonly DiagnosticDescriptor InvalidFactoryMember = new(
         id: "LYTEC_COMMON_HASH_001",
         title: "Invalid hash algorithm factory",
-        messageFormat: "Method '{0}' marked with [GenerateHashAlgorithmExtensions] must be a static method",
+        messageFormat: "Member '{0}' marked with [GenerateHashAlgorithmExtensions] must be a static method or a readable static property",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -22,7 +22,7 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
     private static readonly DiagnosticDescriptor ContainerMustBePartialStaticClass = new(
         id: "LYTEC_COMMON_HASH_002",
         title: "Invalid hash algorithm factory container",
-        messageFormat: "Method '{0}' marked with [GenerateHashAlgorithmExtensions] must be declared in a partial static class",
+        messageFormat: "Member '{0}' marked with [GenerateHashAlgorithmExtensions] must be declared in a partial static class",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -38,7 +38,7 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
     private static readonly DiagnosticDescriptor FactoryMustReturnHashAlgorithm = new(
         id: "LYTEC_COMMON_HASH_004",
         title: "Invalid hash algorithm factory return type",
-        messageFormat: "Method '{0}' marked with [GenerateHashAlgorithmExtensions] must return System.Security.Cryptography.HashAlgorithm or a derived type",
+        messageFormat: "Factory '{0}' marked with [GenerateHashAlgorithmExtensions] must return System.Security.Cryptography.HashAlgorithm or a derived type",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -46,7 +46,15 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
     private static readonly DiagnosticDescriptor InvalidConverter = new(
         id: "LYTEC_COMMON_HASH_005",
         title: "Invalid hash result converter",
-        messageFormat: "Converter '{0}' for method '{1}' must be a unique static method in the same class with signature T {0}(byte[] bytes)",
+        messageFormat: "Converter '{0}' for factory '{1}' must be a unique static method T {0}(byte[] bytes), or a readable static delegate property compatible with T(byte[]) in the same class",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidExtensionMethodName = new(
+        id: "LYTEC_COMMON_HASH_006",
+        title: "Invalid generated extension method name",
+        messageFormat: "Extension method name '{0}' for factory '{1}' is invalid or conflicts with a non-method member in the same class",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -59,11 +67,11 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var methods = context.SyntaxProvider.ForAttr<GenerateHashAlgorithmExtensionsAttribute>(
-            node => node is MethodDeclarationSyntax);
+        var members = context.SyntaxProvider.ForAttr<GenerateHashAlgorithmExtensionsAttribute>(
+            node => node is MethodDeclarationSyntax or PropertyDeclarationSyntax);
 
         context.RegisterSourceOutput(
-            context.CompilationProvider.Combine(methods),
+            context.CompilationProvider.Combine(members),
             static (sourceProductionContext, source) =>
                 Generate(sourceProductionContext, source.Left, source.Right));
     }
@@ -83,22 +91,30 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
 
         foreach (var info in infos)
         {
-            if (info.Symbol is not IMethodSymbol factory || info.Attrs.Length == 0)
+            if (info.Attrs.Length == 0)
                 continue;
 
+            var factorySymbol = info.Symbol;
             var attribute = info.Attrs[0];
-            var location = GetDiagnosticLocation(attribute, factory, context.CancellationToken);
+            var location = GetDiagnosticLocation(
+                attribute,
+                factorySymbol,
+                context.CancellationToken);
 
-            if (factory.MethodKind != MethodKind.Ordinary || !factory.IsStatic)
+            if (!TryGetFactoryShape(
+                    factorySymbol,
+                    out var factoryReturnType,
+                    out var factoryParameters,
+                    out var factoryTypeParameters))
             {
                 context.ReportDiagnostic(Diagnostic.Create(
-                    FactoryMustBeStatic,
+                    InvalidFactoryMember,
                     location,
-                    factory.Name));
+                    factorySymbol.Name));
                 continue;
             }
 
-            var container = factory.ContainingType;
+            var container = factorySymbol.ContainingType;
             if (container.TypeKind != TypeKind.Class ||
                 !container.IsStatic ||
                 !IsPartial(container))
@@ -106,7 +122,7 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
                 context.ReportDiagnostic(Diagnostic.Create(
                     ContainerMustBePartialStaticClass,
                     location,
-                    factory.Name));
+                    factorySymbol.Name));
                 continue;
             }
 
@@ -122,25 +138,42 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
                 continue;
             }
 
-            if (!IsHashAlgorithm(factory.ReturnType, hashAlgorithmType))
+            if (!IsHashAlgorithm(factoryReturnType, hashAlgorithmType))
             {
                 context.ReportDiagnostic(Diagnostic.Create(
                     FactoryMustReturnHashAlgorithm,
                     location,
-                    factory.Name));
+                    factorySymbol.Name));
+                continue;
+            }
+
+            var extensionMethodName = GetExtensionMethodName(attribute, factorySymbol);
+            if (!IsValidExtensionMethodName(
+                    extensionMethodName,
+                    container))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    InvalidExtensionMethodName,
+                    location,
+                    extensionMethodName,
+                    factorySymbol.Name));
                 continue;
             }
 
             var converterName = GetConverterName(attribute);
-            IMethodSymbol? converter = null;
+            ISymbol? converter = null;
             ITypeSymbol resultType = compilation.CreateArrayTypeSymbol(
                 compilation.GetSpecialType(SpecialType.System_Byte));
 
             if (converterName is not null)
             {
                 var converters = container.GetMembers(converterName)
-                    .OfType<IMethodSymbol>()
-                    .Where(IsValidConverter)
+                    .Select(member =>
+                        TryGetConverterResultType(member, out var converterResultType)
+                            ? new ConverterInfo(member, converterResultType)
+                            : null)
+                    .Where(converterInfo => converterInfo is not null)
+                    .Cast<ConverterInfo>()
                     .ToArray();
 
                 if (converters.Length != 1)
@@ -149,12 +182,12 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
                         InvalidConverter,
                         location,
                         converterName,
-                        factory.Name));
+                        factorySymbol.Name));
                     continue;
                 }
 
-                converter = converters[0];
-                resultType = converter.ReturnType;
+                converter = converters[0].Symbol;
+                resultType = converters[0].ResultType;
             }
 
             if (!targetsByContainer.TryGetValue(container, out var targets))
@@ -163,15 +196,22 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
                 targetsByContainer.Add(container, targets);
             }
 
-            targets.Add(new GenerationTarget(factory, converter, resultType));
+            targets.Add(new GenerationTarget(
+                new FactoryInfo(
+                    factorySymbol,
+                    extensionMethodName,
+                    factoryParameters,
+                    factoryTypeParameters),
+                converter,
+                resultType));
         }
 
         foreach (var pair in targetsByContainer)
         {
             var container = pair.Key;
             var targets = pair.Value
-                .OrderBy(target => GetSourceOrder(target.Factory))
-                .ThenBy(target => target.Factory.Name, StringComparer.Ordinal)
+                .OrderBy(target => GetSourceOrder(target.Factory.Symbol))
+                .ThenBy(target => target.Factory.Symbol.Name, StringComparer.Ordinal)
                 .ToArray();
             var hintName = $"{container.GetFiltedMetadataName()}.HashAlgorithmExtensions.g.cs";
 
@@ -293,7 +333,7 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
         sb.Append("public static ")
             .Append(GetTypeName(target.ResultType))
             .Append(' ')
-            .Append(EscapeIdentifier(factory.Name))
+            .Append(EscapeIdentifier(factory.ExtensionMethodName))
             .Append(GetTypeParameterList(factory.TypeParameters))
             .Append('(')
             .Append(string.Join(", ", parameters))
@@ -319,9 +359,13 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
         sb.AppendLine();
     }
 
-    private static string GetFactoryInvocation(IMethodSymbol factory)
+    private static string GetFactoryInvocation(FactoryInfo factory)
     {
-        var arguments = factory.Parameters.Select(parameter =>
+        if (factory.Symbol is IPropertySymbol property)
+            return EscapeIdentifier(property.Name);
+
+        var method = (IMethodSymbol)factory.Symbol;
+        var arguments = method.Parameters.Select(parameter =>
         {
             var modifier = parameter.RefKind switch
             {
@@ -333,8 +377,8 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
             return modifier + EscapeIdentifier(parameter.Name);
         });
 
-        return EscapeIdentifier(factory.Name) +
-            GetTypeParameterList(factory.TypeParameters) +
+        return EscapeIdentifier(method.Name) +
+            GetTypeParameterList(method.TypeParameters) +
             "(" + string.Join(", ", arguments) + ")";
     }
 
@@ -505,17 +549,106 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
         return EscapeIdentifier(candidate);
     }
 
-    private static bool IsValidConverter(IMethodSymbol method)
+    private static bool TryGetFactoryShape(
+        ISymbol symbol,
+        out ITypeSymbol returnType,
+        out IReadOnlyList<IParameterSymbol> parameters,
+        out IReadOnlyList<ITypeParameterSymbol> typeParameters)
     {
-        return method.MethodKind == MethodKind.Ordinary &&
-               method.IsStatic &&
-               !method.IsGenericMethod &&
+        switch (symbol)
+        {
+            case IMethodSymbol
+            {
+                MethodKind: MethodKind.Ordinary,
+                IsStatic: true
+            } method:
+                returnType = method.ReturnType;
+                parameters = method.Parameters;
+                typeParameters = method.TypeParameters;
+                return true;
+
+            case IPropertySymbol
+            {
+                IsStatic: true,
+                IsIndexer: false,
+                GetMethod.IsStatic: true,
+                ReturnsByRef: false,
+                ReturnsByRefReadonly: false
+            } property:
+                returnType = property.Type;
+                parameters = Array.Empty<IParameterSymbol>();
+                typeParameters = Array.Empty<ITypeParameterSymbol>();
+                return true;
+
+            default:
+                returnType = null!;
+                parameters = Array.Empty<IParameterSymbol>();
+                typeParameters = Array.Empty<ITypeParameterSymbol>();
+                return false;
+        }
+    }
+
+    private static bool TryGetConverterResultType(
+        ISymbol symbol,
+        out ITypeSymbol resultType)
+    {
+        switch (symbol)
+        {
+            case IMethodSymbol method
+                when method.MethodKind == MethodKind.Ordinary &&
+                     method.IsStatic &&
+                     HasConverterSignature(method):
+                resultType = method.ReturnType;
+                return true;
+
+            case IPropertySymbol
+            {
+                IsStatic: true,
+                IsIndexer: false,
+                GetMethod.IsStatic: true,
+                ReturnsByRef: false,
+                ReturnsByRefReadonly: false,
+                Type: INamedTypeSymbol
+                {
+                    TypeKind: TypeKind.Delegate,
+                    DelegateInvokeMethod: { } invokeMethod
+                }
+            } when HasConverterSignature(invokeMethod):
+                resultType = invokeMethod.ReturnType;
+                return true;
+
+            default:
+                resultType = null!;
+                return false;
+        }
+    }
+
+    private static bool HasConverterSignature(IMethodSymbol method)
+    {
+        return !method.IsGenericMethod &&
                !method.ReturnsVoid &&
                !method.ReturnsByRef &&
                !method.ReturnsByRefReadonly &&
                method.Parameters.Length == 1 &&
                method.Parameters[0].RefKind == RefKind.None &&
                IsByteArray(method.Parameters[0].Type);
+    }
+
+    private static bool IsValidExtensionMethodName(
+        string extensionMethodName,
+        INamedTypeSymbol container)
+    {
+        if (string.IsNullOrWhiteSpace(extensionMethodName))
+            return false;
+
+        var isIdentifier =
+            SyntaxFacts.IsValidIdentifier(extensionMethodName) ||
+            SyntaxFacts.GetKeywordKind(extensionMethodName) != SyntaxKind.None;
+        if (!isIdentifier)
+            return false;
+
+        return !container.GetMembers(extensionMethodName)
+            .Any(member => member is not IMethodSymbol);
     }
 
     private static bool IsByteArray(ITypeSymbol type)
@@ -544,6 +677,23 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
         }
 
         return null;
+    }
+
+    private static string GetExtensionMethodName(
+        AttributeData attribute,
+        ISymbol factory)
+    {
+        var namedValue = attribute.NamedArguments
+            .FirstOrDefault(argument =>
+                argument.Key == nameof(
+                    GenerateHashAlgorithmExtensionsAttribute.ExtensionMethodName))
+            .Value;
+        if (namedValue.Value is string name)
+            return name;
+
+        return factory is IPropertySymbol
+            ? "Get" + factory.Name
+            : factory.Name;
     }
 
     private static bool IsHashAlgorithm(
@@ -614,26 +764,36 @@ public sealed class GenerateHashAlgorithmExtensionsGenerator : IIncrementalGener
     private static void AppendIndent(StringBuilder sb, int indent) =>
         sb.Append(' ', indent * 4);
 
-    private static int GetSourceOrder(IMethodSymbol method)
+    private static int GetSourceOrder(ISymbol symbol)
     {
-        var location = method.Locations.FirstOrDefault(item => item.IsInSource);
+        var location = symbol.Locations.FirstOrDefault(item => item.IsInSource);
         return location?.SourceSpan.Start ?? int.MaxValue;
     }
 
     private static Location GetDiagnosticLocation(
         AttributeData attribute,
-        IMethodSymbol method,
+        ISymbol symbol,
         CancellationToken cancellationToken)
     {
         return attribute.ApplicationSyntaxReference?
                    .GetSyntax(cancellationToken)
                    .GetLocation() ??
-               method.Locations.FirstOrDefault() ??
+               symbol.Locations.FirstOrDefault() ??
                Location.None;
     }
 
+    private sealed record FactoryInfo(
+        ISymbol Symbol,
+        string ExtensionMethodName,
+        IReadOnlyList<IParameterSymbol> Parameters,
+        IReadOnlyList<ITypeParameterSymbol> TypeParameters);
+
+    private sealed record ConverterInfo(
+        ISymbol Symbol,
+        ITypeSymbol ResultType);
+
     private sealed record GenerationTarget(
-        IMethodSymbol Factory,
-        IMethodSymbol? Converter,
+        FactoryInfo Factory,
+        ISymbol? Converter,
         ITypeSymbol ResultType);
 }
