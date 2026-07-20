@@ -34,6 +34,12 @@ namespace Lytec.Protocol
         public const int FlashReadMaxFileSeconds = 24; // Flash读取最大文件所需时间（暂停播放时为16秒）
         public const int FlashWriteBytesPerSecond = GBufferSize / FlashWriteMaxFileSeconds; // Flash写入速度
         public const int FlashReadBytesPerSecond = GBufferSize / FlashReadMaxFileSeconds; // Flash读取速度
+        /*
+         * 读入+计算MD5：
+         * 文件大小/耗时
+         * 987142/(22.522320-18.265417)=231892.058616
+         */
+        public const int CalcFileMd5SpeedPerSecond = 200000; // 读入+计算文件MD5的速度
 
         public record AllConfigs(LEDConfig Led, NetConfig Net)
         {

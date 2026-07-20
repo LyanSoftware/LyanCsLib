@@ -220,16 +220,21 @@ namespace Lytec.Protocol
             return false;
         }
 
-        public static bool GetFileMD5(ISendAndGetAnswerConfig config, DiskDriver disk, string filepath, [NotNullWhen(true)] out string? md5, string? password = null, int extTimeout = 0)
+        public static bool GetFileMD5(ISendAndGetAnswerConfig config, DiskDriver disk, string filepath, [NotNullWhen(true)] out string? md5, int fileSize = -1, string? password = null, int extTimeout = 0)
         {
             md5 = null;
+            if (fileSize <= 0)
+            {
+                if (!GetFileSize(config, disk, filepath, out fileSize, password, extTimeout))
+                    return false;
+            }
             if (Exec(
                 config,
                 out var p,
                 new CommandPack((int)CommandCode.LoadFileToBuff, (int)disk | (2 << 2), 0, new byte[4].Concat(ToFixedLengthString(filepath, 32)).ToArray()),
                 password,
                 r => r.Data?.Arg2 == 16 && r.Data.Arg3.Length == 16,
-                extTimeout))
+                extTimeout + (fileSize / CalcFileMd5SpeedPerSecond * 1000) + 1000))
             {
                 md5 = p.Data!.Arg3.ToArray().ToHex("");
                 return true;
