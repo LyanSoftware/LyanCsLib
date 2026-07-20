@@ -228,7 +228,7 @@ namespace Lytec.Protocol
                 out var p,
                 new CommandPack((int)CommandCode.LoadFileToBuff, (int)disk | (2 << 2), 0, new byte[4].Concat(ToFixedLengthString(filepath, 32)).ToArray()),
                 password,
-                r => r.Data?.Arg2 == 1 && r.Data.Arg3.Length == 36+16,
+                r => r.Data?.Arg2 == 16 && r.Data.Arg3.Length == 16,
                 extTimeout))
             {
                 md5 = p.Data!.Arg3.Skip(32).ToArray().ToHex("");
