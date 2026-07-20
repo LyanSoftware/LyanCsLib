@@ -231,7 +231,7 @@ namespace Lytec.Protocol
                 r => r.Data?.Arg2 == 16 && r.Data.Arg3.Length == 16,
                 extTimeout))
             {
-                md5 = p.Data!.Arg3.Skip(32).ToArray().ToHex("");
+                md5 = p.Data!.Arg3.ToArray().ToHex("");
                 return true;
             }
             return false;
