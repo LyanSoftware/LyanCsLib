@@ -40,22 +40,36 @@ namespace Lytec.Image
 
         public static SKBitmap ToPremuled(this SKImage src, bool disposeSource = false)
         {
-            // 将图像转换为预乘RGBA8888
-            var bmp = new SKBitmap(new SKImageInfo(src.Width, src.Height, SKColorType.Bgra8888, SKAlphaType.Premul));
-            using SKCanvas canvas = new SKCanvas(bmp);
-            canvas.Clear(SKColors.Transparent);
-            canvas.DrawImage(src, 0, 0, SKSamplingOptions.Default);
-            if (disposeSource)
-                src.Dispose();
-            return bmp;
+            try
+            {
+                if (src.AlphaType == SKAlphaType.Premul)
+                    return SKBitmap.FromImage(src);
+                // 将图像转换为预乘RGBA8888
+                var bmp = new SKBitmap(new SKImageInfo(src.Width, src.Height, SKColorType.Bgra8888, SKAlphaType.Premul));
+                using SKCanvas canvas = new SKCanvas(bmp);
+                canvas.Clear(SKColors.Transparent);
+                canvas.DrawImage(src, 0, 0, SKSamplingOptions.Default);
+                return bmp;
+            }
+            finally
+            {
+                if (disposeSource)
+                    src.Dispose();
+            }
         }
-        
+
         public static SKBitmap ToPremuled(this SKBitmap src, bool disposeSource = false)
         {
-            using var img = SKImage.FromBitmap(src);
-            if (disposeSource)
-                src.Dispose();
-            return img.ToPremuled();
+            try
+            {
+                using var img = SKImage.FromBitmap(src);
+                return img.ToPremuled();
+            }
+            finally
+            {
+                if (disposeSource)
+                    src.Dispose();
+            }
         }
         
         public static SKBitmap ToSKBitmap(this ImageData img)
@@ -87,29 +101,41 @@ namespace Lytec.Image
 
         public static ImageData GetImageData(this SKImage img, bool disposeSource = false)
         {
-            var w = img.Width;
-            var h = img.Height;
-            // 将图像转换为非预乘RGBA8888
-            using var bmp = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul));
-            using (SKCanvas canvas = new SKCanvas(bmp))
-                canvas.DrawImage(img, 0, 0, SKSamplingOptions.Default);
-            var pixels = bmp.Bytes;
-            var rowBytes = bmp.RowBytes;   // 每行字节数（可能因内存对齐而大于 Width * 4）
-            if (disposeSource)
-                img.Dispose();
-            return new ImageData(w, h, pos =>
+            try
             {
-                var offset = pos.Y * rowBytes + pos.X * 4;
-                return new Color(pixels[offset + 2], pixels[offset + 1], pixels[offset + 0], pixels[offset + 3]);
-            });
+                var w = img.Width;
+                var h = img.Height;
+                // 将图像转换为非预乘RGBA8888
+                using var bmp = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul));
+                using (SKCanvas canvas = new SKCanvas(bmp))
+                    canvas.DrawImage(img, 0, 0, SKSamplingOptions.Default);
+                var pixels = bmp.Bytes;
+                var rowBytes = bmp.RowBytes;   // 每行字节数（可能因内存对齐而大于 Width * 4）
+                return new ImageData(w, h, pos =>
+                {
+                    var offset = pos.Y * rowBytes + pos.X * 4;
+                    return new Color(pixels[offset + 2], pixels[offset + 1], pixels[offset + 0], pixels[offset + 3]);
+                });
+            }
+            finally
+            {
+                if (disposeSource)
+                    img.Dispose();
+            }
         }
 
         public static ImageData GetImageData(this SKBitmap bmp, bool disposeSource = false)
         {
-            using var img = SKImage.FromBitmap(bmp);
-            if (disposeSource)
-                bmp.Dispose();
-            return img.GetImageData();
+            try
+            {
+                using var img = SKImage.FromBitmap(bmp);
+                return img.GetImageData();
+            }
+            finally
+            {
+                if (disposeSource)
+                    bmp.Dispose();
+            }
         }
 
         public static void Deconstruct(this SKPoint p, out float X, out float Y)
