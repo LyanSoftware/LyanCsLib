@@ -26,7 +26,7 @@ partial class SCL
 
         public const string SuPw = "LyTeClYtEc";
 
-        public const int FlashWriteMaxFileSeconds = 50; // Flash写入最大文件所需时间
+        public const int FlashWriteMaxFileSeconds = 90; // Flash写入最大文件所需时间
         public const int FlashReadMaxFileSeconds = 24; // Flash读取最大文件所需时间（暂停播放时为16秒）
         public const int FlashWriteBytesPerSecond = GBufferSize / FlashWriteMaxFileSeconds; // Flash写入速度
         public const int FlashReadBytesPerSecond = GBufferSize / FlashReadMaxFileSeconds; // Flash读取速度
