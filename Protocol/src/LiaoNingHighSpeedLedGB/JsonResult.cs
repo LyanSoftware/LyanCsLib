@@ -8,13 +8,15 @@ public class JsonResult : IJsonData
     public string? Msg { get; set; }
     public IJsonData Data { get; set; }
 
+    public IJsonData? RequestContent { get; set; }
+
     public JsonResult(int code, string? msg, IJsonData data)
     {
         Code = code;
         Msg = msg;
         Data = data;
     }
-    public JsonResult(JsonResult other) : this(other.Code, other.Msg, other.Data) { }
+    public JsonResult(JsonResult other) : this(other.Code, other.Msg, other.Data) { RequestContent = other.RequestContent; }
 
     public T Add<T>(string key, T value) => Data != null ? Data.Add(key, value) : throw new InvalidOperationException();
 

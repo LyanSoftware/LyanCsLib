@@ -18,7 +18,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Org.BouncyCastle.Asn1;
 
 namespace Lytec.Protocol.LiaoNingHighSpeedLedGB;
 
@@ -47,6 +46,8 @@ public class App
     public IStringLocalizer? Localizer { get; set; }
     public string i18n(string key) => Localizer.Query(key);
     public void LogAction([CallerMemberName] string action = "") => Logger?.LogInformation($"[{action}]");
+
+    public static partial class ApiPath { }
 
     public virtual byte[] SM3Encode(params byte[] data) => SM3.Compute(data);
 
@@ -139,10 +140,10 @@ public class App
                 {
                     var msg = json.Query("msg", JsonValueType.String) is string msg1 ? msg1 : null;
                     Logger?.LogDebug($"{i18n("响应数据：{Data}").Replace("{Data}", jsonStr)}\r\n{i18n("解析结果：\r\n{Data}").Replace("{Data}", json.ToString(Formatting.Indented))}");
-                    return new JsonResult(code, msg, json);
+                    return new JsonResult(code, msg, json) { RequestContent = parameters };
                 }
                 Logger?.LogError($"{i18n("响应数据格式错误")}\r\n{i18n("响应数据：{Data}").Replace("{Data}", jsonStr)}");
-                return RequestError;
+                return new JsonResult(RequestError) { RequestContent = parameters };
             });
         }
         catch (Exception err)
@@ -167,6 +168,7 @@ public class App
             return RequestError;
         }
     }
+    record RequestData(Stream Stream, string content);
     public Task RequestStream(string url, bool usePost, IJsonData? parameters, Func<Stream, Task> onGetStream)
     => RequestStream(url, usePost, parameters, async s =>
     {
@@ -257,17 +259,25 @@ public class App
     public string AuthToken { get; set; } = "";
     public bool IsLogged => IsConnected && !AuthToken.IsNullOrEmpty();
 
+    partial class ApiPath
+    {
+        public static string queryNonce { get; set; } = "/api/led/queryNonce";
+    }
     public async Task<Result<string>> queryNonce()
     {
         if (!IsConnected)
             return Error<string>(NotConnectedError);
         LogAction();
-        var result = await Request("/api/led/queryNonce", false);
+        var result = await Request(ApiPath.queryNonce, false);
         if (result.Code == 200 && result.Query("data.nonce", JsonValueType.String) is string nonce)
             return Ok(result, nonce);
         return Error<string>(result);
     }
 
+    partial class ApiPath
+    {
+        public static string login { get; set; } = "/api/led/login";
+    }
     public async Task<Result<bool>> login(string appid, string nonce, string secret)
     {
         if (!IsConnected)
@@ -275,7 +285,7 @@ public class App
         if (IsLogged)
             return Ok(true);
         LogAction();
-        var result = await Request("/api/led/login", true, new JsonObj(
+        var result = await Request(ApiPath.login, true, new JsonObj(
             ("appId", appid),
             ("nonce", nonce),
             ("sign", SM3Encode($"{nonce}:{SM3Encode($"{appid}:{SM3Encode(secret)}")}"))
@@ -325,10 +335,14 @@ public class App
         .Cast<MediaType>()
         .ToDictionary(v => v.ToString().ToLower());
 
+    partial class ApiPath
+    {
+        public static string queryCapabilities { get; set; } = "/api/led/queryCapabilities";
+    }
     public Task<Result<Capabilities>> queryCapabilities()
     {
         LogAction();
-        return Request("/api/led/queryCapabilities", false, result =>
+        return Request(ApiPath.queryCapabilities, false, result =>
         {
             if (result.Query("data.functions", JsonValueType.String) is string funcsStr
                 && result.Query("data.medias", JsonValueType.String) is string mediasStr
@@ -354,10 +368,14 @@ public class App
         });
     }
 
+    partial class ApiPath
+    {
+        public static string controlDeviceReboot { get; set; } = "/api/led/controlDeviceReboot";
+    }
     public Task<Result<bool>> controlDeviceReboot()
     {
         LogAction();
-        return Request("/api/led/controlDeviceReboot", true, result => true);
+        return Request(ApiPath.controlDeviceReboot, true, result => true);
     }
 
     public static readonly string[] TimeFormats = new[]
@@ -367,10 +385,14 @@ public class App
         "yyyy-MM-dd'T'HH:mm:ss'Z'zzz",
         "yyyy-MM-dd'T'HH:mm:ss'Z'",
     };
+    partial class ApiPath
+    {
+        public static string querySystemTime { get; set; } = "/api/led/querySystemTime";
+    }
     public Task<Result<DateTime>> querySystemTime()
     {
         LogAction();
-        return Request("/api/led/querySystemTime", false, result =>
+        return Request(ApiPath.querySystemTime, false, result =>
         {
             if (result.Query("data.time", JsonValueType.String) is string timeStr)
             {
@@ -382,16 +404,24 @@ public class App
         });
     }
 
+    partial class ApiPath
+    {
+        public static string controlDateSet { get; set; } = "/api/led/controlDateSet";
+    }
     public Task<Result<bool>> controlDateSet()
     {
         LogAction();
-        return Request("/api/led/controlDateSet", true, new JsonObj(("time", DateTime.Now.ToString(TimeFormats[0]))), _ => true);
+        return Request(ApiPath.controlDateSet, true, new JsonObj(("time", DateTime.Now.ToString(TimeFormats[0]))), _ => true);
     }
 
+    partial class ApiPath
+    {
+        public static string queryResolution { get; set; } = "/api/led/queryResolution";
+    }
     public Task<Result<Size>> queryResolution()
     {
         LogAction();
-        return Request("/api/led/queryResolution", false, result =>
+        return Request(ApiPath.queryResolution, false, result =>
         {
             if (result.Query("data.width", JsonValueType.Int) is int w
                 && result.Query("data.height", JsonValueType.Int) is int h)
@@ -416,10 +446,14 @@ public class App
         public bool IsAutoBrightness => AutoBrightness == 0;
     }
 
+    partial class ApiPath
+    {
+        public static string queryStatus { get; set; } = "/api/led/queryStatus";
+    }
     public Task<Result<DeviceStatus>> queryStatus()
     {
         LogAction();
-        return Request("/api/led/queryStatus", false, result =>
+        return Request(ApiPath.queryStatus, false, result =>
         {
             if (result.Query("data.status", JsonValueType.Int) is int status
                 && result.Query("data.power", JsonValueType.Int) is int power
@@ -442,27 +476,39 @@ public class App
         });
     }
 
+    partial class ApiPath
+    {
+        public static string controlLightControlType { get; set; } = "/api/led/controlLightControlType";
+    }
     public Task<Result<bool>> controlLightControlType(bool auto, int bright)
     {
         LogAction();
         var json = new JsonObj(("auto", auto ? 0 : 1));
         if (!auto)
             json.Add("brightness", bright);
-        return Request("/api/led/controlLightControlType", true, json, _ => true);
+        return Request(ApiPath.controlLightControlType, true, json, _ => true);
     }
 
     public Task<Result<bool>> controlLightControlType(int bright) => controlLightControlType(false, bright);
 
+    partial class ApiPath
+    {
+        public static string controlSwitch { get; set; } = "/api/led/controlSwitch";
+    }
     public Task<Result<bool>> controlSwitch(bool on)
     {
         LogAction();
-        return Request("/api/led/controlSwitch", true, new JsonObj(("action", on ? 1 : 0)), _ => true);
+        return Request(ApiPath.controlSwitch, true, new JsonObj(("action", on ? 1 : 0)), _ => true);
     }
 
+    partial class ApiPath
+    {
+        public static string uploadDeviceFile { get; set; } = "/api/led/uploadDeviceFile";
+    }
     public Task<Result<bool>> uploadDeviceFile(string filename, FileType type, string base64content)
     {
         LogAction();
-        return Request("/api/led/uploadDeviceFile", true, new JsonObj(
+        return Request(ApiPath.uploadDeviceFile, true, new JsonObj(
             ("fileName", filename),
             ("fileType", (int)type),
             ("fileContext", base64content)
@@ -471,10 +517,14 @@ public class App
 
     public Task<Result<bool>> uploadDeviceFile(string filename, FileType type, byte[] content) => uploadDeviceFile(filename, type, Base64Encode(content));
 
+    partial class ApiPath
+    {
+        public static string downDeviceFile { get; set; } = "/api/led/downDeviceFile";
+    }
     public Task<Result<byte[]>> downDeviceFile(string filename, FileType type)
     {
         LogAction();
-        return Request("/api/led/downDeviceFile", true, new JsonObj()
+        return Request(ApiPath.downDeviceFile, true, new JsonObj()
         {
             { "fileName", filename },
             { "fileType", (int)type },
@@ -487,16 +537,24 @@ public class App
         });
     }
 
+    partial class ApiPath
+    {
+        public static string deleteDeviceFile { get; set; } = "/api/led/deleteDeviceFile";
+    }
     public Task<Result<bool>> deleteDeviceFile(string filename, FileType type)
     {
         LogAction();
-        return Request("/api/led/deleteDeviceFile", true, new JsonObj(("fileName", filename), ("fileType", (int)type)), _ => true);
+        return Request(ApiPath.deleteDeviceFile, true, new JsonObj(("fileName", filename), ("fileType", (int)type)), _ => true);
     }
 
+    partial class ApiPath
+    {
+        public static string queryDeviceFileDir { get; set; } = "/api/led/queryDeviceFileDir";
+    }
     public Task<Result<string[]>> queryDeviceFileDir(FileType type)
     {
         LogAction();
-        return Request("/api/led/queryDeviceFileDir", true, new JsonObj(("fileType", (int)type)), result =>
+        return Request(ApiPath.queryDeviceFileDir, true, new JsonObj(("fileType", (int)type)), result =>
         {
             if (result.Query("data.fileList", JsonValueType.Array) is JArray arr)
             {
@@ -515,22 +573,30 @@ public class App
         });
     }
 
+    partial class ApiPath
+    {
+        public static string uploadPlaylist { get; set; } = "/api/led/uploadPlaylist";
+    }
     public Task<Result<bool>> uploadPlaylist(Playlist playlist)
     {
         LogAction();
-        return Request("/api/led/uploadPlaylist", true, new JsonObj(("data", playlist.Serialize())), _ => true);
+        return Request(ApiPath.uploadPlaylist, true, new JsonObj(("data", playlist.Serialize())), _ => true);
     }
 
     public Task<Result<bool>> uploadPlaylist(IJsonData playlist)
     {
         LogAction();
-        return Request("/api/led/uploadPlaylist", true, new JsonObj(("data", playlist)), _ => true);
+        return Request(ApiPath.uploadPlaylist, true, new JsonObj(("data", playlist)), _ => true);
     }
 
+    partial class ApiPath
+    {
+        public static string queryPlaylist { get; set; } = "/api/led/queryPlaylist";
+    }
     public Task<Result<Playlist>> queryPlaylist()
     {
         LogAction();
-        return Request("/api/led/queryPlaylist", false, result =>
+        return Request(ApiPath.queryPlaylist, false, result =>
         {
             if (result.Query("data", JsonValueType.Object) is JObject obj
                 && Playlist.TryDeserialize(new JsonObj(obj), out var list))
@@ -542,7 +608,7 @@ public class App
     public Task<Result<string>> queryCurrentPlaylistFileName()
     {
         LogAction();
-        return Request("/api/led/queryPlaylist", false, result =>
+        return Request(ApiPath.queryPlaylist, false, result =>
         {
             if (result.Query("data.fileName", JsonValueType.String) is string path)
                 return path;
@@ -550,16 +616,24 @@ public class App
         });
     }
 
+    partial class ApiPath
+    {
+        public static string controlPlaySpecifyPlaylist { get; set; } = "/api/led/controlPlaySpecifyPlaylist";
+    }
     public Task<Result<bool>> controlPlaySpecifyPlaylist(string filename)
     {
         LogAction();
-        return Request("/api/led/controlPlaySpecifyPlaylist", true, new JsonObj(("fileName", filename)), _ => true);
+        return Request(ApiPath.controlPlaySpecifyPlaylist, true, new JsonObj(("fileName", filename)), _ => true);
     }
 
+    partial class ApiPath
+    {
+        public static string queryScreenShot { get; set; } = "/api/led/queryScreenShot";
+    }
     public Task<Result<byte[]>> queryScreenShot()
     {
         LogAction();
-        return Request("/api/led/queryScreenShot", false, result =>
+        return Request(ApiPath.queryScreenShot, false, result =>
         {
             if (result.Query("data.file", JsonValueType.String) is string str
                 && !str.IsNullOrEmpty()
@@ -569,10 +643,14 @@ public class App
         });
     }
 
+    partial class ApiPath
+    {
+        public static string queryCurrentPlaylist { get; set; } = "/api/led/queryCurrentPlaylist";
+    }
     public Task<Result<ProgramItem>> queryCurrentPlaylist()
     {
         LogAction();
-        return Request("/api/led/queryCurrentPlaylist", false, result =>
+        return Request(ApiPath.queryCurrentPlaylist, false, result =>
         {
             if (result.Query("data", JsonValueType.Object) is JObject obj
                 && ProgramItem.TryDeserialize(new JsonObj(obj), out var item))
@@ -581,10 +659,14 @@ public class App
         });
     }
 
+    partial class ApiPath
+    {
+        public static string queryFaultInfo { get; set; } = "/api/led/queryFaultInfo";
+    }
     public Task<Result<FaultInfo>> queryFaultInfo()
     {
         LogAction();
-        return Request("/api/led/queryFaultInfo", true, result =>
+        return Request(ApiPath.queryFaultInfo, true, result =>
         {
             if (result.Query("data.temperature", JsonValueType.Int) is int tempFault
                 && result.Query("data.internalFault", JsonValueType.Int) is int internalFault
@@ -616,10 +698,14 @@ public class App
     public static readonly Regex ParseResolutionRegex = new Regex(@"^(?<Width>\d+)\*(?<Height>\d+)$", RegexOptions.Compiled);
     public static readonly Regex HexStringRegex = new Regex(@"^[a-fA-F0-9]*$", RegexOptions.Compiled);
 
+    partial class ApiPath
+    {
+        public static string queryPixelError { get; set; } = "/api/led/queryPixelError";
+    }
     public Task<Result<PixelErrorData>> queryPixelError()
     {
         LogAction();
-        return Request("/api/led/queryPixelError", false, result =>
+        return Request(ApiPath.queryPixelError, false, result =>
         {
             if (result.Query("data.badCount", JsonValueType.Int) is int badCount
                 && result.Query("data.resolution", JsonValueType.String) is string resolutionStr)
@@ -664,10 +750,14 @@ public class App
         });
     }
 
+    partial class ApiPath
+    {
+        public static string controlResetAppidAndSecret { get; set; } = "/api/led/controlResetAppidAndSecret";
+    }
     public async Task<Result<bool>> controlResetAppIdAndSecret()
     {
         LogAction();
-        var r = await Request("/api/led/controlResetAppidAndSecret", true, new JsonObj(), result =>
+        var r = await Request(ApiPath.controlResetAppidAndSecret, true, new JsonObj(), result =>
         {
             if (result.Query("data.appId", JsonValueType.String) is string appid
                 && !appid.IsNullOrEmpty()
@@ -685,6 +775,10 @@ public class App
         return Error(r, false);
     }
 
+    partial class ApiPath
+    {
+        public static string controlNetRestartTime { get; set; } = "/api/led/controlNetRestartTime";
+    }
     protected Task<Result<bool>> controlNetRestartTime(string defaultPlaylistFileName, string heartbeatIP, int heartbeatPort, int heartbeatTimeoutSec, bool enable)
     {
         LogAction();
@@ -696,7 +790,7 @@ public class App
             json.Add("port", heartbeatPort);
             json.Add("outLineTime", heartbeatTimeoutSec);
         }
-        return Request("/api/led/controlNetRestartTime", true, json, _ => true);
+        return Request(ApiPath.controlNetRestartTime, true, json, _ => true);
     }
 
     public Task<Result<bool>> controlNetRestartTime(string defaultPlaylistFileName, string heartbeatIP, int heartbeatPort, int heartbeatTimeoutSec)
