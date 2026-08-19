@@ -29,6 +29,8 @@ namespace Lytec.Image
 
         public float StrokeWidth { get; set; } = 0;
 
+        public SKRect Margin { get; set; }
+
         public FontOptions Options { get; set; } = FontOptions.None;
 
         public bool Underline => Options.HasFlag(FontOptions.Underline);
