@@ -325,13 +325,23 @@ public static class FontLibUtils
             return blank();
         {
             var tw = cache.Sum(v => v.chrw);
+            if (info.Margin.Left > 0)
+                tw += info.Margin.Left;
+            if (info.Margin.Right > 0)
+                tw += info.Margin.Right;
             var lineHeight = cache.Max(v => v.lineHeight);
+            if (info.Margin.Top > 0)
+                lineHeight += info.Margin.Top;
+            if (info.Margin.Bottom > 0)
+                lineHeight += info.Margin.Bottom;
             var baseline = cache.OrderBy(v => v.lineHeight).First().baseline;
+            if (info.Margin.Top > 0)
+                baseline += info.Margin.Top;
             var bounds = new SKRect(
-                cache.Min(v => v.bounds.Left),
-                cache.Min(v => v.bounds.Top),
-                cache.Max(v => v.bounds.Right),
-                cache.Max(v => v.bounds.Bottom)
+                cache.Min(v => v.bounds.Left) - info.Margin.Left,
+                cache.Min(v => v.bounds.Top) - info.Margin.Top,
+                cache.Max(v => v.bounds.Right) + info.Margin.Right,
+                cache.Max(v => v.bounds.Bottom) + info.Margin.Bottom
                 );
             using var tbmp = new SKBitmap((int)Math.Ceiling(tw), (int)Math.Ceiling(lineHeight));
             using (var canvas = new SKCanvas(tbmp))
@@ -402,7 +412,7 @@ public static class FontLibUtils
                 //    bounds.Width > bmp.Width ? bmp.Width : (bmp.Width - bounds.Width) / 2 + bounds.Width,
                 //    bounds.Height > bmp.Height ? bmp.Height : (bmp.Height - bounds.Height) / 2 + bounds.Height
                 //    );
-                var dst = new SKRect(
+                var dst = SKRect.Create(
                     bounds.Width > bmp.Width ? 0 : (bmp.Width - bounds.Width) / 2,
                     bounds.Height > bmp.Height ? 0 : (bmp.Height - bounds.Height) / 2,
                     bounds.Width > bmp.Width ? bmp.Width : (bmp.Width - bounds.Width) / 2 + bounds.Width,
