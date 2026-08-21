@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace Lytec.Protocol;
 
@@ -19,7 +19,11 @@ public static partial class SCL
             CallAnswerIdChar + "Update!",
             CallAnswerIdChar + "UpdatL!",
             CallAnswerIdChar + "UpdatX!",
-        }.ToHashSet();
+        }.Aggregate(new HashSet<string>(), (set, x) =>
+        {
+            set.Add(x);
+            return set;
+        });
         public static readonly int CallAnswerMinLength = AnswersDic.Min(s => CallEncode.GetByteCount(s));
         public static readonly int CallAnswerMaxLength = AnswersDic.Max(s => CallEncode.GetByteCount(s));
         public static bool CheckCallAnswer(byte[] data) => data.Length >= CallAnswerMinLength && AnswersDic.Contains(CallEncode.GetString(data));
