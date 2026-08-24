@@ -12,11 +12,14 @@
     <PackageVersion Include="coverlet.collector" Version="[3.1.2,)" />
   </ItemGroup>
   <ItemGroup>
+    <!-- 低版本框架的高版本语法、特性兼容 -->
     <PackageVersion Include="Nullable" Version="[1.3.1,)" />
     <PackageVersion Include="IsExternalInit" Version="[1.0.3,)" />
     <PackageVersion Include="RequiredMemberAttribute" Version="[1.0.0,)" />
     <!-- Microsoft.Bcl.Memory实际包含了IndexRange -->
     <PackageVersion Include="Microsoft.Bcl.Memory" Version="[9.0.14,)" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="[6.0.0,)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="[6.0.0,9.0)" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="[6.0.0,9.0)" />
