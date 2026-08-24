@@ -53,5 +53,7 @@
     <PackageVersion Include="Avalonia.ReactiveUI" Version="$(AvaloniaVersion)" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageVersion Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
+    <!-- Avalonia的MVU支持 -->
+    <PackageVersion Include="Avalonia.Markup.Declarative" Version="$(AvaloniaVersion)" />
   </ItemGroup>
 </Project>
