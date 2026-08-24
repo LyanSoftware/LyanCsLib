@@ -14,8 +14,7 @@
     <CommonTargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net7.0</CommonTargetFrameworks>
     <LegacyTargetFrameworks>netstandard2.0;netstandard2.1</LegacyTargetFrameworks>
     <AnalyzerTargetFrameworks>netstandard2.0</AnalyzerTargetFrameworks>
-    <!-- Avalonia实际使用net10, 此处包含的netstd20仅供Analyzer使用 -->
-    <AvaloniaTargetFrameworks>netstandard2.0;net10.0;net10.0-windows</AvaloniaTargetFrameworks>
+    <AvaloniaTargetFrameworks>net10.0;net10.0-windows</AvaloniaTargetFrameworks>
     <AvaloniaVersion>12.1.1</AvaloniaVersion>
     <SkiaSharpVersion>[4.148.0,5.0)</SkiaSharpVersion>
   </PropertyGroup>
