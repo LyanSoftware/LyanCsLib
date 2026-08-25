@@ -1,11 +1,14 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Lytec.Common.Localization.Extensions;
 
 namespace Lytec.AvaloniaUI.Mvu;
 
 public static class WindowManager
 {
+    private const string LocalizeScope = "Lytec.AvaloniaUI.Mvu.WindowManager";
+
     public static Window Create<TView>(
         TView view,
         string? title = null)
@@ -27,12 +30,17 @@ public static class WindowManager
     }
 
     public static Window InstallMainWindow<TView>(
-        IClassicDesktopStyleApplicationLifetime desktop,
+        this IClassicDesktopStyleApplicationLifetime desktop,
         TView view)
         where TView : Control, IWindowView
     {
         if (desktop.MainWindow is not null)
-            throw new InvalidOperationException("主窗口已经设置。");
+            throw new InvalidOperationException()
+                .Localize(
+                    LocalizeScope,
+                    "InstallMainWindowError_MultipleInstallMainWindow",
+                    "主窗口已经设置。"
+                    );
 
         var window = Create(view);
         desktop.MainWindow = window;
@@ -40,7 +48,7 @@ public static class WindowManager
     }
 
     public static async Task ShowDialogAsync<TView>(
-        TView view,
+        this TView view,
         Control? ownerView = null,
         string? title = null)
         where TView : Control, IWindowView
@@ -48,8 +56,12 @@ public static class WindowManager
         var owner = (ownerView is not null
             ? TopLevel.GetTopLevel(ownerView) as Window
             : GetMainWindow())
-            ?? throw new InvalidOperationException("显示对话框前必须先创建主窗口。");
-
+            ?? throw new InvalidOperationException()
+                .Localize(
+                    LocalizeScope,
+                    "ShowDialogError_MainWindowNotFound",
+                    "显示对话框前必须先创建主窗口"
+                    );
         var window = Create(view, title);
         await window.ShowDialog(owner);
     }
