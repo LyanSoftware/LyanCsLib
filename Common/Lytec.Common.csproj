@@ -26,6 +26,7 @@
     <PackageReference Include="IsExternalInit" />
     <PackageReference Include="RequiredMemberAttribute" />
     <PackageReference Include="SmartFormat" />
+    <PackageReference Include="System.Collections.Immutable" />
   </ItemGroup>
 
 </Project>

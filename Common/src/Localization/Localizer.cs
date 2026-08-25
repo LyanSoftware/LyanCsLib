@@ -11,6 +11,9 @@ public abstract class Localizer : ILocalizer
 {
     public const string ScopeConnector = ":";
 
+    public static string CombineScopeAndKey(string Scope, string Key)
+    => Scope + ScopeConnector + Key;
+
     public abstract bool TryQuery(string key, out string Value);
 
     public virtual string Format(ILocalizeString str)

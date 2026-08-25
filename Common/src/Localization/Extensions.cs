@@ -15,8 +15,7 @@ public static class Extensions
     public static IServiceCollection AddLocalization<T>(this IServiceCollection collection, T localizer) where T : ILocalizer
     => collection.AddSingleton<ILocalizer>(localizer);
 
-    public static string CombineScopeAndKey(string Scope, string Key)
-    => Scope + Localizer.ScopeConnector + Key;
+    public static string CombineScopeAndKey(string Scope, string Key) => Localizer.CombineScopeAndKey(Scope, Key);
 }
 
 public static class LocalizerExtensions
