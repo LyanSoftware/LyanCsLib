@@ -29,7 +29,7 @@
     <PackageVersion Include="System.Management" Version="[6.0.0,9.0)" />
     <PackageVersion Include="Microsoft.Windows.CsWin32" Version="0.3.183" />
     <PackageVersion Include="System.Memory" Version="[4.6.0,)" />
-    <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="[6.0.0,)" />
+    <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="[6.1.0,)" />
     <PackageVersion Include="Microsoft.CodeAnalysis" Version="[4.5.0,)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="[4.5.0,)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="[3.3.4,)" />
