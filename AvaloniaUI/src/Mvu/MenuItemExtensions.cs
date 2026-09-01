@@ -16,4 +16,13 @@ public static class MenuItemExtensions
         MenuItemLayout.SetShowIconColumn(control, value);
         return control;
     }
+
+    public static T EmptySubmenuArrowColumnWidth<T>(
+        this T control,
+        double value)
+        where T : MenuItem
+    {
+        MenuItemLayout.SetEmptySubmenuArrowColumnWidth(control, value);
+        return control;
+    }
 }

@@ -38,6 +38,25 @@ public static class MenuItemLayout
         => control.SetValue(ShowIconColumnProperty, value);
 
     /// <summary>
+    /// 当前 MenuItem 的直接子菜单全部没有子菜单时，箭头列保留的最小宽度。
+    ///
+    /// 此属性可继承；子 MenuItem 覆盖后，只影响它自己的下一层子菜单。
+    /// </summary>
+    public static readonly AttachedProperty<double> EmptySubmenuArrowColumnWidthProperty =
+        AvaloniaProperty.RegisterAttached<Control, double>(
+            "EmptySubmenuArrowColumnWidth",
+            typeof(MenuItemLayout),
+            defaultValue: 8,
+            inherits: true,
+            validate: static value => double.IsFinite(value) && value >= 0);
+
+    public static double GetEmptySubmenuArrowColumnWidth(Control control)
+        => control.GetValue(EmptySubmenuArrowColumnWidthProperty);
+
+    public static void SetEmptySubmenuArrowColumnWidth(Control control, double value)
+        => control.SetValue(EmptySubmenuArrowColumnWidthProperty, value);
+
+    /// <summary>
     /// 添加到 Application.Styles。
     ///
     /// 只替换下拉 MenuItem 的 Template，
@@ -114,8 +133,20 @@ public static class MenuItemLayout
 
         var arrowColumn = new ColumnDefinition
         {
-            Width = new GridLength(20)
+            Width = GridLength.Auto,
+            SharedSizeGroup = "MenuItemArrow"
         };
+
+        if (item.Parent is Control parentMenuItem)
+        {
+            arrowColumn.Bind(
+                ColumnDefinition.MinWidthProperty,
+                parentMenuItem.GetObservable(EmptySubmenuArrowColumnWidthProperty));
+        }
+        else
+        {
+            arrowColumn.MinWidth = 4;
+        }
 
         grid.ColumnDefinitions.Add(iconColumn);
         grid.ColumnDefinitions.Add(iconSpacerColumn);
@@ -230,7 +261,18 @@ public static class MenuItemLayout
             Path.FillProperty,
             rightArrow.GetResourceObservable("ThemeForegroundBrush"));
 
-        Grid.SetColumn(rightArrow, 4);
+        var rightArrowPresenter = new Border
+        {
+            Width = 20,
+            [!Visual.IsVisibleProperty] =
+                new TemplateBinding(ItemsControl.ItemCountProperty)
+                {
+                    Converter = PositiveIntToBoolConverter.Instance
+                },
+            Child = rightArrow
+        };
+
+        Grid.SetColumn(rightArrowPresenter, 4);
 
         //
         // 子菜单 ItemsPresenter
@@ -322,7 +364,7 @@ public static class MenuItemLayout
         grid.Children.Add(iconPresenter);
         grid.Children.Add(headerPresenter);
         grid.Children.Add(inputGestureText);
-        grid.Children.Add(rightArrow);
+        grid.Children.Add(rightArrowPresenter);
         grid.Children.Add(popup);
 
         //
@@ -375,6 +417,25 @@ public static class MenuItemLayout
 
             return new GridLength(0);
         }
+
+        public object ConvertBack(
+            object? value,
+            Type targetType,
+            object? parameter,
+            CultureInfo culture)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class PositiveIntToBoolConverter : IValueConverter
+    {
+        public static readonly PositiveIntToBoolConverter Instance = new();
+
+        public object Convert(
+            object? value,
+            Type targetType,
+            object? parameter,
+            CultureInfo culture)
+            => value is int count && count > 0;
 
         public object ConvertBack(
             object? value,
