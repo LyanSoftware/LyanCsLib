@@ -57,6 +57,25 @@ public static class MenuItemLayout
         => control.SetValue(EmptySubmenuArrowColumnWidthProperty, value);
 
     /// <summary>
+    /// InputGesture 文本使用的独立主题。
+    ///
+    /// 此属性可继承，因此可以设置在父 MenuItem 上并由子项覆盖。
+    /// </summary>
+    public static readonly AttachedProperty<ControlTheme?> InputGestureTextThemeProperty =
+        AvaloniaProperty.RegisterAttached<Control, ControlTheme?>(
+            "InputGestureTextTheme",
+            typeof(MenuItemLayout),
+            inherits: true);
+
+    public static ControlTheme? GetInputGestureTextTheme(Control control)
+        => control.GetValue(InputGestureTextThemeProperty);
+
+    public static void SetInputGestureTextTheme(
+        Control control,
+        ControlTheme? value)
+        => control.SetValue(InputGestureTextThemeProperty, value);
+
+    /// <summary>
     /// 添加到 Application.Styles。
     ///
     /// 只替换下拉 MenuItem 的 Template，
@@ -240,6 +259,10 @@ public static class MenuItemLayout
                     },
             },
             scope);
+
+        inputGestureText.Bind(
+            StyledElement.ThemeProperty,
+            item.GetObservable(InputGestureTextThemeProperty));
 
         Grid.SetColumn(inputGestureText, 3);
 

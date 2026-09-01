@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Styling;
 using Lytec.AvaloniaUI.Mvu.SimpleTheme;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,15 @@ public static class MenuItemExtensions
         where T : MenuItem
     {
         MenuItemLayout.SetEmptySubmenuArrowColumnWidth(control, value);
+        return control;
+    }
+
+    public static T InputGestureTextTheme<T>(
+        this T control,
+        ControlTheme? value)
+        where T : MenuItem
+    {
+        MenuItemLayout.SetInputGestureTextTheme(control, value);
         return control;
     }
 }
