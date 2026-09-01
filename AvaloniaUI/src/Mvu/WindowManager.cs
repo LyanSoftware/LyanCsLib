@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using Lytec.Common.Localization.Extensions;
 
 namespace Lytec.AvaloniaUI.Mvu;
@@ -16,7 +17,7 @@ public static class WindowManager
     {
         var options = view.WindowOptions;
 
-        return new Window
+        var window = new Window
         {
             Content = view,
             Title = title ?? options.Title,
@@ -27,6 +28,9 @@ public static class WindowManager
             CanResize = options.CanResize,
             WindowStartupLocation = WindowStartupLocation.CenterOwner
         };
+
+        InitializeRootFocus(window, view);
+        return window;
     }
 
     public static Window InstallMainWindow<TView>(
@@ -77,5 +81,28 @@ public static class WindowManager
             is IClassicDesktopStyleApplicationLifetime desktop
                 ? desktop.MainWindow
                 : null;
+    }
+
+    private static void InitializeRootFocus(Window window, Control view)
+    {
+        // 根视图只作为窗口初始焦点的兜底，不加入 Tab 导航顺序。
+        view.Focusable = true;
+        view.IsTabStop = false;
+
+        window.Opened += OnOpened;
+
+        void OnOpened(object? sender, EventArgs e)
+        {
+            window.Opened -= OnOpened;
+
+            // 延迟到 Loaded 优先级，让子控件的自动聚焦逻辑先执行。
+            Dispatcher.UIThread.Post(
+                () =>
+                {
+                    if (window.FocusManager?.GetFocusedElement() is null)
+                        view.Focus();
+                },
+                DispatcherPriority.Loaded);
+        }
     }
 }
