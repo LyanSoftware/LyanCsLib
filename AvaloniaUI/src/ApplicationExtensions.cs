@@ -1,27 +1,27 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Lytec.AvaloniaUI.Mvu;
 
 namespace Lytec.AvaloniaUI;
 
 public static class ApplicationExtensions
 {
-    public static void Shutdown(this Application app, int exitCode)
+    public static async Task<bool> TryShutdownAsync(this Application app, int exitCode = 0)
     {
+        ArgumentNullException.ThrowIfNull(app);
+
         switch (app.ApplicationLifetime)
         {
             case IClassicDesktopStyleApplicationLifetime desktop:
-                desktop.Shutdown(exitCode);
-                break;
+                return await WindowManager.TryShutdownAsync(desktop, exitCode);
             case ISingleViewApplicationLifetime singleView:
                 singleView.MainView = null;
-                break;
+                return true;
             case IControlledApplicationLifetime controlled:
                 controlled.Shutdown(exitCode);
-                break;
+                return true;
+            default:
+                return false;
         }
     }
-    public static void Shutdown(this Application app) => Shutdown(app, 0);
 }
