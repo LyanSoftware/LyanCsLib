@@ -20,6 +20,9 @@ namespace Lytec.AvaloniaUI.Mvu.SimpleTheme;
 
 public static class MenuItemLayout
 {
+    private static FuncValueConverter<bool, GridLength, GridLength> BoolToGridLengthConverter { get; } = new((v, w) => v ? w : new(0));
+    private static FuncValueConverter<int, bool> PositiveIntToBoolConverter { get; } = new(v => v > 0);
+
     /// <summary>
     /// 是否保留此 MenuItem 的直接子菜单左侧的 Icon / Check / Radio 列。
     ///
@@ -129,7 +132,7 @@ public static class MenuItemLayout
             new Binding(nameof(LayoutGrid.ShowIconColumn))
             {
                 Source = grid,
-                Converter = BoolToGridLengthConverter.Instance,
+                Converter = BoolToGridLengthConverter,
                 ConverterParameter = new GridLength(20),
                 Priority = BindingPriority.Template,
             };
@@ -140,7 +143,7 @@ public static class MenuItemLayout
             new Binding(nameof(LayoutGrid.ShowIconColumn))
             {
                 Source = grid,
-                Converter = BoolToGridLengthConverter.Instance,
+                Converter = BoolToGridLengthConverter,
                 ConverterParameter = new GridLength(5),
                 Priority = BindingPriority.Template,
             };
@@ -290,7 +293,7 @@ public static class MenuItemLayout
             [!Visual.IsVisibleProperty] =
                 new TemplateBinding(ItemsControl.ItemCountProperty)
                 {
-                    Converter = PositiveIntToBoolConverter.Instance
+                    Converter = PositiveIntToBoolConverter
                 },
             Child = rightArrow
         }
@@ -451,46 +454,4 @@ public static class MenuItemLayout
         }
     }
 
-    private sealed class BoolToGridLengthConverter : IValueConverter
-    {
-        public static readonly BoolToGridLengthConverter Instance = new();
-
-        public object Convert(
-            object? value,
-            Type targetType,
-            object? parameter,
-            CultureInfo culture)
-        {
-            if (value is true && parameter is GridLength width)
-                return width;
-
-            return new GridLength(0);
-        }
-
-        public object ConvertBack(
-            object? value,
-            Type targetType,
-            object? parameter,
-            CultureInfo culture)
-            => throw new NotSupportedException();
-    }
-
-    private sealed class PositiveIntToBoolConverter : IValueConverter
-    {
-        public static readonly PositiveIntToBoolConverter Instance = new();
-
-        public object Convert(
-            object? value,
-            Type targetType,
-            object? parameter,
-            CultureInfo culture)
-            => value is int count && count > 0;
-
-        public object ConvertBack(
-            object? value,
-            Type targetType,
-            object? parameter,
-            CultureInfo culture)
-            => throw new NotSupportedException();
-    }
 }
