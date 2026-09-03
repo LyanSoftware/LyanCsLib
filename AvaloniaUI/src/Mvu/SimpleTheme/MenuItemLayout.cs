@@ -19,17 +19,14 @@ namespace Lytec.AvaloniaUI.Mvu.SimpleTheme;
 public static class MenuItemLayout
 {
     /// <summary>
-    /// 是否保留 MenuItem 左侧的 Icon / Check / Radio 列。
+    /// 是否保留此 MenuItem 的直接子菜单左侧的 Icon / Check / Radio 列。
     ///
-    /// 此属性可继承，因此可以直接设置在 Menu 上，
-    /// 所有子 MenuItem 都会继承。
     /// </summary>
     public static readonly AttachedProperty<bool> ShowIconColumnProperty =
         AvaloniaProperty.RegisterAttached<Control, bool>(
             "ShowIconColumn",
             typeof(MenuItemLayout),
-            defaultValue: true,
-            inherits: true);
+            defaultValue: true);
 
     public static bool GetShowIconColumn(Control control)
         => control.GetValue(ShowIconColumnProperty);
@@ -40,14 +37,12 @@ public static class MenuItemLayout
     /// <summary>
     /// 当前 MenuItem 的直接子菜单全部没有子菜单时，箭头列保留的最小宽度。
     ///
-    /// 此属性可继承；子 MenuItem 覆盖后，只影响它自己的下一层子菜单。
     /// </summary>
     public static readonly AttachedProperty<double> EmptySubmenuArrowColumnWidthProperty =
         AvaloniaProperty.RegisterAttached<Control, double>(
             "EmptySubmenuArrowColumnWidth",
             typeof(MenuItemLayout),
             defaultValue: 8,
-            inherits: true,
             validate: static value => double.IsFinite(value) && value >= 0);
 
     public static double GetEmptySubmenuArrowColumnWidth(Control control)
@@ -59,13 +54,11 @@ public static class MenuItemLayout
     /// <summary>
     /// InputGesture 文本使用的独立主题。
     ///
-    /// 此属性可继承，因此可以设置在父 MenuItem 上并由子项覆盖。
     /// </summary>
     public static readonly AttachedProperty<ControlTheme?> InputGestureTextThemeProperty =
         AvaloniaProperty.RegisterAttached<Control, ControlTheme?>(
             "InputGestureTextTheme",
-            typeof(MenuItemLayout),
-            inherits: true);
+            typeof(MenuItemLayout));
 
     public static ControlTheme? GetInputGestureTextTheme(Control control)
         => control.GetValue(InputGestureTextThemeProperty);
@@ -112,17 +105,29 @@ public static class MenuItemLayout
         //     false ->  0, 0
         //
 
-        // ColumnDefinition 不在模板的可视树中，无法直接解析 TemplateBinding。
-        // 先由 Grid（模板可视元素）接收值，再让列定义绑定到这个代理值。
-        var grid = new Grid
+        // 此模板属于子 MenuItem，但 ShowIconColumn 配置的是父 MenuItem
+        // 弹出的整层子菜单。每个兄弟子项都读取同一个父项值，因此整列
+        // 会一起显示或隐藏，同时不会影响父项的同级菜单。
+        //
+        // ColumnDefinition 不在模板的可视树中，先由 LayoutGrid 接收父项的值，
+        // 再让列定义绑定到这个代理值。
+        var grid = new LayoutGrid();
+
+        if (item.Parent is MenuItem owner)
         {
-            [!Control.TagProperty] = new TemplateBinding(ShowIconColumnProperty)
-        };
+            grid.Bind(
+                LayoutGrid.ShowIconColumnProperty,
+                owner.GetObservable(ShowIconColumnProperty));
+        }
+        else
+        {
+            grid.ShowIconColumn = true;
+        }
 
         var iconColumn = new ColumnDefinition();
 
         iconColumn[!ColumnDefinition.WidthProperty] =
-            new Binding(nameof(Control.Tag))
+            new Binding(nameof(LayoutGrid.ShowIconColumn))
             {
                 Source = grid,
                 Converter = BoolToGridLengthConverter.Instance,
@@ -132,7 +137,7 @@ public static class MenuItemLayout
         var iconSpacerColumn = new ColumnDefinition();
 
         iconSpacerColumn[!ColumnDefinition.WidthProperty] =
-            new Binding(nameof(Control.Tag))
+            new Binding(nameof(LayoutGrid.ShowIconColumn))
             {
                 Source = grid,
                 Converter = BoolToGridLengthConverter.Instance,
@@ -423,6 +428,24 @@ public static class MenuItemLayout
             scope.Register(control.Name, control);
 
         return control;
+    }
+
+    /// <summary>
+    /// 模板内部的强类型绑定代理。两个 ColumnDefinition 不属于可视树，
+    /// 因此通过它观察父 MenuItem 的 ShowIconColumn 设置。
+    /// </summary>
+    private sealed class LayoutGrid : Grid
+    {
+        public static readonly StyledProperty<bool> ShowIconColumnProperty =
+            AvaloniaProperty.Register<LayoutGrid, bool>(
+                nameof(ShowIconColumn),
+                defaultValue: true);
+
+        public bool ShowIconColumn
+        {
+            get => GetValue(ShowIconColumnProperty);
+            set => SetValue(ShowIconColumnProperty, value);
+        }
     }
 
     private sealed class BoolToGridLengthConverter : IValueConverter
