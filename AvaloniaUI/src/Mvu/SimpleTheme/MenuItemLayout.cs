@@ -10,6 +10,8 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
+using Avalonia.Layout;
+using Avalonia.Markup.Declarative;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Path = Avalonia.Controls.Shapes.Path;
@@ -117,11 +119,8 @@ public static class MenuItemLayout
         {
             grid.Bind(
                 LayoutGrid.ShowIconColumnProperty,
-                owner.GetObservable(ShowIconColumnProperty));
-        }
-        else
-        {
-            grid.ShowIconColumn = true;
+                owner.GetObservable(ShowIconColumnProperty),
+                BindingPriority.Template);
         }
 
         var iconColumn = new ColumnDefinition();
@@ -132,6 +131,7 @@ public static class MenuItemLayout
                 Source = grid,
                 Converter = BoolToGridLengthConverter.Instance,
                 ConverterParameter = new GridLength(20),
+                Priority = BindingPriority.Template,
             };
 
         var iconSpacerColumn = new ColumnDefinition();
@@ -142,34 +142,30 @@ public static class MenuItemLayout
                 Source = grid,
                 Converter = BoolToGridLengthConverter.Instance,
                 ConverterParameter = new GridLength(5),
+                Priority = BindingPriority.Template,
             };
 
-        var headerColumn = new ColumnDefinition
-        {
-            Width = GridLength.Star
-        };
+        var headerColumn = new ColumnDefinition()
+            .TemplateValue(ColumnDefinition.WidthProperty, GridLength.Star);
 
-        var inputGestureColumn = new ColumnDefinition
-        {
-            Width = GridLength.Auto,
-            SharedSizeGroup = "MenuItemIGT"
-        };
+        var inputGestureColumn = new ColumnDefinition()
+            .TemplateValue(ColumnDefinition.WidthProperty, GridLength.Auto)
+            .TemplateValue(DefinitionBase.SharedSizeGroupProperty, "MenuItemIGT");
 
-        var arrowColumn = new ColumnDefinition
-        {
-            Width = GridLength.Auto,
-            SharedSizeGroup = "MenuItemArrow"
-        };
+        var arrowColumn = new ColumnDefinition()
+            .TemplateValue(ColumnDefinition.WidthProperty, GridLength.Auto)
+            .TemplateValue(DefinitionBase.SharedSizeGroupProperty, "MenuItemArrow");
 
         if (item.Parent is Control parentMenuItem)
         {
             arrowColumn.Bind(
                 ColumnDefinition.MinWidthProperty,
-                parentMenuItem.GetObservable(EmptySubmenuArrowColumnWidthProperty));
+                parentMenuItem.GetObservable(EmptySubmenuArrowColumnWidthProperty),
+                BindingPriority.Template);
         }
         else
         {
-            arrowColumn.MinWidth = 4;
+            arrowColumn.TemplateValue(ColumnDefinition.MinWidthProperty, 4d);
         }
 
         grid.ColumnDefinitions.Add(iconColumn);
@@ -186,35 +182,34 @@ public static class MenuItemLayout
             new ContentControl
             {
                 Name = "PART_ToggleIconPresenter",
-                IsVisible = false,
-                Margin = new Thickness(3),
-                Width = 16,
-                Height = 16,
-            },
+            }
+            .TemplateValue(Layoutable.MarginProperty, new Thickness(3))
+            .TemplateValue(Layoutable.WidthProperty, 16d)
+            .TemplateValue(Layoutable.HeightProperty, 16d)
+            .TemplateValue(Visual.IsVisibleProperty, false)
+            .TemplateValue(Grid.ColumnProperty, 0)
+            ,
             scope);
-
-        Grid.SetColumn(toggleIconPresenter, 0);
 
         //
         // Icon presenter
         //
 
         var iconPresenter = Register(
-            new ContentControl
+            new ContentPresenter
             {
                 Name = "PART_IconPresenter",
-                Width = 16,
-                Height = 16,
-                Margin = new Thickness(3),
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-
-                [!ContentControl.ContentProperty] =
+                [!ContentPresenter.ContentProperty] =
                     new TemplateBinding(MenuItem.IconProperty),
-            },
+            }
+            .TemplateValue(Layoutable.WidthProperty, 16d)
+            .TemplateValue(Layoutable.HeightProperty, 16d)
+            .TemplateValue(Layoutable.MarginProperty, new Thickness(3))
+            .TemplateValue(Layoutable.HorizontalAlignmentProperty, HorizontalAlignment.Center)
+            .TemplateValue(Layoutable.VerticalAlignmentProperty, VerticalAlignment.Center)
+            .TemplateValue(Grid.ColumnProperty, 0)
+            ,
             scope);
-
-        Grid.SetColumn(iconPresenter, 0);
 
         //
         // Header
@@ -224,28 +219,27 @@ public static class MenuItemLayout
             new ContentPresenter
             {
                 Name = "PART_HeaderPresenter",
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-
-                [!ContentPresenter.MarginProperty] =
+                [!Layoutable.MarginProperty] =
                     new TemplateBinding(TemplatedControl.PaddingProperty),
 
                 [!ContentPresenter.ContentProperty] =
-                    new TemplateBinding(MenuItem.HeaderProperty),
+                    new TemplateBinding(HeaderedSelectingItemsControl.HeaderProperty),
 
                 [!ContentPresenter.ContentTemplateProperty] =
-                    new TemplateBinding(MenuItem.HeaderTemplateProperty),
-            },
+                    new TemplateBinding(HeaderedSelectingItemsControl.HeaderTemplateProperty),
+            }
+            .TemplateValue(Layoutable.VerticalAlignmentProperty, VerticalAlignment.Center)
+            .TemplateValue(Grid.ColumnProperty, 2)
+            .DataTemplates([
+                // 保留 SimpleTheme 对 "_File" / "_Open" 等 AccessText 的支持。
+                new FuncDataTemplate<string>(
+                    (text, _) => new AccessText
+                    {
+                        Text = text
+                    }),
+            ])
+            ,
             scope);
-
-        // 保留 SimpleTheme 对 "_File" / "_Open" 等 AccessText 的支持。
-        headerPresenter.DataTemplates.Add(
-            new FuncDataTemplate<string>(
-                (text, _) => new AccessText
-                {
-                    Text = text
-                }));
-
-        Grid.SetColumn(headerPresenter, 2);
 
         //
         // Ctrl+O / Ctrl+S 等 InputGesture
@@ -255,21 +249,22 @@ public static class MenuItemLayout
             new TextBlock
             {
                 Name = "PART_InputGestureText",
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-
                 [!TextBlock.TextProperty] =
                     new TemplateBinding(MenuItem.InputGestureProperty)
                     {
                         Converter = new PlatformKeyGestureConverter()
                     },
-            },
+            }
+            .TemplateValue(Layoutable.VerticalAlignmentProperty, VerticalAlignment.Center)
+            ,
             scope);
 
         inputGestureText.Bind(
             StyledElement.ThemeProperty,
-            item.GetObservable(InputGestureTextThemeProperty));
+            item.GetObservable(InputGestureTextThemeProperty),
+            BindingPriority.Template);
 
-        Grid.SetColumn(inputGestureText, 3);
+        inputGestureText.TemplateValue(Grid.ColumnProperty, 3);
 
         //
         // 子菜单右箭头
@@ -279,28 +274,28 @@ public static class MenuItemLayout
             new Path
             {
                 Name = "rightArrow",
-                Margin = new Thickness(10, 0, 0, 0),
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                Data = Geometry.Parse("M0,0L4,3.5 0,7z"),
-            },
+            }
+            .TemplateValue(Layoutable.MarginProperty, new Thickness(10, 0, 0, 0))
+            .TemplateValue(Layoutable.VerticalAlignmentProperty, VerticalAlignment.Center)
+            .TemplateValue(Path.DataProperty, Geometry.Parse("M0,0L4,3.5 0,7z")),
             scope);
 
         rightArrow.Bind(
-            Path.FillProperty,
-            rightArrow.GetResourceObservable("ThemeForegroundBrush"));
+            Shape.FillProperty,
+            rightArrow.GetResourceObservable("ThemeForegroundBrush"),
+            BindingPriority.Template);
 
         var rightArrowPresenter = new Border
         {
-            Width = 20,
             [!Visual.IsVisibleProperty] =
                 new TemplateBinding(ItemsControl.ItemCountProperty)
                 {
                     Converter = PositiveIntToBoolConverter.Instance
                 },
             Child = rightArrow
-        };
-
-        Grid.SetColumn(rightArrowPresenter, 4);
+        }
+        .TemplateValue(Layoutable.WidthProperty, 20d)
+        .TemplateValue(Grid.ColumnProperty, 4);
 
         //
         // 子菜单 ItemsPresenter
@@ -310,16 +305,13 @@ public static class MenuItemLayout
             new ItemsPresenter
             {
                 Name = "PART_ItemsPresenter",
-                Margin = new Thickness(2),
-
                 [!ItemsPresenter.ItemsPanelProperty] =
                     new TemplateBinding(ItemsControl.ItemsPanelProperty),
-            },
+            }
+            .TemplateValue(Layoutable.MarginProperty, new Thickness(2))
+            .TemplateValue(Grid.IsSharedSizeScopeProperty, true)
+            ,
             scope);
-
-        itemsPresenter.SetValue(
-            Grid.IsSharedSizeScopeProperty,
-            true);
 
         //
         // ScrollViewer
@@ -337,7 +329,7 @@ public static class MenuItemLayout
                 out var resource)
             && resource is ControlTheme scrollViewerTheme)
         {
-            scrollViewer.Theme = scrollViewerTheme;
+            scrollViewer.TemplateValue(StyledElement.ThemeProperty, scrollViewerTheme);
         }
 
         //
@@ -354,11 +346,13 @@ public static class MenuItemLayout
 
         popupBorder.Bind(
             Border.BackgroundProperty,
-            popupBorder.GetResourceObservable("ThemeBackgroundBrush"));
+            popupBorder.GetResourceObservable("ThemeBackgroundBrush"),
+            BindingPriority.Template);
 
         popupBorder.Bind(
             Border.BorderBrushProperty,
-            popupBorder.GetResourceObservable("ThemeBorderMidBrush"));
+            popupBorder.GetResourceObservable("ThemeBorderMidBrush"),
+            BindingPriority.Template);
 
         //
         // PART_Popup
@@ -371,9 +365,6 @@ public static class MenuItemLayout
             new Popup
             {
                 Name = "PART_Popup",
-                IsLightDismissEnabled = false,
-                Placement = PlacementMode.RightEdgeAlignedTop,
-
                 [!Popup.IsOpenProperty] =
                     new TemplateBinding(MenuItem.IsSubMenuOpenProperty)
                     {
@@ -381,7 +372,9 @@ public static class MenuItemLayout
                     },
 
                 Child = popupBorder
-            },
+            }
+            .TemplateValue(Popup.IsLightDismissEnabledProperty, false)
+            .TemplateValue(Popup.PlacementProperty, PlacementMode.RightEdgeAlignedTop),
             scope);
 
         //
@@ -419,6 +412,16 @@ public static class MenuItemLayout
                 Child = grid
             },
             scope);
+    }
+
+    private static T TemplateValue<T, TValue>(
+        this T target,
+        StyledProperty<TValue> property,
+        TValue value)
+        where T : AvaloniaObject
+    {
+        target.SetValue(property, value, BindingPriority.Template);
+        return target;
     }
 
     private static T Register<T>(T control, INameScope scope)
