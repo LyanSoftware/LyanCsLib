@@ -28,6 +28,15 @@ public static class LocalizerExtensions
     => localizer.Format(new LocalizeString(CombineScopeAndKey(Scope, Key), Arguments, DefaultMessage));
     public static string Format(this ILocalizer localizer, string Scope, string Key, string? DefaultMessage = null)
     => localizer.Format(new LocalizeString(CombineScopeAndKey(Scope, Key), DefaultMessage: DefaultMessage));
+
+    public static IObservable<string> Observe(this ILocalizer localizer, string Key, object Arguments, string? DefaultMessage = null)
+    => localizer.Observe(new LocalizeString(Key, Arguments, DefaultMessage));
+    public static IObservable<string> Observe(this ILocalizer localizer, string Key, string? DefaultMessage = null)
+    => localizer.Observe(new LocalizeString(Key, DefaultMessage: DefaultMessage));
+    public static IObservable<string> Observe(this ILocalizer localizer, string Scope, string Key, object Arguments, string? DefaultMessage = null)
+    => localizer.Observe(new LocalizeString(CombineScopeAndKey(Scope, Key), Arguments, DefaultMessage));
+    public static IObservable<string> Observe(this ILocalizer localizer, string Scope, string Key, string? DefaultMessage = null)
+    => localizer.Observe(new LocalizeString(CombineScopeAndKey(Scope, Key), DefaultMessage: DefaultMessage));
 }
 
 public static class ExceptionExtensions

@@ -1,64 +1,57 @@
 using System.Collections.Immutable;
 using System.Globalization;
-using System.Net.Http.Headers;
-using System.Text;
-using Newtonsoft.Json;
-using SmartFormat;
 
 namespace Lytec.Common.Localization;
 
-public class JsonLocalizer : Localizer
+/// <summary>
+/// Formats localized text from an atomically replaceable, ordered set of JSON
+/// language-pack layers. Loading and validation are handled by
+/// <see cref="ILanguagePackService"/>.
+/// </summary>
+public sealed class JsonLocalizer : Localizer
 {
-    public static string DefaultFileNameFormat { get; set; } = "lang/{LangName}.json";
+    private Snapshot snapshot = new(
+        CultureInfo.InvariantCulture,
+        ImmutableArray<ImmutableDictionary<string, string>>.Empty);
 
-    public string FileNameFormat { get; set; } = DefaultFileNameFormat;
+    public override CultureInfo CurrentCulture => snapshot.Culture;
 
-    public CultureInfo Language { get; protected set; } = Thread.CurrentThread.CurrentUICulture;
-
-    protected ImmutableArray<ImmutableDictionary<string, string>> Data { get; set; }
-
-    protected virtual void Reload(CultureInfo lang)
+    internal void Apply(
+        CultureInfo culture,
+        ImmutableArray<ImmutableDictionary<string, string>> layers)
     {
-        var data = new List<ImmutableDictionary<string, string>>();
-        var langs = new HashSet<string>();
-        var de = JsonSerializer.Create(new JsonSerializerSettings()
-        {
-        });
-        for (var la = lang; la != null; la = la.Parent)
-        {
-            if (!langs.Add(la.Name))
-                continue;
-            using var fs = File.OpenRead(Smart.Format(FileNameFormat, la.Name));
-            using var sr = new StreamReader(fs, Encoding.UTF8);
-            using var jr = new JsonTextReader(sr);
-            var d = de.Deserialize<Dictionary<string, Dictionary<string, string>>>(jr);
-            if (d == null)
-                continue;
-            data.Add(d.SelectMany(x => x.Value.Select(y => new
-            {
-                Key = CombineScopeAndKey(x.Key, y.Key),
-                y.Value,
-            })).ToImmutableDictionary(x => x.Key, x => x.Value));
-        }
-        Language = lang;
-        Data = data.ToImmutableArray();
-    }
+        if (culture is null)
+            throw new ArgumentNullException(nameof(culture));
 
-    public void Reload() => Reload(Language);
-    public void ChangeLang(CultureInfo lang) => Reload(lang);
+        snapshot = new Snapshot(
+            culture,
+            layers.IsDefault
+                ? ImmutableArray<ImmutableDictionary<string, string>>.Empty
+                : layers);
+        NotifyChanged();
+    }
 
     public override bool TryQuery(string key, out string Value)
     {
-        var ds = Data;
-        foreach (var d in ds)
+        var current = snapshot;
+        foreach (var layer in current.Layers)
         {
-            if (d.TryGetValue(key, out var v) && !v.IsNullOrEmpty())
+            if (layer.TryGetValue(key, out var value) && !value.IsNullOrEmpty())
             {
-                Value = v;
+                Value = value;
                 return true;
             }
         }
-        Value = "";
+
+        Value = string.Empty;
         return false;
+    }
+
+    private sealed class Snapshot(
+        CultureInfo culture,
+        ImmutableArray<ImmutableDictionary<string, string>> layers)
+    {
+        public CultureInfo Culture { get; } = culture;
+        public ImmutableArray<ImmutableDictionary<string, string>> Layers { get; } = layers;
     }
 }
