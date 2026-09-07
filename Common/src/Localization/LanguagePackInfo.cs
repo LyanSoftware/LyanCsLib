@@ -2,16 +2,9 @@ using System.Globalization;
 
 namespace Lytec.Common.Localization;
 
-public sealed class LanguagePackInfo
+public record LanguagePackInfo(CultureInfo Culture)
 {
-    public LanguagePackInfo(CultureInfo culture)
-    {
-        Culture = culture ?? throw new ArgumentNullException(nameof(culture));
-    }
-
-    public CultureInfo Culture { get; }
-
     public string Id => Culture.Name;
 
-    public string DisplayName => $"{Culture.NativeName} ({Culture.EnglishName})";
+    public string DisplayName => Culture.NativeName != Culture.EnglishName ? $"{Culture.NativeName} ({Culture.EnglishName})" : Culture.EnglishName;
 }
