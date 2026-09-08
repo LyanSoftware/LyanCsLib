@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using Lytec.Common.Localization;
 using Lytec.Common.Localization.Extensions;
 
 namespace Lytec.AvaloniaUI.Mvu;
@@ -9,6 +10,8 @@ namespace Lytec.AvaloniaUI.Mvu;
 public static class WindowManager
 {
     private const string LocalizeScope = "Lytec.AvaloniaUI.Mvu.WindowManager";
+    private static LocalizeString Localize(string Key, object? Arguments = null, string? DefaultMessage = null)
+    => new(LocalizeScope, Key, Arguments, DefaultMessage);
 
     private static readonly Dictionary<Window, ManagedWindow> ManagedWindows = [];
     private static IClassicDesktopStyleApplicationLifetime? installedDesktop;
