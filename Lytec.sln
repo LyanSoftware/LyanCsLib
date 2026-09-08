@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.9.12112.369 stable
+VisualStudioVersion = 18.9.12112.369
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Common", "Common\Lytec.Common.csproj", "{C4424BC3-500D-4023-9C3C-77874ED9C3EC}"
 EndProject
@@ -47,8 +47,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Common.Generated", "Common.Generated\Lytec.Common.Generated.csproj", "{FEB67227-040C-4BC3-8A0D-603AB1297483}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Wpf", "Wpf\Lytec.Wpf.csproj", "{FDD50CE1-1932-4C35-90B4-6D7484CC10C6}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.NewBeeUIUtils", "NewBeeUIUtils\Lytec.NewBeeUIUtils.csproj", "{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lytec.AvaloniaUI.Generators", "AvaloniaUI.Generators\Lytec.AvaloniaUI.Generators.csproj", "{9CBDD477-51DB-485B-B717-E5A328BED8CC}"
 EndProject
@@ -130,10 +128,6 @@ Global
 		{FDD50CE1-1932-4C35-90B4-6D7484CC10C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FDD50CE1-1932-4C35-90B4-6D7484CC10C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FDD50CE1-1932-4C35-90B4-6D7484CC10C6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
