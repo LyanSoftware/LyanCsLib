@@ -36,3 +36,7 @@ dotnet_diagnostic.IDE0066.severity = none
 
 # RS2008: 启用分析器发布跟踪
 dotnet_diagnostic.RS2008.severity = none
+
+# IDE0130: 命名空间与文件夹结构不匹配
+# 在源代码统一放入src子目录时, 此提示永远不对（提示要求将"src"纳入命名空间）
+dotnet_diagnostic.IDE0130.severity = none

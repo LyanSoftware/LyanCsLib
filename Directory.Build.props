@@ -4,7 +4,7 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageVersion>0.1.1</PackageVersion>
+    <PackageVersion>0.2.0</PackageVersion>
     <Authors>Lytec.K</Authors>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <!-- 保留生成的代码文件 -->
@@ -14,7 +14,8 @@
     <CommonTargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net7.0</CommonTargetFrameworks>
     <LegacyTargetFrameworks>netstandard2.0;netstandard2.1</LegacyTargetFrameworks>
     <AnalyzerTargetFrameworks>netstandard2.0</AnalyzerTargetFrameworks>
-    <AvaloniaVersion>11.3.6</AvaloniaVersion>
+    <AvaloniaTargetFrameworks>net10.0;net10.0-windows</AvaloniaTargetFrameworks>
+    <AvaloniaVersion>12.1.1</AvaloniaVersion>
     <SkiaSharpVersion>[4.148.0,5.0)</SkiaSharpVersion>
   </PropertyGroup>
 </Project>

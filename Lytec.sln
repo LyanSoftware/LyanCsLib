@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.5.33516.290
+# Visual Studio Version 18
+VisualStudioVersion = 18.9.12112.369 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Common", "Common\Lytec.Common.csproj", "{C4424BC3-500D-4023-9C3C-77874ED9C3EC}"
 EndProject
@@ -21,8 +21,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.NetStandard20Compatibility", "NetStandard20Compatibility\Lytec.NetStandard20Compatibility.csproj", "{3F08E2A0-AD22-4B66-9C05-AB632FE1A1F0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.AvaloniaUI", "AvaloniaUI\Lytec.AvaloniaUI.csproj", "{1E5D574D-00B4-459E-BF15-7FB212963CB5}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.AvaloniaUI.Generators", "AvaloniaUI.Generators\Lytec.AvaloniaUI.Generators.csproj", "{C52737E5-42BA-4FCC-B0E1-ED2E0D6D41C2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.WinForms", "WinForms\Lytec.WinForms.csproj", "{3561417C-AFE2-4A80-8176-11E4A2DB7303}"
 EndProject
@@ -74,10 +72,6 @@ Global
 		{1E5D574D-00B4-459E-BF15-7FB212963CB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E5D574D-00B4-459E-BF15-7FB212963CB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E5D574D-00B4-459E-BF15-7FB212963CB5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C52737E5-42BA-4FCC-B0E1-ED2E0D6D41C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C52737E5-42BA-4FCC-B0E1-ED2E0D6D41C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C52737E5-42BA-4FCC-B0E1-ED2E0D6D41C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C52737E5-42BA-4FCC-B0E1-ED2E0D6D41C2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3561417C-AFE2-4A80-8176-11E4A2DB7303}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3561417C-AFE2-4A80-8176-11E4A2DB7303}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3561417C-AFE2-4A80-8176-11E4A2DB7303}.Release|Any CPU.ActiveCfg = Release|Any CPU
