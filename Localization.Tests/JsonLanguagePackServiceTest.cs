@@ -38,7 +38,7 @@ public sealed class JsonLanguagePackServiceTest
             """);
 
         var (localizer, service, _) = CreateService(directory.Path, "fr-CA");
-        await service.InitializeAsync();
+        await service.InitializeAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal("target", Format(localizer, "Target"));
         Assert.Equal("parent", Format(localizer, "Parent"));
@@ -61,7 +61,7 @@ public sealed class JsonLanguagePackServiceTest
             """);
 
         var (_, service, _) = CreateService(directory.Path, "en");
-        var languages = await service.DiscoverAsync();
+        var languages = await service.DiscoverAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(new[] { "en", "zh-CN" },
             languages.Select(static language => language.Id).OrderBy(static id => id));
@@ -76,7 +76,7 @@ public sealed class JsonLanguagePackServiceTest
         directory.Write("en.json", "{}");
 
         var (_, service, log) = CreateService(directory.Path, "en");
-        var languages = await service.DiscoverAsync();
+        var languages = await service.DiscoverAsync(TestContext.Current.CancellationToken);
 
         Assert.Single(languages);
         Assert.Equal("en", languages[0].Id);
@@ -95,7 +95,7 @@ public sealed class JsonLanguagePackServiceTest
             """);
 
         var (localizer, service, _) = CreateService(directory.Path, "en");
-        await service.InitializeAsync();
+        await service.InitializeAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal("last-scope", Format(localizer, "Key"));
     }
@@ -116,10 +116,11 @@ public sealed class JsonLanguagePackServiceTest
             log,
             directory.Path,
             CultureInfo.GetCultureInfo("en"));
-        await service.InitializeAsync();
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await service.InitializeAsync(cancellationToken);
 
-        var first = service.ChangeLanguageAsync("fr");
-        var last = service.ChangeLanguageAsync("en");
+        var first = service.ChangeLanguageAsync("fr", cancellationToken);
+        var last = service.ChangeLanguageAsync("en", cancellationToken);
         await Task.WhenAll(first, last);
 
         Assert.False(await first);
@@ -142,10 +143,11 @@ public sealed class JsonLanguagePackServiceTest
             Localizer.CombineScopeAndKey(Scope, "Key"),
             DefaultMessage: "embedded")).Subscribe(observer);
 
-        await service.InitializeAsync();
-        await service.ChangeLanguageAsync("fr");
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await service.InitializeAsync(cancellationToken);
+        await service.ChangeLanguageAsync("fr", cancellationToken);
         subscription.Dispose();
-        await service.ChangeLanguageAsync("en");
+        await service.ChangeLanguageAsync("en", cancellationToken);
 
         Assert.Equal(new[] { "embedded", "en", "fr" }, observer.Values);
     }
@@ -158,7 +160,7 @@ public sealed class JsonLanguagePackServiceTest
         directory.Write("en.json", "{ \"Test.Scope\": { \"Number\": \"{Value:N2}\" } }");
 
         var (localizer, service, _) = CreateService(directory.Path, "fr-FR");
-        await service.InitializeAsync();
+        await service.InitializeAsync(TestContext.Current.CancellationToken);
 
         var value = localizer.Format(new LocalizeString(
             Localizer.CombineScopeAndKey(Scope, "Number"),

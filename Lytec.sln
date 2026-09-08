@@ -52,6 +52,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.NewBeeUIUtils", "NewB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lytec.AvaloniaUI.Generators", "AvaloniaUI.Generators\Lytec.AvaloniaUI.Generators.csproj", "{9CBDD477-51DB-485B-B717-E5A328BED8CC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lytec.AvaloniaUI.Generators.Tests", "AvaloniaUI.Generators.Tests\Lytec.AvaloniaUI.Generators.Tests.csproj", "{36474C5A-E402-4E2E-B703-8E52AF633D1E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lytec.Localization.Tests", "Localization.Tests\Lytec.Localization.Tests.csproj", "{8C8BE470-9D5B-626B-065B-202803A00118}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -134,6 +138,14 @@ Global
 		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36474C5A-E402-4E2E-B703-8E52AF633D1E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36474C5A-E402-4E2E-B703-8E52AF633D1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36474C5A-E402-4E2E-B703-8E52AF633D1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36474C5A-E402-4E2E-B703-8E52AF633D1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C8BE470-9D5B-626B-065B-202803A00118}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C8BE470-9D5B-626B-065B-202803A00118}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C8BE470-9D5B-626B-065B-202803A00118}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C8BE470-9D5B-626B-065B-202803A00118}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

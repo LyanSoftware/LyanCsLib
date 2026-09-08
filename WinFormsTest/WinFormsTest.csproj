@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
+    <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -10,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -21,21 +22,9 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
-    <ProjectReference Include="..\NetStandard20Compatibility\Lytec.NetStandard20Compatibility.csproj" />
-    <ProjectReference Include="..\NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />
+  <ItemGroup>
     <ProjectReference Include="..\WinForms\Lytec.WinForms.csproj" />
     <ProjectReference Include="..\Image.GDIPlus\Lytec.Image.GDIPlus.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\AvaloniaUI\Lytec.AvaloniaUI.csproj" />
-    <ProjectReference Include="..\Common\Lytec.Common.csproj" />
-    <ProjectReference Include="..\Image\Lytec.Image.csproj" />
-    <ProjectReference Include="..\Protocol.Images\Lytec.Protocol.Images.csproj" />
-    <ProjectReference Include="..\Protocol\Lytec.Protocol.csproj" />
-    <ProjectReference Include="..\SerialPort\Lytec.SerialPort.csproj" />
-    <ProjectReference Include="..\Win32\Lytec.Win32.csproj" />
   </ItemGroup>
 
 </Project>
