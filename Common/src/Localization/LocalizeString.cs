@@ -7,4 +7,9 @@ public interface ILocalizeString
     string? DefaultMessage { get; }
 }
 
-public record LocalizeString(string Key, object? Arguments = null, string? DefaultMessage = null) : ILocalizeString;
+public record LocalizeString(string Key, object? Arguments = null, string? DefaultMessage = null) : ILocalizeString
+{
+    public LocalizeString(string Scope, string Key, object? Arguments = null, string? DefaultMessage = null)
+        : this(Localizer.CombineScopeAndKey(Scope, Key), Arguments, DefaultMessage)
+    { }
+}

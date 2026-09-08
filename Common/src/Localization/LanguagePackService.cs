@@ -28,45 +28,35 @@ public interface ILanguagePackService
         CancellationToken cancellationToken = default);
 }
 
-public sealed class JsonLanguagePackService : ILanguagePackService
+public sealed class JsonLanguagePackService(
+    JsonLocalizer localizer,
+    ILanguagePreferenceStore? preferenceStore = null,
+    ILocalizationLogSink? log = null,
+    string? languageDirectory = null,
+    CultureInfo? startupCulture = null) : ILanguagePackService
 {
     private const string LocalizeScope = "Lytec.Common.Localization.JsonLanguagePackService";
+    private static LocalizeString Localize(string Key, object? Arguments = null, string? DefaultMessage = null)
+    => new(LocalizeScope, Key, Arguments, DefaultMessage);
 
-    private readonly JsonLocalizer localizer;
-    private readonly ILanguagePreferenceStore preferenceStore;
-    private readonly ILocalizationLogSink log;
-    private readonly SynchronizationContext? notificationContext;
+    private readonly JsonLocalizer localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
+    private readonly ILanguagePreferenceStore preferenceStore = preferenceStore ?? new NullLanguagePreferenceStore();
+    private readonly ILocalizationLogSink log = log ?? new DebugLocalizationLogSink(localizer);
+    private readonly SynchronizationContext? notificationContext = SynchronizationContext.Current;
     private readonly SemaphoreSlim saveGate = new(1, 1);
 
     private ImmutableDictionary<string, LanguagePack> packs =
         ImmutableDictionary.Create<string, LanguagePack>(StringComparer.OrdinalIgnoreCase);
-    private IReadOnlyList<LanguagePackInfo> availableLanguages = Array.Empty<LanguagePackInfo>();
+    private IReadOnlyList<LanguagePackInfo> availableLanguages = [];
     private long changeVersion;
-
-    public JsonLanguagePackService(
-        JsonLocalizer localizer,
-        ILanguagePreferenceStore? preferenceStore = null,
-        ILocalizationLogSink? log = null,
-        string? languageDirectory = null,
-        CultureInfo? startupCulture = null)
-    {
-        this.localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
-        this.preferenceStore = preferenceStore ?? new NullLanguagePreferenceStore();
-        this.log = log ?? new DebugLocalizationLogSink(localizer);
-        notificationContext = SynchronizationContext.Current;
-
-        StartupCulture = startupCulture ?? CultureInfo.CurrentUICulture;
-        LanguageDirectory = Path.GetFullPath(languageDirectory
-            ?? Path.Combine(AppContext.BaseDirectory, "lang"));
-    }
 
     public event EventHandler? CurrentLanguageChanged;
 
-    public CultureInfo StartupCulture { get; }
+    public CultureInfo StartupCulture { get; } = startupCulture ?? CultureInfo.CurrentUICulture;
 
     public string CurrentLanguageId { get; private set; } = LanguageId.Auto;
 
-    public string LanguageDirectory { get; }
+    public string LanguageDirectory { get; } = Path.GetFullPath(languageDirectory ?? Path.Combine(AppContext.BaseDirectory, "lang"));
 
     public IReadOnlyList<LanguagePackInfo> AvailableLanguages => availableLanguages;
 
@@ -88,9 +78,7 @@ public sealed class JsonLanguagePackService : ILanguagePackService
         {
             log.Write(
                 LocalizationLogLevel.Warning,
-                new LocalizeString(
-                    Combine("PreferenceLoadFailed"),
-                    DefaultMessage: "读取语言偏好设置失败，将使用自动语言。"),
+                Localize("PreferenceLoadFailed", DefaultMessage: "读取语言偏好设置失败，将使用自动语言。"),
                 ex);
             requestedLanguage = LanguageId.Auto;
         }
@@ -118,14 +106,14 @@ public sealed class JsonLanguagePackService : ILanguagePackService
         {
             log.Write(
                 LocalizationLogLevel.Error,
-                new LocalizeString(
-                    Combine("DirectoryScanFailed"),
+                Localize(
+                    "DirectoryScanFailed",
                     new { Directory = LanguageDirectory },
                     "扫描语言包目录“{Directory}”失败，将继续使用程序内嵌文本。"),
                 ex);
             result = new DiscoveryResult(
                 ImmutableDictionary.Create<string, LanguagePack>(StringComparer.OrdinalIgnoreCase),
-                Array.Empty<LanguagePackInfo>());
+                []);
         }
 
         packs = result.Packs;
@@ -143,8 +131,8 @@ public sealed class JsonLanguagePackService : ILanguagePackService
         {
             log.Write(
                 LocalizationLogLevel.Warning,
-                new LocalizeString(
-                    Combine("LanguageNotAvailable"),
+                Localize(
+                    "LanguageNotAvailable",
                     new { LanguageId = languageId },
                     "语言“{LanguageId}”不可用，将保持当前语言。"));
             return Task.FromResult(false);
@@ -195,8 +183,8 @@ public sealed class JsonLanguagePackService : ILanguagePackService
 
             log.Write(
                 LocalizationLogLevel.Warning,
-                new LocalizeString(
-                    Combine("FallbackPackMissing"),
+                Localize(
+                    "FallbackPackMissing",
                     new { Culture = culture.Name },
                     "回退链中的语言包“{Culture}”不存在，将继续使用下一层。"));
         }
@@ -244,8 +232,8 @@ public sealed class JsonLanguagePackService : ILanguagePackService
             {
                 log.Write(
                     LocalizationLogLevel.Warning,
-                    new LocalizeString(
-                        Combine("PreferenceSaveFailed"),
+                    Localize(
+                        "PreferenceSaveFailed",
                         new { LanguageId = languageId },
                         "保存语言偏好“{LanguageId}”失败。"),
                     ex);
@@ -278,7 +266,7 @@ public sealed class JsonLanguagePackService : ILanguagePackService
     {
         var result = ImmutableDictionary.CreateBuilder<string, LanguagePack>(StringComparer.OrdinalIgnoreCase);
         if (!Directory.Exists(LanguageDirectory))
-            return new DiscoveryResult(result.ToImmutable(), Array.Empty<LanguagePackInfo>());
+            return new DiscoveryResult(result.ToImmutable(), []);
 
         var files = Directory.EnumerateFiles(LanguageDirectory, "*", SearchOption.TopDirectoryOnly)
             .Where(static path => string.Equals(
@@ -302,8 +290,8 @@ public sealed class JsonLanguagePackService : ILanguagePackService
             {
                 log.Write(
                     LocalizationLogLevel.Warning,
-                    new LocalizeString(
-                        Combine("InvalidFileName"),
+                    Localize(
+                        "InvalidFileName",
                         new { FileName = Path.GetFileName(path) },
                         "语言包文件名“{FileName}”不是有效的 CultureInfo 名称，已跳过。"),
                     ex);
@@ -322,8 +310,8 @@ public sealed class JsonLanguagePackService : ILanguagePackService
             {
                 log.Write(
                     LocalizationLogLevel.Warning,
-                    new LocalizeString(
-                        Combine("InvalidContent"),
+                    Localize(
+                        "InvalidContent",
                         new { FileName = Path.GetFileName(path) },
                         "语言包“{FileName}”无法读取或内容无效，已跳过。"),
                     ex);
@@ -388,9 +376,6 @@ public sealed class JsonLanguagePackService : ILanguagePackService
                 args.Handler(args.Service, EventArgs.Empty);
             }, (this, handler));
     }
-
-    private static string Combine(string key)
-        => Localizer.CombineScopeAndKey(LocalizeScope, key);
 
     private sealed class LanguagePack(
         CultureInfo culture,
