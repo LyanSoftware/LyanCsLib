@@ -59,17 +59,8 @@ public static class SKColorFilters
             }
             else if (bits > 0)
             {
-                // 1 <= bits <= 7
-                int levels = 1 << bits;                 // 离散级别数
-                var maxlv = levels - 1;
                 for (int i = 0; i < 256; i++)
-                {
-                    // 四舍五入到最近的级别
-                    int level = (i * maxlv + 127) / 255;
-                    // 映射回 0~255
-                    int value = (level * 255 + maxlv / 2) / maxlv;
-                    table[i] = (byte)value;
-                }
+                    table[i] = Color.Quantize((byte)i, bits);
             }
             return table;
         }

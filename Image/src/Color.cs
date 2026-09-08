@@ -58,4 +58,44 @@ public readonly partial struct Color : IEquatable<Color>
     public string DebugView => ToString();
 
     public byte GrayScale => (byte)(R * 0.299 + G * 0.587 + B * 0.114);
+
+    /// <summary>
+    /// 量化颜色通道
+    /// </summary>
+    /// <param name="v">通道值</param>
+    /// <param name="bits">量化bit数, 1-7, >=8不量化返回原始值</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    public static byte Quantize(byte v, int bits)
+    {
+        // 1 <= bits <= 7
+        if (bits >= 8)
+            return v;
+        if (bits < 1)
+            throw new ArgumentException(nameof(bits));
+
+        // 离散级别数
+        int levels = 1 << bits;
+        var maxlv = levels - 1;
+        // 先求最近的色阶索引
+        var index = (v * maxlv + 127) / 255;
+        // 再把索引映射回 0~255
+        return (byte)((index * 255 + maxlv / 2) / maxlv);
+    }
+
+    /// <summary>
+    /// 量化颜色
+    /// </summary>
+    /// <param name="r"></param>
+    /// <param name="g"></param>
+    /// <param name="b"></param>
+    /// <param name="a"></param>
+    /// <returns></returns>
+    public Color Quantize(int r, int g, int b, int a = 8)
+    => new Color(
+        Quantize(R, r),
+        Quantize(G, g),
+        Quantize(B, b),
+        Quantize(A, a)
+    );
 }
