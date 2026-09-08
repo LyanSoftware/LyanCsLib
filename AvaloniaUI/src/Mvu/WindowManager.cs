@@ -141,8 +141,7 @@ public static class WindowManager
         if (ReferenceEquals(installedDesktop, desktop))
             return;
 
-        if (installedDesktop is not null)
-            installedDesktop.ShutdownRequested -= OnShutdownRequested;
+        installedDesktop?.ShutdownRequested -= OnShutdownRequested;
 
         installedDesktop = desktop;
         installedDesktop.ShutdownRequested += OnShutdownRequested;
