@@ -50,6 +50,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.Wpf", "Wpf\Lytec.Wpf.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lytec.NewBeeUIUtils", "NewBeeUIUtils\Lytec.NewBeeUIUtils.csproj", "{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lytec.AvaloniaUI.Generators", "AvaloniaUI.Generators\Lytec.AvaloniaUI.Generators.csproj", "{9CBDD477-51DB-485B-B717-E5A328BED8CC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -128,6 +130,10 @@ Global
 		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2CC465B5-B2C1-48FD-8ABF-5FBDBE289CD0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CBDD477-51DB-485B-B717-E5A328BED8CC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
