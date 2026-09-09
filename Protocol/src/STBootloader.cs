@@ -810,7 +810,7 @@ public class STBootloader
         var endAddr = startAddr + length;
         if (startAddr < flashStartAddr || endAddr > flashEndAddr)
             return false;
-        var pageSizes = info.FlashPageSizes.Reverse().SkipWhile(v => v == 0).Reverse().ToArray();
+        var pageSizes = info.FlashPageSizes.AsEnumerable().Reverse().SkipWhile(v => v == 0).Reverse().ToArray();
         if (pageSizes.Length < 1)
             return false;
         var beforeBuf = Array.Empty<byte>();

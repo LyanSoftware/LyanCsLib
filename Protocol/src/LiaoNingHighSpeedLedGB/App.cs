@@ -14,6 +14,7 @@ using Lytec.Common;
 using Lytec.Common.Crypto;
 using Lytec.Common.Data;
 using Lytec.Common.Localization;
+using Lytec.Common.Localization.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -43,8 +44,8 @@ public class Result<T> : JsonResult
 public class App
 {
     public ILogger? Logger { get; set; }
-    public IStringLocalizer? Localizer { get; set; }
-    public string i18n(string key) => Localizer.Query(key);
+    public ILocalizer? Localizer { get; set; }
+    public string i18n(string key) => Localizer?.Format(key) ?? key;
     public void LogAction([CallerMemberName] string action = "") => Logger?.LogInformation($"[{action}]");
 
     public static partial class ApiPath { }
