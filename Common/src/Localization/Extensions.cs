@@ -65,20 +65,20 @@ public static class Extensions
 
 public static class LocalizerExtensions
 {
-    public static string Format(this ILocalizer localizer, string Key, object Arguments, string? DefaultMessage = null)
+    public static string Format(this ILocalizer localizer, string Key, object? Arguments, string? DefaultMessage = null)
     => localizer.Format(new LocalizeString(Key, Arguments, DefaultMessage));
     public static string Format(this ILocalizer localizer, string Key, string? DefaultMessage = null)
     => localizer.Format(new LocalizeString(Key, DefaultMessage: DefaultMessage));
-    public static string Format(this ILocalizer localizer, string Scope, string Key, object Arguments, string? DefaultMessage = null)
+    public static string Format(this ILocalizer localizer, string Scope, string Key, object? Arguments, string? DefaultMessage = null)
     => localizer.Format(new LocalizeString(Scope, Key, Arguments, DefaultMessage));
     public static string Format(this ILocalizer localizer, string Scope, string Key, string? DefaultMessage = null)
     => localizer.Format(new LocalizeString(Scope, Key, DefaultMessage: DefaultMessage));
 
-    public static IObservable<string> Observe(this ILocalizer localizer, string Key, object Arguments, string? DefaultMessage = null)
+    public static IObservable<string> Observe(this ILocalizer localizer, string Key, object? Arguments, string? DefaultMessage = null)
     => localizer.Observe(new LocalizeString(Key, Arguments, DefaultMessage));
     public static IObservable<string> Observe(this ILocalizer localizer, string Key, string? DefaultMessage = null)
     => localizer.Observe(new LocalizeString(Key, DefaultMessage: DefaultMessage));
-    public static IObservable<string> Observe(this ILocalizer localizer, string Scope, string Key, object Arguments, string? DefaultMessage = null)
+    public static IObservable<string> Observe(this ILocalizer localizer, string Scope, string Key, object? Arguments, string? DefaultMessage = null)
     => localizer.Observe(new LocalizeString(Scope, Key, Arguments, DefaultMessage));
     public static IObservable<string> Observe(this ILocalizer localizer, string Scope, string Key, string? DefaultMessage = null)
     => localizer.Observe(new LocalizeString(Scope, Key, DefaultMessage: DefaultMessage));
