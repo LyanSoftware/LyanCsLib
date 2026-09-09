@@ -129,24 +129,26 @@ public static class MenuItemLayout
         var iconColumn = new ColumnDefinition();
 
         iconColumn[!ColumnDefinition.WidthProperty] =
-            new Binding(nameof(LayoutGrid.ShowIconColumn))
-            {
-                Source = grid,
-                Converter = BoolToGridLengthConverter,
-                ConverterParameter = new GridLength(20),
-                Priority = BindingPriority.Template,
-            };
+            CompiledBinding.Create<LayoutGrid, bool>(
+                expression: x => x.ShowIconColumn,
+                source: grid,
+                mode: BindingMode.OneWay,
+                converter: BoolToGridLengthConverter,
+                converterParameter: new GridLength(20),
+                priority: BindingPriority.Template
+            );
 
         var iconSpacerColumn = new ColumnDefinition();
 
         iconSpacerColumn[!ColumnDefinition.WidthProperty] =
-            new Binding(nameof(LayoutGrid.ShowIconColumn))
-            {
-                Source = grid,
-                Converter = BoolToGridLengthConverter,
-                ConverterParameter = new GridLength(5),
-                Priority = BindingPriority.Template,
-            };
+            CompiledBinding.Create<LayoutGrid, bool>(
+                expression: x => x.ShowIconColumn,
+                source: grid,
+                mode: BindingMode.OneWay,
+                converter: BoolToGridLengthConverter,
+                converterParameter: new GridLength(5),
+                priority: BindingPriority.Template
+            );
 
         var headerColumn = new ColumnDefinition()
             .TemplateValue(ColumnDefinition.WidthProperty, GridLength.Star);
