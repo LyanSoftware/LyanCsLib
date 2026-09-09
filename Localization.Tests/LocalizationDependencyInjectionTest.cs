@@ -41,6 +41,7 @@ public sealed class LocalizationDependencyInjectionTest
         var log = new TestLocalizationLogSink();
         var languageDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var startupCulture = CultureInfo.GetCultureInfo("fr-CA");
+        var languagePackSource = new EmptyLanguagePackSource();
         var services = new ServiceCollection();
 
         services.AddSingleton<ILanguagePreferenceStore>(preference);
@@ -48,6 +49,7 @@ public sealed class LocalizationDependencyInjectionTest
         services.AddJsonLocalization(options =>
         {
             options.LanguageDirectory = languageDirectory;
+            options.LanguagePackSource = languagePackSource;
             options.StartupCulture = startupCulture;
         });
 
@@ -59,6 +61,8 @@ public sealed class LocalizationDependencyInjectionTest
         Assert.Same(languagePacks, provider.GetRequiredService<ILanguagePackService>());
         Assert.Same(preference, provider.GetRequiredService<ILanguagePreferenceStore>());
         Assert.Same(log, provider.GetRequiredService<ILocalizationLogSink>());
+        Assert.Same(languagePackSource, provider.GetRequiredService<ILanguagePackSource>());
+        Assert.Same(languagePackSource, Assert.IsType<JsonLanguagePackService>(languagePacks).LanguagePackSource);
         Assert.Equal(Path.GetFullPath(languageDirectory), languagePacks.LanguageDirectory);
         Assert.Equal(startupCulture, languagePacks.StartupCulture);
     }
@@ -98,5 +102,14 @@ public sealed class LocalizationDependencyInjectionTest
             Exception? exception = null)
         {
         }
+    }
+
+    private sealed class EmptyLanguagePackSource : ILanguagePackSource
+    {
+        public string Description => "empty";
+
+        public IEnumerable<LanguagePackResource> Enumerate(
+            CancellationToken cancellationToken = default)
+            => [];
     }
 }

@@ -42,7 +42,7 @@ public sealed class JsonLanguagePackServiceTest
 
         Assert.Equal("target", Format(localizer, "Target"));
         Assert.Equal("parent", Format(localizer, "Parent"));
-        Assert.Equal("parent-for-empty", Format(localizer, "Empty"));
+        Assert.Equal(string.Empty, Format(localizer, "Empty"));
         Assert.Equal("english", Format(localizer, "English"));
         Assert.Equal("embedded", Format(localizer, "Missing", "embedded"));
     }
@@ -65,6 +65,34 @@ public sealed class JsonLanguagePackServiceTest
 
         Assert.Equal(new[] { "en", "zh-CN" },
             languages.Select(static language => language.Id).OrderBy(static id => id));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_BasePackTreatsNullAsMissingAndEmptyAsFinalValue()
+    {
+        using var directory = new TemporaryDirectory();
+        directory.Write("fr.json", """
+            {
+              "Test.Scope": {
+                "Null": null,
+                "Empty": ""
+              }
+            }
+            """);
+        directory.Write("en.json", """
+            {
+              "Test.Scope": {
+                "Null": "fallback-null",
+                "Empty": "fallback-empty"
+              }
+            }
+            """);
+
+        var (localizer, service, _) = CreateService(directory.Path, "fr");
+        await service.InitializeAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("fallback-null", Format(localizer, "Null"));
+        Assert.Equal(string.Empty, Format(localizer, "Empty"));
     }
 
     [Fact]
@@ -98,6 +126,87 @@ public sealed class JsonLanguagePackServiceTest
         await service.InitializeAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal("last-scope", Format(localizer, "Key"));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_MergesOverrideValuesPerEntry()
+    {
+        using var directory = new TemporaryDirectory();
+        directory.Write("en.json", """
+            {
+              "Test.Scope": {
+                "Keep": "base",
+                "Replace": "base",
+                "Empty": "base",
+                "Null": "base",
+                "Number": "base",
+                "Boolean": "base",
+                "Object": "base",
+                "Array": "base"
+              }
+            }
+            """);
+        directory.Write("en.override.json", """
+            {
+              "Test.Scope": {
+                "Replace": "override",
+                "Empty": "",
+                "Null": null,
+                "Number": 12.5,
+                "Boolean": true,
+                "Object": { "Nested": "ignored" },
+                "Array": ["ignored"],
+                "Added": "added"
+              }
+            }
+            """);
+
+        var (localizer, service, _) = CreateService(directory.Path, "en");
+        await service.InitializeAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("base", Format(localizer, "Keep"));
+        Assert.Equal("override", Format(localizer, "Replace"));
+        Assert.Equal(string.Empty, Format(localizer, "Empty", "fallback"));
+        Assert.Equal("base", Format(localizer, "Null"));
+        Assert.Equal("12.5", Format(localizer, "Number"));
+        Assert.Equal("True", Format(localizer, "Boolean"));
+        Assert.Equal("base", Format(localizer, "Object"));
+        Assert.Equal("base", Format(localizer, "Array"));
+        Assert.Equal("added", Format(localizer, "Added"));
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_OverrideWithoutBaseCreatesLanguagePack()
+    {
+        using var directory = new TemporaryDirectory();
+        directory.Write("fr.override.json", "{ \"Test.Scope\": { \"Key\": \"fr\" } }");
+
+        var (localizer, service, _) = CreateService(directory.Path, "fr");
+        var languages = await service.InitializeAsync(TestContext.Current.CancellationToken);
+
+        Assert.Single(languages);
+        Assert.Equal("fr", languages[0].Id);
+        Assert.Equal("fr", Format(localizer, "Key"));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_LoadsEmbeddedLanguagePackSource()
+    {
+        var localizer = new JsonLocalizer();
+        var service = new JsonLanguagePackService(
+            localizer,
+            new NullLanguagePreferenceStore(),
+            new RecordingLogSink(),
+            startupCulture: CultureInfo.GetCultureInfo("en"),
+            languagePackSource: new EmbeddedResourceLanguagePackSource(
+                typeof(JsonLanguagePackServiceTest).Assembly,
+                "Test.LanguagePacks."));
+
+        var languages = await service.InitializeAsync(TestContext.Current.CancellationToken);
+
+        Assert.Single(languages);
+        Assert.Equal("en", languages[0].Id);
+        Assert.Equal("embedded-source", Format(localizer, "Embedded"));
     }
 
     [Fact]

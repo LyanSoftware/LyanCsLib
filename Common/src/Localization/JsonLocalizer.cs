@@ -36,7 +36,7 @@ public sealed class JsonLocalizer : Localizer
         var current = snapshot;
         foreach (var layer in current.Layers)
         {
-            if (layer.TryGetValue(key, out var value) && !value.IsNullOrEmpty())
+            if (layer.TryGetValue(key, out var value))
             {
                 Value = value;
                 return true;

@@ -21,4 +21,10 @@
     <ProjectReference Include="..\Common\Lytec.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="TestLanguagePacks\*.json">
+      <LogicalName>Test.LanguagePacks.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

@@ -40,6 +40,8 @@ public static class Extensions
         configure?.Invoke(options);
 
         collection.TryAddSingleton(options);
+        collection.TryAddSingleton<ILanguagePackSource>(_ =>
+            options.LanguagePackSource ?? new DirectoryLanguagePackSource(options.LanguageDirectory));
         collection.TryAddSingleton<JsonLocalizer>();
         collection.TryAddSingleton<ILocalizer>(
             static services => services.GetRequiredService<JsonLocalizer>());
@@ -53,7 +55,8 @@ public static class Extensions
                 services.GetRequiredService<ILanguagePreferenceStore>(),
                 services.GetRequiredService<ILocalizationLogSink>(),
                 configuredOptions.LanguageDirectory,
-                configuredOptions.StartupCulture);
+                configuredOptions.StartupCulture,
+                services.GetRequiredService<ILanguagePackSource>());
         });
 
         return collection;

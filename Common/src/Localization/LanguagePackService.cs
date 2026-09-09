@@ -1,7 +1,7 @@
-using System.Collections.Immutable;
-using System.Globalization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Collections.Immutable;
+using System.Globalization;
 
 namespace Lytec.Common.Localization;
 
@@ -33,8 +33,11 @@ public sealed class JsonLanguagePackService(
     ILanguagePreferenceStore? preferenceStore = null,
     ILocalizationLogSink? log = null,
     string? languageDirectory = null,
-    CultureInfo? startupCulture = null) : ILanguagePackService
+    CultureInfo? startupCulture = null,
+    ILanguagePackSource? languagePackSource = null) : ILanguagePackService
 {
+    private const string JsonSuffix = ".json";
+    private const string OverrideSuffix = ".override.json";
     private const string LocalizeScope = "Lytec.Common.Localization.JsonLanguagePackService";
     private static LocalizeString Localize(string Key, object? Arguments = null, string? DefaultMessage = null)
     => new(LocalizeScope, Key, Arguments, DefaultMessage);
@@ -57,6 +60,12 @@ public sealed class JsonLanguagePackService(
     public string CurrentLanguageId { get; private set; } = LanguageId.Auto;
 
     public string LanguageDirectory { get; } = Path.GetFullPath(languageDirectory ?? Path.Combine(AppContext.BaseDirectory, "lang"));
+
+    /// <summary>
+    /// Gets the source used to discover and open language packs.
+    /// </summary>
+    public ILanguagePackSource LanguagePackSource { get; } = languagePackSource
+        ?? new DirectoryLanguagePackSource(languageDirectory);
 
     public IReadOnlyList<LanguagePackInfo> AvailableLanguages => availableLanguages;
 
@@ -108,8 +117,8 @@ public sealed class JsonLanguagePackService(
                 LocalizationLogLevel.Error,
                 Localize(
                     "DirectoryScanFailed",
-                    new { Directory = LanguageDirectory },
-                    "扫描语言包目录“{Directory}”失败，将继续使用程序内嵌文本。"),
+                    new { Directory = LanguagePackSource.Description },
+                    "读取语言包来源“{Directory}”失败，将继续使用程序内嵌文本。"),
                 ex);
             result = new DiscoveryResult(
                 ImmutableDictionary.Create<string, LanguagePack>(StringComparer.OrdinalIgnoreCase),
@@ -264,61 +273,74 @@ public sealed class JsonLanguagePackService(
 
     private DiscoveryResult DiscoverCore(CancellationToken cancellationToken)
     {
-        var result = ImmutableDictionary.CreateBuilder<string, LanguagePack>(StringComparer.OrdinalIgnoreCase);
-        if (!Directory.Exists(LanguageDirectory))
-            return new DiscoveryResult(result.ToImmutable(), []);
+        var resources = LanguagePackSource.Enumerate(cancellationToken)
+            .Where(static resource => resource.FileName.EndsWith(JsonSuffix, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(static resource => resource.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var result = new Dictionary<string, LanguagePack>(StringComparer.OrdinalIgnoreCase);
 
-        var files = Directory.EnumerateFiles(LanguageDirectory, "*", SearchOption.TopDirectoryOnly)
-            .Where(static path => string.Equals(
-                Path.GetExtension(path),
-                ".json",
-                StringComparison.OrdinalIgnoreCase))
-            .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var path in files)
+        void proc(IEnumerable<LanguagePackResource> res, bool isOverride)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var fileName = Path.GetFileNameWithoutExtension(path);
-            CultureInfo culture;
-            try
+            foreach (var r in res)
             {
-                culture = CultureInfo.GetCultureInfo(fileName);
-                if (culture == CultureInfo.InvariantCulture || string.IsNullOrWhiteSpace(culture.Name))
-                    throw new CultureNotFoundException(nameof(fileName), fileName, "Invariant culture is not a language pack ID.");
-            }
-            catch (CultureNotFoundException ex)
-            {
-                log.Write(
-                    LocalizationLogLevel.Warning,
-                    Localize(
-                        "InvalidFileName",
-                        new { FileName = Path.GetFileName(path) },
-                        "语言包文件名“{FileName}”不是有效的 CultureInfo 名称，已跳过。"),
-                    ex);
-                continue;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
+                CultureInfo culture;
+                try
+                {
+                    var cultureName = isOverride
+                        ? r.FileName[..^OverrideSuffix.Length]
+                        : r.FileName[..^JsonSuffix.Length];
 
-            try
-            {
-                var data = ReadAndValidate(path);
-                result[culture.Name] = new LanguagePack(culture, data);
-            }
-            catch (Exception ex) when (ex is IOException
-                                       or UnauthorizedAccessException
-                                       or JsonException
-                                       or InvalidDataException)
-            {
-                log.Write(
-                    LocalizationLogLevel.Warning,
-                    Localize(
-                        "InvalidContent",
-                        new { FileName = Path.GetFileName(path) },
-                        "语言包“{FileName}”无法读取或内容无效，已跳过。"),
-                    ex);
+                    culture = CultureInfo.GetCultureInfo(cultureName);
+                    if (culture == CultureInfo.InvariantCulture || string.IsNullOrWhiteSpace(culture.Name))
+                        throw new CultureNotFoundException(nameof(r.FileName), cultureName, "Invariant culture is not a language pack ID.");
+                }
+                catch (CultureNotFoundException ex)
+                {
+                    log.Write(
+                        LocalizationLogLevel.Warning,
+                        Localize(
+                            "InvalidFileName",
+                            new { FileName = r.FileName },
+                            "语言包文件名“{FileName}”不是有效的 CultureInfo 名称，已跳过。"),
+                        ex);
+                    continue;
+                }
+
+                try
+                {
+                    using var stream = r.OpenRead();
+                    ImmutableDictionary<string, string> data;
+                    if (isOverride)
+                    {
+                        var overrides = ReadOverridePack(stream);
+                        data = result.TryGetValue(culture.Name, out var pack)
+                            ? pack.Data.SetItems(overrides)
+                            : overrides;
+                    }
+                    else data = ReadBasePack(stream);
+                    result[culture.Name] = new LanguagePack(culture, data);
+                }
+                catch (Exception ex) when (ex is IOException
+                                           or UnauthorizedAccessException
+                                           or JsonException
+                                           or InvalidDataException)
+                {
+                    log.Write(
+                        LocalizationLogLevel.Warning,
+                        Localize(
+                            "InvalidContent",
+                            new { FileName = r.FileName },
+                            "语言包“{FileName}”无法读取或内容无效，已跳过。"),
+                        ex);
+                }
             }
         }
+        static bool isOverride(LanguagePackResource r) => r.FileName.EndsWith(OverrideSuffix, StringComparison.OrdinalIgnoreCase);
+        proc(resources.Where(x => !isOverride(x)), false);
+        proc(resources.Where(isOverride), true);
 
-        var packs = result.ToImmutable();
+        var packs = result.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
         var languages = packs.Values
             .Select(static pack => new LanguagePackInfo(pack.Culture))
             .OrderBy(static info => info.DisplayName, StringComparer.CurrentCultureIgnoreCase)
@@ -326,11 +348,80 @@ public sealed class JsonLanguagePackService(
         return new DiscoveryResult(packs, languages);
     }
 
-    private static ImmutableDictionary<string, string> ReadAndValidate(string path)
+    private static ImmutableDictionary<string, string> ReadBasePack(Stream stream)
     {
-        using var stream = File.OpenRead(path);
+        var root = ReadRoot(stream);
+        var data = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
+        foreach (var scope in root.Properties())
+        {
+            if (string.IsNullOrWhiteSpace(scope.Name) || scope.Value is not JObject entries)
+                throw new InvalidDataException("Every scope must have a non-empty name and an object value.");
+
+            foreach (var entry in entries.Properties())
+            {
+                if (string.IsNullOrWhiteSpace(entry.Name))
+                    throw new InvalidDataException("Every localization key must have a non-empty name.");
+
+                if (entry.Value.Type is JTokenType.Null or JTokenType.Undefined)
+                    continue;
+
+                if (entry.Value.Type != JTokenType.String)
+                    throw new InvalidDataException("Every localization value must be a string or null.");
+
+                data[Localizer.CombineScopeAndKey(scope.Name, entry.Name)] = entry.Value.Value<string>()!;
+            }
+        }
+
+        return data.ToImmutable();
+    }
+
+    private static ImmutableDictionary<string, string> ReadOverridePack(Stream stream)
+    {
+        var root = ReadRoot(stream);
+        var data = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
+        foreach (var scope in root.Properties())
+        {
+            if (string.IsNullOrWhiteSpace(scope.Name) || scope.Value is not JObject entries)
+                continue;
+
+            foreach (var entry in entries.Properties())
+            {
+                if (string.IsNullOrWhiteSpace(entry.Name)
+                    || !TryConvertOverrideValue(entry.Value, out var value))
+                    continue;
+
+                data[Localizer.CombineScopeAndKey(scope.Name, entry.Name)] = value;
+            }
+        }
+
+        return data.ToImmutable();
+    }
+
+    private static bool TryConvertOverrideValue(JToken token, out string value)
+    {
+        if (token is JValue scalar && scalar.Value is not null)
+        {
+            try
+            {
+                value = Convert.ToString(scalar.Value, CultureInfo.InvariantCulture) ?? string.Empty;
+                return true;
+            }
+            catch (Exception ex) when (ex is FormatException or InvalidCastException)
+            {
+            }
+        }
+
+        value = string.Empty;
+        return false;
+    }
+
+    private static JObject ReadRoot(Stream stream)
+    {
         using var textReader = new StreamReader(stream);
-        using var jsonReader = new JsonTextReader(textReader);
+        using var jsonReader = new JsonTextReader(textReader)
+        {
+            DateParseHandling = DateParseHandling.None,
+        };
         var root = JObject.Load(jsonReader, new JsonLoadSettings
         {
             CommentHandling = CommentHandling.Ignore,
@@ -343,22 +434,7 @@ public sealed class JsonLanguagePackService(
                 throw new InvalidDataException("A language pack must contain exactly one root object.");
         }
 
-        var data = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
-        foreach (var scope in root.Properties())
-        {
-            if (string.IsNullOrWhiteSpace(scope.Name) || scope.Value is not JObject entries)
-                throw new InvalidDataException("Every scope must have a non-empty name and an object value.");
-
-            foreach (var entry in entries.Properties())
-            {
-                if (string.IsNullOrWhiteSpace(entry.Name) || entry.Value.Type != JTokenType.String)
-                    throw new InvalidDataException("Every localization key must have a non-empty name and a string value.");
-
-                data[Localizer.CombineScopeAndKey(scope.Name, entry.Name)] = entry.Value.Value<string>()!;
-            }
-        }
-
-        return data.ToImmutable();
+        return root;
     }
 
     private void NotifyCurrentLanguageChanged()

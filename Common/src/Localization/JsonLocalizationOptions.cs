@@ -5,6 +5,13 @@ namespace Lytec.Common.Localization;
 public sealed class JsonLocalizationOptions
 {
     /// <summary>
+    /// Gets or sets the language-pack source. A null value uses a
+    /// <see cref="DirectoryLanguagePackSource"/> configured by
+    /// <see cref="LanguageDirectory"/>.
+    /// </summary>
+    public ILanguagePackSource? LanguagePackSource { get; set; }
+
+    /// <summary>
     /// Gets or sets the language-pack directory. A null value uses
     /// <c>AppContext.BaseDirectory/lang</c>.
     /// </summary>
