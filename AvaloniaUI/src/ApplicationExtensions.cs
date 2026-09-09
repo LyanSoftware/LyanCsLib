@@ -10,18 +10,24 @@ public static class ApplicationExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        switch (app.ApplicationLifetime)
+        if (app.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            return await WindowManager.TryShutdownAsync(desktop, exitCode);
+
+        var controlled = app.ApplicationLifetime as IControlledApplicationLifetime;
+        var exitHandler = ApplicationExit.GetExitHandler(app);
+        if (controlled is null && exitHandler is null)
+            return false;
+
+        if (ApplicationExit.GetExitGuard(app) is { } guard
+            && !await guard.TryLeaveApplicationAsync())
+            return false;
+
+        if (controlled is not null)
         {
-            case IClassicDesktopStyleApplicationLifetime desktop:
-                return await WindowManager.TryShutdownAsync(desktop, exitCode);
-            case ISingleViewApplicationLifetime singleView:
-                singleView.MainView = null;
-                return true;
-            case IControlledApplicationLifetime controlled:
-                controlled.Shutdown(exitCode);
-                return true;
-            default:
-                return false;
+            controlled.Shutdown(exitCode);
+            return true;
         }
+
+        return await exitHandler!.TryExitAsync(exitCode);
     }
 }

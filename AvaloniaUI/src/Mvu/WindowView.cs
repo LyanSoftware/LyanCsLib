@@ -16,19 +16,20 @@ public record WindowInfo
     /// Asynchronously decides whether this window may close. The window remains visible
     /// while this callback runs, so the callback may display an owned confirmation dialog.
     /// </summary>
-    public Func<WindowCloseContext, ValueTask<WindowCloseDecision>>? CanCloseAsync { get; init; }
+    public Func<WindowCloseContext, ValueTask<LeaveDecision>>? CanCloseAsync { get; init; }
 
     /// <summary>
     /// Performs the window's asynchronous cleanup after closing has been approved.
-    /// The window is hidden before this callback runs.
+    /// The window is disabled while this callback runs and is only hidden after
+    /// cleanup succeeds.
     /// </summary>
     public Func<WindowCloseContext, ValueTask>? CleanupAsync { get; init; }
-}
 
-public enum WindowCloseDecision
-{
-    Allow,
-    Cancel,
+    /// <summary>
+    /// Presents an exception raised by the close decision or cleanup. When omitted,
+    /// <see cref="WindowManager"/> displays a basic owned error dialog.
+    /// </summary>
+    public Func<WindowCloseContext, Exception, ValueTask>? CloseErrorAsync { get; init; }
 }
 
 public sealed record WindowCloseContext(
@@ -38,7 +39,7 @@ public sealed record WindowCloseContext(
     bool IsApplicationExit,
     bool MayBeTerminatedBySystem);
 
-public interface IWindowView
+public interface IWindowView : ILeaveAware
 {
     WindowInfo WindowOptions { get; }
 }

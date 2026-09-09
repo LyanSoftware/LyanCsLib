@@ -12,6 +12,9 @@ public static class WindowManager
     private const string LocalizeScope = "Lytec.AvaloniaUI.Mvu.WindowManager";
     private static LocalizeString Localize(string Key, object? Arguments = null, string? DefaultMessage = null)
     => new(LocalizeScope, Key, Arguments, DefaultMessage);
+    public static ILocalizer? Localizer { get; set; }
+    private static string i18n(string Key, object? Arguments = null, string? DefaultMessage = null)
+    => Localizer?.Format(LocalizeScope, Key, Arguments, DefaultMessage) ?? DefaultMessage ?? Key;
 
     private static readonly Dictionary<Window, ManagedWindow> ManagedWindows = [];
     private static IClassicDesktopStyleApplicationLifetime? installedDesktop;
@@ -23,8 +26,17 @@ public static class WindowManager
         TView view,
         string? title = null)
         where TView : Control, IWindowView
+        => Create((Control)view, title);
+
+    public static Window Create(Control view, string? title = null)
     {
-        var options = view.WindowOptions;
+        ArgumentNullException.ThrowIfNull(view);
+        if (view is not IWindowView windowView)
+            throw new ArgumentException(
+                $"{view.GetType().FullName} must implement {nameof(IWindowView)}.",
+                nameof(view));
+
+        var options = windowView.WindowOptions;
 
         var window = new Window
         {
@@ -130,7 +142,7 @@ public static class WindowManager
 
     private static void RegisterWindow(Window window, WindowInfo options)
     {
-        var managedWindow = new ManagedWindow(window, options);
+        var managedWindow = new ManagedWindow(window, view: window.Content as ILeaveAware, options);
         ManagedWindows.Add(window, managedWindow);
         window.Closing += OnWindowClosing;
         window.Closed += OnWindowClosed;
@@ -236,6 +248,73 @@ public static class WindowManager
         return closeTask;
     }
 
+    private static async Task<bool> CloseWindows(
+        IReadOnlyList<ManagedWindow> windows,
+        WindowCloseContext[] contexts,
+        bool keepRootWindow)
+    {
+        var enabled = windows.Select(w => w.Window.IsEnabled).ToList();
+        foreach (var window in windows)
+            window.Window.IsEnabled = false;
+
+        var closedCount = 0;
+        try
+        {
+            for (var i = 0; i < windows.Count; i++)
+            {
+                var w = windows[i];
+                try
+                {
+                    w.Window.IsEnabled = true;
+                    if (!await CanCloseAsync(w, contexts[i]))
+                        return false;
+                    w.Window.IsEnabled = false;
+                    await CleanupAsync(w, contexts[i]);
+                    if ((i+1) < windows.Count || !keepRootWindow)
+                    {
+                        bool ok = false;
+                        void handler(object? sender, EventArgs? args) => ok = true;
+                        try
+                        {
+                            w.NativeCloseAllowed = true;
+                            w.Window.Closed += handler;
+                            w.Window.Close();
+                        }
+                        finally
+                        {
+                            w.NativeCloseAllowed = ok;
+                            w.Window.Closed -= handler;
+                        }
+                        if (!ok)
+                        {
+                            w.Window.IsEnabled = true;
+                            return false;
+                        }
+                        closedCount++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    w.Window.IsEnabled = true;
+                    await ShowCloseErrorAsync(w, contexts[i], ex);
+                    return false;
+                }
+            }
+            return true;
+        }
+        finally
+        {
+            for (var i = closedCount; i < windows.Count; i++)
+            {
+                // i==closedCount为失败的那个窗口, 或是保留的根窗口
+                // 后续窗口的IsEnabled都没有被临时设为true过
+                if (enabled[i] || i == closedCount)
+                    windows[i].Window.IsEnabled = true;
+                windows[i].CloseTask = null;
+            }
+        }
+    }
+
     private static async Task<bool> RunWindowCloseAndResetAsync(
         IReadOnlyList<ManagedWindow> windows,
         ManagedWindow rootWindow,
@@ -244,48 +323,19 @@ public static class WindowManager
     {
         await Task.Yield();
 
-        try
-        {
-            var contexts = windows.Select(window => new WindowCloseContext(
-                window.Window,
-                ReferenceEquals(window, rootWindow)
-                    ? reason
-                    : WindowCloseReason.OwnerWindowClosing,
-                isProgrammatic,
-                IsApplicationExit: false,
-                MayBeTerminatedBySystem: false)).ToArray();
+        var contexts = windows.Select(window => new WindowCloseContext(
+            window.Window,
+            ReferenceEquals(window, rootWindow)
+                ? reason
+                : WindowCloseReason.OwnerWindowClosing,
+            isProgrammatic,
+            IsApplicationExit: false,
+            MayBeTerminatedBySystem: false)).ToArray();
 
-            for (var i = 0; i < windows.Count; i++)
-            {
-                if (!await CanCloseAsync(windows[i], contexts[i]))
-                    return false;
-            }
+        if (!await CloseWindows(windows, contexts, false))
+            return false;
 
-            foreach (var window in windows)
-                window.Window.Hide();
-
-            for (var i = 0; i < windows.Count; i++)
-                await CleanupAsync(windows[i], contexts[i]);
-
-            foreach (var window in windows)
-                window.NativeCloseAllowed = true;
-            try
-            {
-                rootWindow.Window.Close();
-            }
-            finally
-            {
-                foreach (var window in windows)
-                    window.NativeCloseAllowed = false;
-            }
-
-            return true;
-        }
-        finally
-        {
-            foreach (var window in windows)
-                window.CloseTask = null;
-        }
+        return true;
     }
 
     private static async Task<bool> RunApplicationCloseAndResetAsync(
@@ -317,17 +367,8 @@ public static class WindowManager
                 IsApplicationExit: true,
                 MayBeTerminatedBySystem: mayBeTerminatedBySystem)).ToArray();
 
-            for (var i = 0; i < windows.Length; i++)
-            {
-                if (!await CanCloseAsync(windows[i], contexts[i]))
-                    return false;
-            }
-
-            foreach (var window in windows)
-                window.Window.Hide();
-
-            for (var i = 0; i < windows.Length; i++)
-                await CleanupAsync(windows[i], contexts[i]);
+            if (!await CloseWindows(windows, contexts, true))
+                return false;
 
             nativeApplicationCloseAllowed = true;
             try
@@ -367,7 +408,7 @@ public static class WindowManager
     {
         return ManagedWindows.TryGetValue(window, out var managedWindow)
             ? managedWindow
-            : new ManagedWindow(window, new WindowInfo());
+            : new ManagedWindow(window, window.Content as ILeaveAware, new WindowInfo());
     }
 
     private static IEnumerable<ManagedWindow> OrderOwnedWindowGroup(Window rootWindow)
@@ -401,8 +442,15 @@ public static class WindowManager
         WindowCloseContext context)
     {
         var callback = managedWindow.Options.CanCloseAsync;
-        return callback is null
-            || await callback(context) is WindowCloseDecision.Allow;
+        if (callback is not null
+            && await callback(context) is LeaveDecision.Cancel)
+            return false;
+
+        if (managedWindow.View is null)
+            return true;
+
+        return await managedWindow.View.TryLeaveAsync(ToLeaveContext(context))
+            is LeaveDecision.Allow;
     }
 
     private static async ValueTask CleanupAsync(
@@ -412,7 +460,68 @@ public static class WindowManager
         var callback = managedWindow.Options.CleanupAsync;
         if (callback is not null)
             await callback(context);
+
+        if (managedWindow.View is not null)
+            await managedWindow.View.CleanupAsync(ToLeaveContext(context));
     }
+
+    private static async ValueTask ShowCloseErrorAsync(
+        ManagedWindow managedWindow,
+        WindowCloseContext context,
+        Exception exception)
+    {
+        if (managedWindow.Options.CloseErrorAsync is { } callback)
+        {
+            await callback(context, exception);
+            return;
+        }
+
+        var dialog = new Window
+        {
+            Title = i18n("CloseErrorWindowTitle", DefaultMessage: "无法关闭窗口"),
+            Width = 480,
+            Height = 240,
+            MinWidth = 320,
+            MinHeight = 180,
+            CanResize = true,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        var closeButton = new Button
+        {
+            Content = i18n("CloseButton", DefaultMessage: "关闭"),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+        };
+        closeButton.Click += (_, _) => dialog.Close();
+        dialog.Content = new Grid
+        {
+            Margin = new Thickness(16),
+            RowDefinitions = new RowDefinitions("*,Auto"),
+            RowSpacing = 12,
+            Children =
+            {
+                new TextBox
+                {
+                    Text = (exception.GetLocalizedMessage() is { } lstr ? Localizer?.Format(lstr) : null)
+                        ?? exception.Message,
+                    IsReadOnly = true,
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                    AcceptsReturn = true,
+                },
+                closeButton,
+            },
+        };
+        Grid.SetRow(closeButton, 1);
+        await dialog.ShowDialog(managedWindow.Window);
+    }
+
+    private static LeaveContext ToLeaveContext(WindowCloseContext context)
+        => new(
+            context.IsApplicationExit
+                ? LeaveReason.ApplicationExit
+                : LeaveReason.WindowClose,
+            context.Window.Content ?? context.Window,
+            IsProgrammatic: context.IsProgrammatic,
+            MayBeTerminatedBySystem: context.MayBeTerminatedBySystem);
 
     private static void InitializeRootFocus(Window window, Control view)
     {
@@ -437,9 +546,13 @@ public static class WindowManager
         }
     }
 
-    private sealed class ManagedWindow(Window window, WindowInfo options)
+    private sealed class ManagedWindow(
+        Window window,
+        ILeaveAware? view,
+        WindowInfo options)
     {
         public Window Window { get; } = window;
+        public ILeaveAware? View { get; } = view;
         public WindowInfo Options { get; } = options;
         public Task<bool>? CloseTask { get; set; }
         public bool NativeCloseAllowed { get; set; }
