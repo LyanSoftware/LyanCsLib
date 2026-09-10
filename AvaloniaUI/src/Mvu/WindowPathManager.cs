@@ -6,7 +6,24 @@ namespace Lytec.AvaloniaUI.Mvu;
 /// <summary>
 /// Describes one modal window in a route from a desktop main window.
 /// </summary>
-public sealed record WindowPathSegment(string Id, Func<Control> CreateView);
+public abstract record WindowPathSegment
+{
+    public string Id { get; }
+
+    private protected WindowPathSegment(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        Id = id;
+    }
+
+    internal abstract CreatedWindow Create(IWindowManager windowManager);
+    
+    public static WindowPathSegment Create<TView>(string id, Func<TView> createView)
+        where TView : Control, IWindowView
+    => new WindowPathManager.WindowPathSegment<TView>(id, createView);
+}
+
+internal readonly record struct CreatedWindow(Control View, Window Window);
 
 public interface IWindowPathManager
 {
@@ -30,6 +47,32 @@ internal sealed class WindowPathManager(
     : IWindowPathManager, IDisposable
 {
     private const string LocalizeScope = "Lytec.AvaloniaUI.Mvu.WindowPathManager";
+
+    internal sealed record WindowPathSegment<TView> : WindowPathSegment
+        where TView : Control, IWindowView
+    {
+        public Func<TView> CreateView { get; }
+
+        public WindowPathSegment(string id, Func<TView> createView)
+            : base(id)
+        {
+            ArgumentNullException.ThrowIfNull(createView);
+            CreateView = createView;
+        }
+
+        internal override CreatedWindow Create(IWindowManager windowManager)
+        {
+            var view = CreateView()
+                ?? throw new InvalidOperationException()
+                    .Localize(
+                        LocalizeScope,
+                        "OpenPathError_NullView",
+                        new { Id },
+                        "窗口路径段“{Id}”返回了 null 视图。");
+            return new CreatedWindow(view, windowManager.Create(view));
+        }
+    }
+
     private readonly List<OpenSegment> openPath = [];
     private bool operationInProgress;
     private bool disposed;
@@ -64,14 +107,9 @@ internal sealed class WindowPathManager(
             for (var i = commonLength; i < targetPath.Count; i++)
             {
                 var segment = targetPath[i];
-                var view = segment.CreateView()
-                    ?? throw new InvalidOperationException()
-                        .Localize(
-                            LocalizeScope,
-                            "OpenPathError_NullView",
-                            new { segment.Id },
-                            "窗口路径段“{Id}”返回了 null 视图。");
-                var window = windowManager.Create(view);
+                var created = segment.Create(windowManager);
+                var view = created.View;
+                var window = created.Window;
                 var opened = new TaskCompletionSource(
                     TaskCreationOptions.RunContinuationsAsynchronously);
                 window.Opened += OnOpened;

@@ -10,11 +10,17 @@ namespace Lytec.AvaloniaUI.Mvu;
 
 public interface IWindowManager
 {
-    Window Create(Control view, string? title = null);
+    Window Create<TView>(TView view, string? title = null)
+        where TView : Control, IWindowView;
 
-    Window InstallMainWindow(Control view);
+    Window InstallMainWindow<TView>(TView view)
+        where TView : Control, IWindowView;
 
-    Task ShowDialogAsync(Control view, Control? ownerView = null, string? title = null);
+    Task ShowDialogAsync<TView>(
+        TView view,
+        Control? ownerView = null,
+        string? title = null)
+        where TView : Control, IWindowView;
 
     void Close(Control view);
 
@@ -51,22 +57,11 @@ internal sealed class WindowManager : IWindowManager
         desktop.ShutdownRequested += OnShutdownRequested;
     }
 
-    public Window Create(Control view, string? title = null)
+    public Window Create<TView>(TView view, string? title = null)
+        where TView : Control, IWindowView
     {
         ArgumentNullException.ThrowIfNull(view);
-        if (view is not IWindowView windowView)
-            throw new ArgumentException(
-                i18n(
-                    "CreateError_WindowViewRequired",
-                    new
-                    {
-                        ViewType = view.GetType().FullName,
-                        InterfaceType = nameof(IWindowView),
-                    },
-                    "类型“{ViewType}”必须实现 {InterfaceType}。"),
-                nameof(view));
-
-        var options = windowView.WindowOptions;
+        var options = view.WindowOptions;
 
         var window = new Window
         {
@@ -86,7 +81,8 @@ internal sealed class WindowManager : IWindowManager
         return window;
     }
 
-    public Window InstallMainWindow(Control view)
+    public Window InstallMainWindow<TView>(TView view)
+        where TView : Control, IWindowView
     {
         if (desktop.MainWindow is not null)
             throw new InvalidOperationException()
@@ -101,10 +97,11 @@ internal sealed class WindowManager : IWindowManager
         return window;
     }
 
-    public async Task ShowDialogAsync(
-        Control view,
+    public async Task ShowDialogAsync<TView>(
+        TView view,
         Control? ownerView = null,
         string? title = null)
+        where TView : Control, IWindowView
     {
         var owner = (ownerView is not null
             ? TopLevel.GetTopLevel(ownerView) as Window
