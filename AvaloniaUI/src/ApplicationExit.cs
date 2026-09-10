@@ -1,5 +1,7 @@
-using System.Runtime.CompilerServices;
 using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
+using Lytec.AvaloniaUI.Mvu;
 
 namespace Lytec.AvaloniaUI;
 
@@ -20,87 +22,107 @@ public interface IApplicationExitGuard
     ValueTask<bool> TryLeaveApplicationAsync();
 }
 
-public static class ApplicationExit
+/// <summary>
+/// Coordinates guarded application exit across desktop and single-view platforms.
+/// </summary>
+public interface IApplicationExitService
 {
-    private static readonly ConditionalWeakTable<Application, Registrations> Table = new();
+    IDisposable RegisterHandler(IApplicationExitHandler handler);
 
-    public static IDisposable RegisterExitHandler(
-        this Application application,
-        IApplicationExitHandler handler)
+    IDisposable RegisterGuard(IApplicationExitGuard guard);
+
+    Task<bool> TryShutdownAsync(int exitCode = 0);
+}
+
+internal sealed class ApplicationExitService(
+    Application application,
+    IEnumerable<IWindowManager> windowManagers)
+    : IApplicationExitService
+{
+    private readonly RegistrationStack<IApplicationExitHandler> handlers = new();
+    private readonly RegistrationStack<IApplicationExitGuard> guards = new();
+    private readonly IWindowManager? windowManager = windowManagers.SingleOrDefault();
+
+    public IDisposable RegisterHandler(IApplicationExitHandler handler)
     {
-        ArgumentNullException.ThrowIfNull(application);
         ArgumentNullException.ThrowIfNull(handler);
-        return Table.GetOrCreateValue(application).SetExitHandler(handler);
+        return handlers.Register(handler);
     }
 
-    public static IDisposable RegisterExitGuard(
-        this Application application,
-        IApplicationExitGuard guard)
+    public IDisposable RegisterGuard(IApplicationExitGuard guard)
     {
-        ArgumentNullException.ThrowIfNull(application);
         ArgumentNullException.ThrowIfNull(guard);
-        return Table.GetOrCreateValue(application).SetExitGuard(guard);
+        return guards.Register(guard);
     }
 
-    internal static IApplicationExitHandler? GetExitHandler(Application application)
-        => Table.TryGetValue(application, out var registrations)
-            ? registrations.ExitHandler
-            : null;
+    public Task<bool> TryShutdownAsync(int exitCode = 0)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+            return Dispatcher.UIThread.InvokeAsync(() => TryShutdownAsync(exitCode));
 
-    internal static IApplicationExitGuard? GetExitGuard(Application application)
-        => Table.TryGetValue(application, out var registrations)
-            ? registrations.ExitGuard
-            : null;
+        return TryShutdownOnUiThreadAsync(exitCode);
+    }
 
-    private sealed class Registrations
+    private async Task<bool> TryShutdownOnUiThreadAsync(int exitCode)
+    {
+        if (windowManager is not null)
+            return await windowManager.TryShutdownAsync(exitCode);
+
+        var controlledLifetime = application.ApplicationLifetime
+            as IControlledApplicationLifetime;
+        var handler = handlers.Current;
+        if (controlledLifetime is null && handler is null)
+            return false;
+
+        if (guards.Current is { } guard
+            && !await guard.TryLeaveApplicationAsync())
+            return false;
+
+        if (controlledLifetime is not null)
+        {
+            controlledLifetime.Shutdown(exitCode);
+            return true;
+        }
+
+        return await handler!.TryExitAsync(exitCode);
+    }
+
+    private sealed class RegistrationStack<T>
+        where T : class
     {
         private readonly object gate = new();
-        private IApplicationExitHandler? exitHandler;
-        private IApplicationExitGuard? exitGuard;
+        private readonly List<Entry> entries = [];
 
-        public IApplicationExitHandler? ExitHandler
+        public T? Current
         {
-            get { lock (gate) return exitHandler; }
+            get
+            {
+                lock (gate)
+                    return entries.Count == 0 ? null : entries[^1].Value;
+            }
         }
 
-        public IApplicationExitGuard? ExitGuard
+        public IDisposable Register(T value)
         {
-            get { lock (gate) return exitGuard; }
-        }
-
-        public IDisposable SetExitHandler(IApplicationExitHandler value)
-        {
+            var entry = new Entry(value);
             lock (gate)
-                exitHandler = value;
+                entries.Add(entry);
+
             return new Registration(() =>
             {
                 lock (gate)
-                {
-                    if (ReferenceEquals(exitHandler, value))
-                        exitHandler = null;
-                }
+                    entries.Remove(entry);
             });
         }
 
-        public IDisposable SetExitGuard(IApplicationExitGuard value)
-        {
-            lock (gate)
-                exitGuard = value;
-            return new Registration(() =>
-            {
-                lock (gate)
-                {
-                    if (ReferenceEquals(exitGuard, value))
-                        exitGuard = null;
-                }
-            });
-        }
+        private sealed record Entry(T Value);
     }
 
     private sealed class Registration(Action unregister) : IDisposable
     {
         private Action? unregister = unregister;
 
-        public void Dispose() => Interlocked.Exchange(ref unregister, null)?.Invoke();
+        public void Dispose()
+            => Interlocked.Exchange(ref unregister, null)?.Invoke();
     }
 }

@@ -36,6 +36,7 @@
     <ProjectReference Include="..\Common\Lytec.Common.csproj" />
 
     <PackageReference Include="SmartFormat" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
 
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Themes.Fluent" />

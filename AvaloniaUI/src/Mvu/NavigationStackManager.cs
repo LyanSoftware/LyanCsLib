@@ -2,11 +2,38 @@ using Avalonia.Controls;
 
 namespace Lytec.AvaloniaUI.Mvu;
 
+public interface INavigationStackManager : IDisposable
+{
+    NavigationPage NavigationPage { get; }
+
+    bool IsBusy { get; }
+
+    event EventHandler? BusyChanged;
+
+    Task<bool> PushAsync(Page page);
+
+    Task<bool> PopAsync();
+
+    Task<bool> PopToRootAsync();
+
+    Task<bool> SwitchRootAsync(Page rootPage);
+
+    ValueTask<bool> TryLeaveAllAsync(bool mayBeTerminatedBySystem = false);
+}
+
+public interface INavigationStackManagerFactory
+{
+    INavigationStackManager Create(
+        NavigationPage navigationPage,
+        Page rootPage,
+        ILeaveErrorHandler? errorHandler = null);
+}
+
 /// <summary>
 /// Adds asynchronous leave decisions and cleanup to an Avalonia
 /// <see cref="NavigationPage"/>.
 /// </summary>
-public sealed class NavigationStackManager : IDisposable
+internal sealed class NavigationStackManager : INavigationStackManager
 {
     private readonly Dictionary<Page, Func<NavigatingFromEventArgs, Task>> handlers = [];
     private readonly ILeaveErrorHandler? errorHandler;
@@ -270,4 +297,14 @@ public sealed class NavigationStackManager : IDisposable
             page.Navigating -= handler;
         handlers.Clear();
     }
+}
+
+internal sealed class NavigationStackManagerFactory
+    : INavigationStackManagerFactory
+{
+    public INavigationStackManager Create(
+        NavigationPage navigationPage,
+        Page rootPage,
+        ILeaveErrorHandler? errorHandler = null)
+        => new NavigationStackManager(navigationPage, rootPage, errorHandler);
 }

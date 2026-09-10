@@ -2,38 +2,68 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using Lytec.AvaloniaUI;
 using Lytec.Common.Localization;
 using Lytec.Common.Localization.Extensions;
 
 namespace Lytec.AvaloniaUI.Mvu;
 
-public static class WindowManager
+public interface IWindowManager
+{
+    Window Create(Control view, string? title = null);
+
+    Window InstallMainWindow(Control view);
+
+    Task ShowDialogAsync(Control view, Control? ownerView = null, string? title = null);
+
+    void Close(Control view);
+
+    Task<bool> TryCloseAsync(Control view);
+
+    Task<bool> TryShutdownAsync(int exitCode = 0, bool mayBeTerminatedBySystem = false);
+}
+
+internal sealed class WindowManager : IWindowManager
 {
     private const string LocalizeScope = "Lytec.AvaloniaUI.Mvu.WindowManager";
     private static LocalizeString Localize(string Key, object? Arguments = null, string? DefaultMessage = null)
     => new(LocalizeScope, Key, Arguments, DefaultMessage);
-    public static ILocalizer? Localizer { get; set; }
-    private static string i18n(string Key, object? Arguments = null, string? DefaultMessage = null)
-    => Localizer?.Format(LocalizeScope, Key, Arguments, DefaultMessage) ?? DefaultMessage ?? Key;
+    private string i18n(string Key, object? Arguments = null, string? DefaultMessage = null)
+    => localizer.Format(LocalizeScope, Key, Arguments, DefaultMessage);
 
-    private static readonly Dictionary<Window, ManagedWindow> ManagedWindows = [];
-    private static IClassicDesktopStyleApplicationLifetime? installedDesktop;
-    private static Task<bool>? applicationCloseTask;
-    private static bool applicationCloseInProgress;
-    private static bool nativeApplicationCloseAllowed;
+    private readonly Dictionary<Window, ManagedWindow> managedWindows = [];
+    private readonly IClassicDesktopStyleApplicationLifetime desktop;
+    private readonly ILocalizer localizer;
+    private readonly AvaloniaMvuOptions options;
+    private Task<bool>? applicationCloseTask;
+    private bool applicationCloseInProgress;
+    private bool nativeApplicationCloseAllowed;
+    private bool disposed;
 
-    public static Window Create<TView>(
-        TView view,
-        string? title = null)
-        where TView : Control, IWindowView
-        => Create((Control)view, title);
+    public WindowManager(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        ILocalizer localizer,
+        AvaloniaMvuOptions options)
+    {
+        this.desktop = desktop;
+        this.localizer = localizer;
+        this.options = options;
+        desktop.ShutdownRequested += OnShutdownRequested;
+    }
 
-    public static Window Create(Control view, string? title = null)
+    public Window Create(Control view, string? title = null)
     {
         ArgumentNullException.ThrowIfNull(view);
         if (view is not IWindowView windowView)
             throw new ArgumentException(
-                $"{view.GetType().FullName} must implement {nameof(IWindowView)}.",
+                i18n(
+                    "CreateError_WindowViewRequired",
+                    new
+                    {
+                        ViewType = view.GetType().FullName,
+                        InterfaceType = nameof(IWindowView),
+                    },
+                    "类型“{ViewType}”必须实现 {InterfaceType}。"),
                 nameof(view));
 
         var options = windowView.WindowOptions;
@@ -56,10 +86,7 @@ public static class WindowManager
         return window;
     }
 
-    public static Window InstallMainWindow<TView>(
-        this IClassicDesktopStyleApplicationLifetime desktop,
-        TView view)
-        where TView : Control, IWindowView
+    public Window InstallMainWindow(Control view)
     {
         if (desktop.MainWindow is not null)
             throw new InvalidOperationException()
@@ -71,19 +98,17 @@ public static class WindowManager
 
         var window = Create(view);
         desktop.MainWindow = window;
-        InstallDesktopLifetime(desktop);
         return window;
     }
 
-    public static async Task ShowDialogAsync<TView>(
-        this TView view,
+    public async Task ShowDialogAsync(
+        Control view,
         Control? ownerView = null,
         string? title = null)
-        where TView : Control, IWindowView
     {
         var owner = (ownerView is not null
             ? TopLevel.GetTopLevel(ownerView) as Window
-            : GetMainWindow())
+            : desktop.MainWindow)
             ?? throw new InvalidOperationException()
                 .Localize(
                     LocalizeScope,
@@ -94,12 +119,12 @@ public static class WindowManager
         await window.ShowDialog(owner);
     }
 
-    public static void Close(Control view)
+    public void Close(Control view)
     {
         (TopLevel.GetTopLevel(view) as Window)?.Close();
     }
 
-    public static Task<bool> TryCloseAsync(Control view)
+    public Task<bool> TryCloseAsync(Control view)
     {
         ArgumentNullException.ThrowIfNull(view);
 
@@ -108,61 +133,36 @@ public static class WindowManager
             : Task.FromResult(false);
     }
 
-    public static Task<bool> TryShutdownAsync(
-        IClassicDesktopStyleApplicationLifetime desktop,
+    public Task<bool> TryShutdownAsync(
         int exitCode = 0,
         bool mayBeTerminatedBySystem = false)
     {
-        ArgumentNullException.ThrowIfNull(desktop);
-
         if (!Dispatcher.UIThread.CheckAccess())
             return Dispatcher.UIThread.InvokeAsync(
-                () => TryShutdownAsync(desktop, exitCode, mayBeTerminatedBySystem));
-
-        InstallDesktopLifetime(desktop);
+                () => TryShutdownAsync(exitCode, mayBeTerminatedBySystem));
 
         if (applicationCloseTask is not null)
             return applicationCloseTask;
 
         applicationCloseInProgress = true;
         applicationCloseTask = RunApplicationCloseAndResetAsync(
-            desktop,
             exitCode,
             mayBeTerminatedBySystem);
         return applicationCloseTask;
     }
 
-    private static Window? GetMainWindow()
-    {
-        return Application.Current?.ApplicationLifetime
-            is IClassicDesktopStyleApplicationLifetime desktop
-                ? desktop.MainWindow
-                : null;
-    }
-
-    private static void RegisterWindow(Window window, WindowInfo options)
+    private void RegisterWindow(Window window, WindowInfo options)
     {
         var managedWindow = new ManagedWindow(window, view: window.Content as ILeaveAware, options);
-        ManagedWindows.Add(window, managedWindow);
+        managedWindows.Add(window, managedWindow);
         window.Closing += OnWindowClosing;
         window.Closed += OnWindowClosed;
     }
 
-    private static void InstallDesktopLifetime(IClassicDesktopStyleApplicationLifetime desktop)
-    {
-        if (ReferenceEquals(installedDesktop, desktop))
-            return;
-
-        installedDesktop?.ShutdownRequested -= OnShutdownRequested;
-
-        installedDesktop = desktop;
-        installedDesktop.ShutdownRequested += OnShutdownRequested;
-    }
-
-    private static async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+    private async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (sender is not Window window
-            || !ManagedWindows.TryGetValue(window, out var managedWindow)
+            || !managedWindows.TryGetValue(window, out var managedWindow)
             || managedWindow.NativeCloseAllowed
             || nativeApplicationCloseAllowed)
             return;
@@ -174,47 +174,48 @@ public static class WindowManager
 
         if (e.CloseReason is WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown)
         {
-            if (Application.Current?.ApplicationLifetime
-                is IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                await TryShutdownAsync(
-                    desktop,
-                    mayBeTerminatedBySystem: e.CloseReason is WindowCloseReason.OSShutdown);
-            }
+            await TryShutdownAsync(
+                mayBeTerminatedBySystem: e.CloseReason is WindowCloseReason.OSShutdown);
 
+            return;
+        }
+
+        if (ReferenceEquals(window, desktop.MainWindow)
+            && options.MainWindowCloseBehavior is MainWindowCloseBehavior.ExitApplication)
+        {
+            await TryShutdownAsync();
             return;
         }
 
         await TryCloseAsync(managedWindow, e.CloseReason, e.IsProgrammatic);
     }
 
-    private static void OnWindowClosed(object? sender, EventArgs e)
+    private void OnWindowClosed(object? sender, EventArgs e)
     {
         if (sender is not Window window)
             return;
 
         window.Closing -= OnWindowClosing;
         window.Closed -= OnWindowClosed;
-        ManagedWindows.Remove(window);
+        managedWindows.Remove(window);
     }
 
-    private static async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+    private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
         if (nativeApplicationCloseAllowed)
             return;
 
         e.Cancel = true;
-        if (installedDesktop is not null)
-            await TryShutdownAsync(installedDesktop, mayBeTerminatedBySystem: true);
+        await TryShutdownAsync(mayBeTerminatedBySystem: true);
     }
 
-    private static Task<bool> TryCloseAsync(Window window)
+    private Task<bool> TryCloseAsync(Window window)
     {
         if (!Dispatcher.UIThread.CheckAccess())
             return Dispatcher.UIThread.InvokeAsync(() => TryCloseAsync(window));
 
         if (applicationCloseInProgress
-            || !ManagedWindows.TryGetValue(window, out var managedWindow))
+            || !managedWindows.TryGetValue(window, out var managedWindow))
             return Task.FromResult(false);
 
         return TryCloseAsync(
@@ -223,7 +224,7 @@ public static class WindowManager
             isProgrammatic: true);
     }
 
-    private static Task<bool> TryCloseAsync(
+    private Task<bool> TryCloseAsync(
         ManagedWindow managedWindow,
         WindowCloseReason reason,
         bool isProgrammatic)
@@ -248,10 +249,10 @@ public static class WindowManager
         return closeTask;
     }
 
-    private static async Task<bool> CloseWindows(
+    private async Task<bool> CloseWindows(
         IReadOnlyList<ManagedWindow> windows,
         WindowCloseContext[] contexts,
-        bool keepRootWindow)
+        Window? retainedWindow)
     {
         var enabled = windows.Select(w => w.Window.IsEnabled).ToList();
         foreach (var window in windows)
@@ -270,7 +271,7 @@ public static class WindowManager
                         return false;
                     w.Window.IsEnabled = false;
                     await CleanupAsync(w, contexts[i]);
-                    if ((i+1) < windows.Count || !keepRootWindow)
+                    if (!ReferenceEquals(w.Window, retainedWindow))
                     {
                         bool ok = false;
                         void handler(object? sender, EventArgs? args) => ok = true;
@@ -306,7 +307,7 @@ public static class WindowManager
         {
             for (var i = closedCount; i < windows.Count; i++)
             {
-                // i==closedCount为失败的那个窗口, 或是保留的根窗口
+                // i==closedCount为失败的那个窗口，或是退出时保留的 MainWindow。
                 // 后续窗口的IsEnabled都没有被临时设为true过
                 if (enabled[i] || i == closedCount)
                     windows[i].Window.IsEnabled = true;
@@ -315,7 +316,7 @@ public static class WindowManager
         }
     }
 
-    private static async Task<bool> RunWindowCloseAndResetAsync(
+    private async Task<bool> RunWindowCloseAndResetAsync(
         IReadOnlyList<ManagedWindow> windows,
         ManagedWindow rootWindow,
         WindowCloseReason reason,
@@ -332,14 +333,13 @@ public static class WindowManager
             IsApplicationExit: false,
             MayBeTerminatedBySystem: false)).ToArray();
 
-        if (!await CloseWindows(windows, contexts, false))
+        if (!await CloseWindows(windows, contexts, retainedWindow: null))
             return false;
 
         return true;
     }
 
-    private static async Task<bool> RunApplicationCloseAndResetAsync(
-        IClassicDesktopStyleApplicationLifetime desktop,
+    private async Task<bool> RunApplicationCloseAndResetAsync(
         int exitCode,
         bool mayBeTerminatedBySystem)
     {
@@ -347,7 +347,7 @@ public static class WindowManager
 
         try
         {
-            var pendingWindowCloses = ManagedWindows.Values
+            var pendingWindowCloses = managedWindows.Values
                 .Select(static window => window.CloseTask)
                 .Where(static task => task is not null)
                 .Cast<Task<bool>>()
@@ -367,7 +367,7 @@ public static class WindowManager
                 IsApplicationExit: true,
                 MayBeTerminatedBySystem: mayBeTerminatedBySystem)).ToArray();
 
-            if (!await CloseWindows(windows, contexts, true))
+            if (!await CloseWindows(windows, contexts, desktop.MainWindow))
                 return false;
 
             nativeApplicationCloseAllowed = true;
@@ -387,7 +387,7 @@ public static class WindowManager
         }
     }
 
-    private static IEnumerable<ManagedWindow> OrderForApplicationClose(
+    private IEnumerable<ManagedWindow> OrderForApplicationClose(
         IClassicDesktopStyleApplicationLifetime desktop)
     {
         return desktop.Windows
@@ -404,14 +404,14 @@ public static class WindowManager
             .Select(static item => item.Managed);
     }
 
-    private static ManagedWindow GetManagedWindow(Window window)
+    private ManagedWindow GetManagedWindow(Window window)
     {
-        return ManagedWindows.TryGetValue(window, out var managedWindow)
+        return managedWindows.TryGetValue(window, out var managedWindow)
             ? managedWindow
             : new ManagedWindow(window, window.Content as ILeaveAware, new WindowInfo());
     }
 
-    private static IEnumerable<ManagedWindow> OrderOwnedWindowGroup(Window rootWindow)
+    private IEnumerable<ManagedWindow> OrderOwnedWindowGroup(Window rootWindow)
     {
         return EnumerateOwnedWindows(rootWindow)
             .Select(GetManagedWindow)
@@ -465,7 +465,7 @@ public static class WindowManager
             await managedWindow.View.CleanupAsync(ToLeaveContext(context));
     }
 
-    private static async ValueTask ShowCloseErrorAsync(
+    private async ValueTask ShowCloseErrorAsync(
         ManagedWindow managedWindow,
         WindowCloseContext context,
         Exception exception)
@@ -501,7 +501,7 @@ public static class WindowManager
             {
                 new TextBox
                 {
-                    Text = (exception.GetLocalizedMessage() is { } lstr ? Localizer?.Format(lstr) : null)
+                    Text = (exception.GetLocalizedMessage() is { } lstr ? localizer.Format(lstr) : null)
                         ?? exception.Message,
                     IsReadOnly = true,
                     TextWrapping = Avalonia.Media.TextWrapping.Wrap,
@@ -544,6 +544,21 @@ public static class WindowManager
                 },
                 DispatcherPriority.Loaded);
         }
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+            return;
+
+        disposed = true;
+        desktop.ShutdownRequested -= OnShutdownRequested;
+        foreach (var window in managedWindows.Keys.ToArray())
+        {
+            window.Closing -= OnWindowClosing;
+            window.Closed -= OnWindowClosed;
+        }
+        managedWindows.Clear();
     }
 
     private sealed class ManagedWindow(

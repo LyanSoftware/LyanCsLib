@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Lytec.Common.Localization.Extensions;
 
 namespace Lytec.AvaloniaUI.Mvu;
 
@@ -7,30 +8,42 @@ namespace Lytec.AvaloniaUI.Mvu;
 /// </summary>
 public sealed record WindowPathSegment(string Id, Func<Control> CreateView);
 
+public interface IWindowPathManager
+{
+    bool IsBusy { get; }
+
+    Task<bool> OpenPathAsync(IReadOnlyList<WindowPathSegment> targetPath);
+}
+
+public interface IWindowPathManagerFactory
+{
+    IWindowPathManager GetOrCreate(Window rootWindow);
+}
+
 /// <summary>
 /// Maintains one modal child-window path. Switching paths closes windows back
 /// to the common ancestor and then opens missing windows in order.
 /// </summary>
-public sealed class WindowPathManager
+internal sealed class WindowPathManager(
+    Window rootWindow,
+    IWindowManager windowManager)
+    : IWindowPathManager, IDisposable
 {
+    private const string LocalizeScope = "Lytec.AvaloniaUI.Mvu.WindowPathManager";
     private readonly List<OpenSegment> openPath = [];
     private bool operationInProgress;
+    private bool disposed;
 
     public bool IsBusy => operationInProgress;
 
     public async Task<bool> OpenPathAsync(
-        Control rootView,
         IReadOnlyList<WindowPathSegment> targetPath)
     {
-        ArgumentNullException.ThrowIfNull(rootView);
         ArgumentNullException.ThrowIfNull(targetPath);
+        ObjectDisposedException.ThrowIf(disposed, this);
 
         if (operationInProgress)
             return false;
-
-        var rootWindow = TopLevel.GetTopLevel(rootView) as Window
-            ?? throw new InvalidOperationException(
-                "The root view must be attached to a desktop Window.");
 
         operationInProgress = true;
         try
@@ -40,7 +53,7 @@ public sealed class WindowPathManager
 
             for (var i = openPath.Count - 1; i >= commonLength; i--)
             {
-                if (!await WindowManager.TryCloseAsync(openPath[i].View))
+                if (!await windowManager.TryCloseAsync(openPath[i].View))
                     return false;
                 RemoveClosedSegments();
             }
@@ -52,9 +65,13 @@ public sealed class WindowPathManager
             {
                 var segment = targetPath[i];
                 var view = segment.CreateView()
-                    ?? throw new InvalidOperationException(
-                        $"Window path segment '{segment.Id}' returned a null view.");
-                var window = WindowManager.Create(view);
+                    ?? throw new InvalidOperationException()
+                        .Localize(
+                            LocalizeScope,
+                            "OpenPathError_NullView",
+                            new { segment.Id },
+                            "窗口路径段“{Id}”返回了 null 视图。");
+                var window = windowManager.Create(view);
                 var opened = new TaskCompletionSource(
                     TaskCreationOptions.RunContinuationsAsynchronously);
                 window.Opened += OnOpened;
@@ -63,6 +80,9 @@ public sealed class WindowPathManager
                 var dialogTask = window.ShowDialog(owner);
                 _ = ObserveDialogAsync(dialogTask);
                 await opened.Task;
+
+                if (!window.IsVisible)
+                    return false;
 
                 openPath.Add(new OpenSegment(segment.Id, view, window));
                 owner = window;
@@ -75,6 +95,7 @@ public sealed class WindowPathManager
 
                 void OnClosed(object? sender, EventArgs e)
                 {
+                    window.Opened -= OnOpened;
                     window.Closed -= OnClosed;
                     RemoveWindowAndDescendants(window);
                     opened.TrySetResult();
@@ -125,10 +146,67 @@ public sealed class WindowPathManager
         }
         catch
         {
-            // ShowDialog failures are surfaced by the route operation where possible;
-            // observing the task prevents a later unobserved-task exception.
+            // The route operation observes whether the window opened. Keep the
+            // dialog task observed so a later failure cannot become unobserved.
         }
     }
 
+    public void Dispose()
+    {
+        if (disposed)
+            return;
+
+        disposed = true;
+        openPath.Clear();
+    }
+
     private sealed record OpenSegment(string Id, Control View, Window Window);
+}
+
+internal sealed class WindowPathManagerFactory(IWindowManager windowManager)
+    : IWindowPathManagerFactory, IDisposable
+{
+    private readonly Dictionary<Window, WindowPathManager> managers = [];
+    private bool disposed;
+
+    public IWindowPathManager GetOrCreate(Window rootWindow)
+    {
+        ArgumentNullException.ThrowIfNull(rootWindow);
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        while (rootWindow.Owner is Window owner)
+            rootWindow = owner;
+
+        if (managers.TryGetValue(rootWindow, out var manager))
+            return manager;
+
+        manager = new WindowPathManager(rootWindow, windowManager);
+        managers.Add(rootWindow, manager);
+        rootWindow.Closed += OnRootWindowClosed;
+        return manager;
+    }
+
+    private void OnRootWindowClosed(object? sender, EventArgs e)
+    {
+        if (sender is not Window rootWindow)
+            return;
+
+        rootWindow.Closed -= OnRootWindowClosed;
+        if (managers.Remove(rootWindow, out var manager))
+            manager.Dispose();
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+            return;
+
+        disposed = true;
+        foreach (var (rootWindow, manager) in managers)
+        {
+            rootWindow.Closed -= OnRootWindowClosed;
+            manager.Dispose();
+        }
+        managers.Clear();
+    }
 }

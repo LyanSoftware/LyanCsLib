@@ -1,33 +1,49 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Lytec.AvaloniaUI.Mvu;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Lytec.AvaloniaUI;
 
-public static class ApplicationExtensions
+public enum MainWindowCloseBehavior
 {
-    public static async Task<bool> TryShutdownAsync(this Application app, int exitCode = 0)
+    FollowApplicationLifetime,
+    ExitApplication,
+}
+
+public sealed class AvaloniaMvuOptions
+{
+    public MainWindowCloseBehavior MainWindowCloseBehavior { get; set; }
+        = MainWindowCloseBehavior.FollowApplicationLifetime;
+}
+
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddAvaloniaMvu(
+        this IServiceCollection services,
+        Application application,
+        Action<AvaloniaMvuOptions>? configure = null)
     {
-        ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(application);
 
-        if (app.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            return await WindowManager.TryShutdownAsync(desktop, exitCode);
+        var options = new AvaloniaMvuOptions();
+        configure?.Invoke(options);
 
-        var controlled = app.ApplicationLifetime as IControlledApplicationLifetime;
-        var exitHandler = ApplicationExit.GetExitHandler(app);
-        if (controlled is null && exitHandler is null)
-            return false;
+        services.TryAddSingleton<Application>(application);
+        services.TryAddSingleton(options);
+        services.TryAddSingleton<INavigationStackManagerFactory, NavigationStackManagerFactory>();
+        services.TryAddSingleton<IApplicationExitService, ApplicationExitService>();
 
-        if (ApplicationExit.GetExitGuard(app) is { } guard
-            && !await guard.TryLeaveApplicationAsync())
-            return false;
-
-        if (controlled is not null)
+        if (application.ApplicationLifetime
+            is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            controlled.Shutdown(exitCode);
-            return true;
+            services.TryAddSingleton<IClassicDesktopStyleApplicationLifetime>(desktop);
+            services.TryAddSingleton<IWindowManager, WindowManager>();
+            services.TryAddSingleton<IWindowPathManagerFactory, WindowPathManagerFactory>();
         }
 
-        return await exitHandler!.TryExitAsync(exitCode);
+        return services;
     }
 }
