@@ -44,7 +44,7 @@ public abstract class Localizer : ILocalizer
 
         try
         {
-            return (!hasTranslation || str.Arguments is null)
+            return str.Arguments is null
                 ? format
                 : Smart.Format(CurrentCulture, format, [str.Arguments]);
         }
