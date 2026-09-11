@@ -4,13 +4,12 @@ namespace Lytec.AvaloniaUI.Mvu;
 
 public record WindowInfo
 {
-    public string Title { get; init; } = "Window";
     public double Width { get; init; } = 800;
     public double Height { get; init; } = 600;
     public double MinWidth { get; init; } = 400;
     public double MinHeight { get; init; } = 300;
     public bool CanResize { get; init; } = true;
-    public SizeToContent SizeToContent { get; init; } = SizeToContent.WidthAndHeight;
+    public SizeToContent SizeToContent { get; init; } = SizeToContent.Manual;
 
     /// <summary>
     /// Asynchronously decides whether this window may close. The window remains visible
@@ -27,7 +26,7 @@ public record WindowInfo
 
     /// <summary>
     /// Presents an exception raised by the close decision or cleanup. When omitted,
-    /// <see cref="WindowManager"/> displays a basic owned error dialog.
+    /// the window presentation manager displays a basic owned error dialog.
     /// </summary>
     public Func<WindowCloseContext, Exception, ValueTask>? CloseErrorAsync { get; init; }
 }
@@ -38,8 +37,3 @@ public sealed record WindowCloseContext(
     bool IsProgrammatic,
     bool IsApplicationExit,
     bool MayBeTerminatedBySystem);
-
-public interface IWindowView : ILeaveAware
-{
-    WindowInfo WindowOptions { get; }
-}

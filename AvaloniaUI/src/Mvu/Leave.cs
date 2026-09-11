@@ -35,11 +35,3 @@ public interface ILeaveAware
     ValueTask CleanupAsync(LeaveContext context)
         => ValueTask.CompletedTask;
 }
-
-/// <summary>
-/// Presents failures raised while a guarded leave operation is running.
-/// </summary>
-public interface ILeaveErrorHandler
-{
-    ValueTask ShowErrorAsync(LeaveContext context, Exception exception);
-}

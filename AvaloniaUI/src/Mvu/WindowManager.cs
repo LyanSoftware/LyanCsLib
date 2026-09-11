@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Data;
 using Avalonia.Threading;
 using Lytec.AvaloniaUI;
 using Lytec.Common.Localization;
@@ -8,28 +9,12 @@ using Lytec.Common.Localization.Extensions;
 
 namespace Lytec.AvaloniaUI.Mvu;
 
-public interface IWindowManager
+internal interface IDesktopShutdownCoordinator
 {
-    Window Create<TView>(TView view, string? title = null)
-        where TView : Control, IWindowView;
-
-    Window InstallMainWindow<TView>(TView view)
-        where TView : Control, IWindowView;
-
-    Task ShowDialogAsync<TView>(
-        TView view,
-        Control? ownerView = null,
-        string? title = null)
-        where TView : Control, IWindowView;
-
-    void Close(Control view);
-
-    Task<bool> TryCloseAsync(Control view);
-
-    Task<bool> TryShutdownAsync(int exitCode = 0, bool mayBeTerminatedBySystem = false);
+    Task<bool> TryShutdownAsync(int exitCode, bool mayBeTerminatedBySystem = false);
 }
 
-internal sealed class WindowManager : IWindowManager
+internal sealed class WindowViewManager : IViewManager, IDesktopShutdownCoordinator
 {
     private const string LocalizeScope = "Lytec.AvaloniaUI.Mvu.WindowManager";
     private static LocalizeString Localize(string Key, object? Arguments = null, string? DefaultMessage = null)
@@ -41,68 +26,111 @@ internal sealed class WindowManager : IWindowManager
     private readonly IClassicDesktopStyleApplicationLifetime desktop;
     private readonly ILocalizer localizer;
     private readonly AvaloniaMvuOptions options;
+    private readonly ViewRegistry registry;
+    private readonly Dictionary<Window, WindowPathManager> pathManagers = [];
     private Task<bool>? applicationCloseTask;
     private bool applicationCloseInProgress;
     private bool nativeApplicationCloseAllowed;
     private bool disposed;
 
-    public WindowManager(
+    public WindowViewManager(
         IClassicDesktopStyleApplicationLifetime desktop,
         ILocalizer localizer,
-        AvaloniaMvuOptions options)
+        AvaloniaMvuOptions options,
+        ViewRegistry registry)
     {
         this.desktop = desktop;
         this.localizer = localizer;
         this.options = options;
+        this.registry = registry;
         desktop.ShutdownRequested += OnShutdownRequested;
     }
 
-    public Window Create<TView>(TView view, string? title = null)
-        where TView : Control, IWindowView
-    {
-        ArgumentNullException.ThrowIfNull(view);
-        var options = view.WindowOptions;
+    public ViewManagerState State { get; } = new();
 
-        var window = new Window
-        {
-            Content = view,
-            Title = title ?? options.Title,
-            Width = options.Width,
-            Height = options.Height,
-            MinWidth = options.MinWidth,
-            MinHeight = options.MinHeight,
-            CanResize = options.CanResize,
-            ClosingBehavior = WindowClosingBehavior.OwnerWindowOnly,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
-        };
+    public event EventHandler? StateChanged;
 
-        RegisterWindow(window, options);
-        InitializeRootFocus(window, view);
-        return window;
-    }
-
-    public Window InstallMainWindow<TView>(TView view)
-        where TView : Control, IWindowView
+    public Control InstallRoot(string routeId)
     {
         if (desktop.MainWindow is not null)
             throw new InvalidOperationException()
                 .Localize(
                     LocalizeScope,
                     "InstallMainWindowError_MultipleInstallMainWindow",
-                    "主窗口已经设置。"
-                    );
+                    "主窗口已经设置。");
 
-        var window = Create(view);
+        var lease = registry.Create(routeId);
+        Window window;
+        try
+        {
+            window = Create(lease);
+        }
+        catch
+        {
+            lease.Dispose();
+            throw;
+        }
+
         desktop.MainWindow = window;
+        State.CurrentRootId = routeId;
+        State.StackDepth = 1;
+        RaiseStateChanged();
         return window;
     }
 
-    public async Task ShowDialogAsync<TView>(
-        TView view,
-        Control? ownerView = null,
-        string? title = null)
-        where TView : Control, IWindowView
+    internal CreatedWindow Create(string routeId)
     {
+        var lease = registry.Create(routeId);
+        try
+        {
+            return new CreatedWindow(lease.View, Create(lease));
+        }
+        catch
+        {
+            lease.Dispose();
+            throw;
+        }
+    }
+
+    private Window Create(ManagedViewLease lease, string? title = null)
+    {
+        var view = lease.View;
+        var viewOptions = lease.ManagedView.ViewOptions;
+        var windowOptions = viewOptions.Window;
+
+        var window = new Window
+        {
+            Content = view,
+            Title = title ?? viewOptions.Title ?? "View",
+            Width = windowOptions.Width,
+            Height = windowOptions.Height,
+            MinWidth = windowOptions.MinWidth,
+            MinHeight = windowOptions.MinHeight,
+            CanResize = windowOptions.CanResize,
+            SizeToContent = windowOptions.SizeToContent,
+            ClosingBehavior = WindowClosingBehavior.OwnerWindowOnly,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        if (title is null && viewOptions.TitleBinding is { } titleBinding)
+            window.Bind(Window.TitleProperty, titleBinding);
+
+        RegisterWindow(window, lease, windowOptions);
+        InitializeRootFocus(window, view);
+        return window;
+    }
+
+    public Task<bool> OpenAsync(string routeId, Control? ownerView = null)
+        => OpenPathAsync([routeId], ownerView);
+
+    public Task<bool> ShowModalAsync(string routeId, Control? ownerView = null)
+        => OpenAsync(routeId, ownerView);
+
+    public async Task<bool> OpenPathAsync(
+        IReadOnlyList<string> routeIds,
+        Control? ownerView = null)
+    {
+        if (State.IsBusy)
+            return false;
         var owner = (ownerView is not null
             ? TopLevel.GetTopLevel(ownerView) as Window
             : desktop.MainWindow)
@@ -110,18 +138,41 @@ internal sealed class WindowManager : IWindowManager
                 .Localize(
                     LocalizeScope,
                     "ShowDialogError_MainWindowNotFound",
-                    "显示对话框前必须先创建主窗口"
-                    );
-        var window = Create(view, title);
-        await window.ShowDialog(owner);
+                    "显示对话框前必须先创建主窗口");
+        while (owner.Owner is Window parent)
+            owner = parent;
+
+        if (!pathManagers.TryGetValue(owner, out var manager))
+        {
+            manager = new WindowPathManager(owner, this);
+            pathManagers.Add(owner, manager);
+            owner.Closed += OnPathRootClosed;
+        }
+        State.IsBusy = true;
+        RaiseStateChanged();
+        try
+        {
+            return await manager.OpenPathAsync(routeIds);
+        }
+        finally
+        {
+            State.IsBusy = false;
+            RaiseStateChanged();
+        }
     }
 
-    public void Close(Control view)
+    public async Task<bool> BackAsync()
     {
-        (TopLevel.GetTopLevel(view) as Window)?.Close();
+        var window = desktop.Windows
+            .Where(static window => window.IsVisible)
+            .OrderByDescending(GetOwnerDepth)
+            .FirstOrDefault();
+        return window is not null
+            && !ReferenceEquals(window, desktop.MainWindow)
+            && await TryCloseAsync(window);
     }
 
-    public Task<bool> TryCloseAsync(Control view)
+    internal Task<bool> TryCloseAsync(Control view)
     {
         ArgumentNullException.ThrowIfNull(view);
 
@@ -129,6 +180,9 @@ internal sealed class WindowManager : IWindowManager
             ? TryCloseAsync(window)
             : Task.FromResult(false);
     }
+
+    public ValueTask<bool> TryLeaveAllAsync(bool mayBeTerminatedBySystem = false)
+        => new(TryPrepareApplicationCloseAsync(mayBeTerminatedBySystem));
 
     public Task<bool> TryShutdownAsync(
         int exitCode = 0,
@@ -148,13 +202,40 @@ internal sealed class WindowManager : IWindowManager
         return applicationCloseTask;
     }
 
-    private void RegisterWindow(Window window, WindowInfo options)
+    private async Task<bool> TryPrepareApplicationCloseAsync(
+        bool mayBeTerminatedBySystem)
     {
-        var managedWindow = new ManagedWindow(window, view: window.Content as ILeaveAware, options);
+        if (!Dispatcher.UIThread.CheckAccess())
+            return await Dispatcher.UIThread.InvokeAsync(
+                () => TryPrepareApplicationCloseAsync(mayBeTerminatedBySystem));
+
+        var windows = OrderForApplicationClose(desktop).ToArray();
+        var reason = mayBeTerminatedBySystem
+            ? WindowCloseReason.OSShutdown
+            : WindowCloseReason.ApplicationShutdown;
+        var contexts = windows.Select(window => new WindowCloseContext(
+            window.Window,
+            reason,
+            IsProgrammatic: !mayBeTerminatedBySystem,
+            IsApplicationExit: true,
+            MayBeTerminatedBySystem: mayBeTerminatedBySystem)).ToArray();
+        return await CloseWindows(windows, contexts, desktop.MainWindow);
+    }
+
+    private void RegisterWindow(
+        Window window,
+        ManagedViewLease lease,
+        WindowInfo options)
+    {
+        var managedWindow = new ManagedWindow(window, lease, options);
         managedWindows.Add(window, managedWindow);
+        window.Opened += OnWindowOpened;
         window.Closing += OnWindowClosing;
         window.Closed += OnWindowClosed;
     }
+
+    private void OnWindowOpened(object? sender, EventArgs e)
+        => UpdateWindowState();
 
     private async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
@@ -192,9 +273,12 @@ internal sealed class WindowManager : IWindowManager
         if (sender is not Window window)
             return;
 
+        window.Opened -= OnWindowOpened;
         window.Closing -= OnWindowClosing;
         window.Closed -= OnWindowClosed;
-        managedWindows.Remove(window);
+        if (managedWindows.Remove(window, out var managedWindow))
+            managedWindow.Lease?.Dispose();
+        UpdateWindowState();
     }
 
     private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
@@ -405,7 +489,7 @@ internal sealed class WindowManager : IWindowManager
     {
         return managedWindows.TryGetValue(window, out var managedWindow)
             ? managedWindow
-            : new ManagedWindow(window, window.Content as ILeaveAware, new WindowInfo());
+            : new ManagedWindow(window, null, new WindowInfo());
     }
 
     private IEnumerable<ManagedWindow> OrderOwnedWindowGroup(Window rootWindow)
@@ -443,10 +527,10 @@ internal sealed class WindowManager : IWindowManager
             && await callback(context) is LeaveDecision.Cancel)
             return false;
 
-        if (managedWindow.View is null)
+        if (managedWindow.Lease is null)
             return true;
 
-        return await managedWindow.View.TryLeaveAsync(ToLeaveContext(context))
+        return await managedWindow.Lease.ManagedView.TryLeaveAsync(ToLeaveContext(context))
             is LeaveDecision.Allow;
     }
 
@@ -458,8 +542,8 @@ internal sealed class WindowManager : IWindowManager
         if (callback is not null)
             await callback(context);
 
-        if (managedWindow.View is not null)
-            await managedWindow.View.CleanupAsync(ToLeaveContext(context));
+        if (managedWindow.Lease is not null)
+            await managedWindow.Lease.ManagedView.CleanupAsync(ToLeaveContext(context));
     }
 
     private async ValueTask ShowCloseErrorAsync(
@@ -470,6 +554,11 @@ internal sealed class WindowManager : IWindowManager
         if (managedWindow.Options.CloseErrorAsync is { } callback)
         {
             await callback(context, exception);
+            return;
+        }
+        if (options.LeaveErrorAsync is { } commonCallback)
+        {
+            await commonCallback(ToLeaveContext(context), exception);
             return;
         }
 
@@ -550,23 +639,47 @@ internal sealed class WindowManager : IWindowManager
 
         disposed = true;
         desktop.ShutdownRequested -= OnShutdownRequested;
-        foreach (var window in managedWindows.Keys.ToArray())
+        foreach (var manager in pathManagers.Values)
+            manager.Dispose();
+        pathManagers.Clear();
+        foreach (var (window, managedWindow) in managedWindows.ToArray())
         {
+            window.Opened -= OnWindowOpened;
             window.Closing -= OnWindowClosing;
             window.Closed -= OnWindowClosed;
+            managedWindow.Lease?.Dispose();
         }
         managedWindows.Clear();
     }
 
     private sealed class ManagedWindow(
         Window window,
-        ILeaveAware? view,
+        ManagedViewLease? lease,
         WindowInfo options)
     {
         public Window Window { get; } = window;
-        public ILeaveAware? View { get; } = view;
+        public ManagedViewLease? Lease { get; } = lease;
         public WindowInfo Options { get; } = options;
         public Task<bool>? CloseTask { get; set; }
         public bool NativeCloseAllowed { get; set; }
     }
+
+    private void OnPathRootClosed(object? sender, EventArgs e)
+    {
+        if (sender is not Window rootWindow)
+            return;
+
+        rootWindow.Closed -= OnPathRootClosed;
+        if (pathManagers.Remove(rootWindow, out var manager))
+            manager.Dispose();
+    }
+
+    internal void UpdateWindowState()
+    {
+        State.StackDepth = desktop.Windows.Count(static window => window.IsVisible);
+        RaiseStateChanged();
+    }
+
+    private void RaiseStateChanged()
+        => StateChanged?.Invoke(this, EventArgs.Empty);
 }

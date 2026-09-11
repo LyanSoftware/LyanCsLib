@@ -36,12 +36,11 @@ public interface IApplicationExitService
 
 internal sealed class ApplicationExitService(
     Application application,
-    IEnumerable<IWindowManager> windowManagers)
+    IServiceProvider services)
     : IApplicationExitService
 {
     private readonly RegistrationStack<IApplicationExitHandler> handlers = new();
     private readonly RegistrationStack<IApplicationExitGuard> guards = new();
-    private readonly IWindowManager? windowManager = windowManagers.SingleOrDefault();
 
     public IDisposable RegisterHandler(IApplicationExitHandler handler)
     {
@@ -65,8 +64,11 @@ internal sealed class ApplicationExitService(
 
     private async Task<bool> TryShutdownOnUiThreadAsync(int exitCode)
     {
-        if (windowManager is not null)
-            return await windowManager.TryShutdownAsync(exitCode);
+        var viewManager = services.GetService(typeof(IViewManager)) as IViewManager;
+        if (application.ApplicationLifetime
+            is IClassicDesktopStyleApplicationLifetime
+            && viewManager is IDesktopShutdownCoordinator desktopManager)
+            return await desktopManager.TryShutdownAsync(exitCode);
 
         var controlledLifetime = application.ApplicationLifetime
             as IControlledApplicationLifetime;
@@ -76,6 +78,10 @@ internal sealed class ApplicationExitService(
 
         if (guards.Current is { } guard
             && !await guard.TryLeaveApplicationAsync())
+            return false;
+
+        if (viewManager is not null
+            && !await viewManager.TryLeaveAllAsync())
             return false;
 
         if (controlledLifetime is not null)
