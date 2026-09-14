@@ -14,29 +14,29 @@ public static class LocalizerExtensions
 {
     public static BindingBase Localize(
         this ILocalizer localizer,
-        string key,
-        string? defaultMessage = null)
-        => localizer.Observe(key, defaultMessage).ToBinding();
+        string Key,
+        string? DefaultMessage = null)
+        => localizer.Observe(Key, DefaultMessage).ToBinding();
 
     public static BindingBase Localize(
         this ILocalizer localizer,
-        string key,
+        string Key,
         object arguments,
-        string? defaultMessage = null)
-        => localizer.Observe(key, arguments, defaultMessage).ToBinding();
+        string? DefaultMessage = null)
+        => localizer.Observe(Key, arguments, DefaultMessage).ToBinding();
 
     public static BindingBase Localize(
         this ILocalizer localizer,
         string scope,
-        string key,
-        string? defaultMessage = null)
-        => localizer.Observe(scope, key, defaultMessage).ToBinding();
+        string Key,
+        string? DefaultMessage = null)
+        => localizer.Observe(scope, Key, DefaultMessage).ToBinding();
 
     public static BindingBase Localize(
         this ILocalizer localizer,
         string scope,
-        string key,
+        string Key,
         object arguments,
-        string? defaultMessage = null)
-        => localizer.Observe(scope, key, arguments, defaultMessage).ToBinding();
+        string? DefaultMessage = null)
+        => localizer.Observe(scope, Key, arguments, DefaultMessage).ToBinding();
 }
