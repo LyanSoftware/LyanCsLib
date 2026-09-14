@@ -65,22 +65,22 @@ public static class Extensions
 
 public static class LocalizerExtensions
 {
-    public static string Format(this ILocalizer localizer, string Key, object? Arguments, string? DefaultMessage = null)
+    public static string Format(this ILocalizer localizer, string Key, object? Arguments, string? DefaultMessage)
     => localizer.Format(new LocalizeString(Key, Arguments, DefaultMessage));
-    public static string Format(this ILocalizer localizer, string Key, string? DefaultMessage = null)
+    public static string Format(this ILocalizer localizer, string Key, string? DefaultMessage)
     => localizer.Format(new LocalizeString(Key, DefaultMessage: DefaultMessage));
-    public static string Format(this ILocalizer localizer, string Scope, string Key, object? Arguments, string? DefaultMessage = null)
+    public static string Format(this ILocalizer localizer, string Scope, string Key, object? Arguments, string? DefaultMessage)
     => localizer.Format(new LocalizeString(Scope, Key, Arguments, DefaultMessage));
-    public static string Format(this ILocalizer localizer, string Scope, string Key, string? DefaultMessage = null)
+    public static string Format(this ILocalizer localizer, string Scope, string Key, string? DefaultMessage)
     => localizer.Format(new LocalizeString(Scope, Key, DefaultMessage: DefaultMessage));
 
-    public static IObservable<string> Observe(this ILocalizer localizer, string Key, object? Arguments, string? DefaultMessage = null)
+    public static IObservable<string> Observe(this ILocalizer localizer, string Key, object? Arguments, string? DefaultMessage)
     => localizer.Observe(new LocalizeString(Key, Arguments, DefaultMessage));
-    public static IObservable<string> Observe(this ILocalizer localizer, string Key, string? DefaultMessage = null)
+    public static IObservable<string> Observe(this ILocalizer localizer, string Key, string? DefaultMessage)
     => localizer.Observe(new LocalizeString(Key, DefaultMessage: DefaultMessage));
-    public static IObservable<string> Observe(this ILocalizer localizer, string Scope, string Key, object? Arguments, string? DefaultMessage = null)
+    public static IObservable<string> Observe(this ILocalizer localizer, string Scope, string Key, object? Arguments, string? DefaultMessage)
     => localizer.Observe(new LocalizeString(Scope, Key, Arguments, DefaultMessage));
-    public static IObservable<string> Observe(this ILocalizer localizer, string Scope, string Key, string? DefaultMessage = null)
+    public static IObservable<string> Observe(this ILocalizer localizer, string Scope, string Key, string? DefaultMessage)
     => localizer.Observe(new LocalizeString(Scope, Key, DefaultMessage: DefaultMessage));
 }
 
@@ -99,13 +99,13 @@ public static class ExceptionExtensions
         return ex;
     }
 
-    public static T Localize<T>(this T ex, string Key, object Arguments, string? DefaultMessage = null) where T : Exception
+    public static T Localize<T>(this T ex, string Key, object Arguments, string? DefaultMessage) where T : Exception
     => ex.Localize(new LocalizeString(Key, Arguments, DefaultMessage));
-    public static T Localize<T>(this T ex, string Key, string? DefaultMessage = null) where T : Exception
+    public static T Localize<T>(this T ex, string Key, string? DefaultMessage) where T : Exception
     => ex.Localize(new LocalizeString(Key, DefaultMessage: DefaultMessage));
-    public static T Localize<T>(this T ex, string Scope, string Key, object Arguments, string? DefaultMessage = null) where T : Exception
+    public static T Localize<T>(this T ex, string Scope, string Key, object Arguments, string? DefaultMessage) where T : Exception
     => ex.Localize(new LocalizeString(Scope, Key, Arguments, DefaultMessage));
-    public static T Localize<T>(this T ex, string Scope, string Key, string? DefaultMessage = null) where T : Exception
+    public static T Localize<T>(this T ex, string Scope, string Key, string? DefaultMessage) where T : Exception
     => ex.Localize(new LocalizeString(Scope, Key, DefaultMessage: DefaultMessage));
 
 }
