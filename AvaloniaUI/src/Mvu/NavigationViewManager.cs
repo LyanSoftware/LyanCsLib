@@ -38,16 +38,16 @@ public interface INavigationViewManager : IViewManager
     Task<bool> CloseDrawerAsync();
 }
 
-internal sealed class NavigationViewManager :
+internal sealed class NavigationViewManager(
+    Application application,
+    AvaloniaMvuOptions options,
+    ViewRegistry registry,
+    ILocalizer localizer,
+    IApplicationExitService applicationExitService) :
     INavigationViewManager,
     IDesktopShutdownCoordinator
 {
     private const string LocalizeScope = "Lytec.AvaloniaUI.Mvu.NavigationViewManager";
-    private readonly Application application;
-    private readonly AvaloniaMvuOptions options;
-    private readonly ViewRegistry registry;
-    private readonly ILocalizer localizer;
-    private readonly IApplicationExitService applicationExitService;
     private readonly Dictionary<Page, ManagedPage> pages = [];
     private readonly Dictionary<string, DrawerViewLease> drawerLeases =
         new(StringComparer.Ordinal);
@@ -62,24 +62,10 @@ internal sealed class NavigationViewManager :
     private Task<bool>? desktopShutdownTask;
     private bool disposed;
 
-    public NavigationViewManager(
-        Application application,
-        AvaloniaMvuOptions options,
-        ViewRegistry registry,
-        ILocalizer localizer,
-        IApplicationExitService applicationExitService)
-    {
-        this.application = application;
-        this.options = options;
-        this.registry = registry;
-        this.localizer = localizer;
-        this.applicationExitService = applicationExitService;
-    }
-
     public ViewManagerState State { get; } = new();
 
     public IReadOnlyCollection<string> DrawerIds
-        => registry.Drawers.Keys.ToArray();
+        => [.. registry.Drawers.Keys];
 
     public event EventHandler? StateChanged;
     public event EventHandler<RootBackRequestedEventArgs>? RootBackRequested;
@@ -761,17 +747,14 @@ internal sealed class NavigationViewManager :
                 desktop.ShutdownRequested -= OnDesktopShutdownRequested;
             desktopWindow = null;
         }
-        if (outerNavigation is not null)
-            outerNavigation.KeyDown -= OnHostKeyDown;
+        outerNavigation?.KeyDown -= OnHostKeyDown;
         if (mainNavigation is not null)
             Unsubscribe(mainNavigation);
         if (outerNavigation is not null
             && !ReferenceEquals(outerNavigation, mainNavigation))
             Unsubscribe(outerNavigation);
-        if (shellPage is not null)
-            shellPage.PageNavigationSystemBackButtonPressed -= OnSystemBack;
-        if (drawerHost is not null)
-            drawerHost.LightDismissRequested -= OnLightDismissRequested;
+        shellPage?.PageNavigationSystemBackButtonPressed -= OnSystemBack;
+        drawerHost?.LightDismissRequested -= OnLightDismissRequested;
 
         foreach (var page in pages.Keys.ToArray())
             ReleasePage(page);
