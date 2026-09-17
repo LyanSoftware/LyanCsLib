@@ -46,13 +46,13 @@ public abstract class Localizer : ILocalizer
         {
             return str.Arguments is null
                 ? format
-                : Smart.Format(CurrentCulture, format, [str.Arguments]);
+                : Smart.Format(CurrentCulture, format, str.Arguments);
         }
         catch when (hasTranslation && str.DefaultMessage is not null)
         {
             return str.Arguments is null
                 ? str.DefaultMessage
-                : Smart.Format(CurrentCulture, str.DefaultMessage, [str.Arguments]);
+                : Smart.Format(CurrentCulture, str.DefaultMessage, str.Arguments);
         }
     }
 
@@ -79,7 +79,7 @@ public abstract class Localizer : ILocalizer
             }, (this, handler));
     }
 
-    private sealed class LocalizedTextObservable(Localizer localizer, ILocalizeString value)
+    private record LocalizedTextObservable(Localizer Localizer, ILocalizeString Value)
         : IObservable<string>
     {
         public IDisposable Subscribe(IObserver<string> observer)
@@ -87,17 +87,17 @@ public abstract class Localizer : ILocalizer
             if (observer is null)
                 throw new ArgumentNullException(nameof(observer));
 
-            EventHandler handler = (_, _) => observer.OnNext(localizer.Format(value));
-            localizer.Changed += handler;
-            observer.OnNext(localizer.Format(value));
-            return new Subscription(localizer, handler);
+            EventHandler handler = (_, _) => observer.OnNext(Localizer.Format(Value));
+            Localizer.Changed += handler;
+            observer.OnNext(Localizer.Format(Value));
+            return new Subscription(Localizer, handler);
         }
     }
 
-    private sealed class Subscription(Localizer localizer, EventHandler handler) : IDisposable
+    private record Subscription(Localizer Localizer, EventHandler Handler) : IDisposable
     {
-        private Localizer? source = localizer;
-        private EventHandler? changedHandler = handler;
+        private Localizer? source = Localizer;
+        private EventHandler? changedHandler = Handler;
 
         public void Dispose()
         {

@@ -45,7 +45,7 @@ public class App
 {
     public ILogger? Logger { get; set; }
     public ILocalizer? Localizer { get; set; }
-    public string i18n(string key) => Localizer?.Format(key) ?? key;
+    public string i18n(string key) => Localizer?.Format(key, key) ?? key;
     public void LogAction([CallerMemberName] string action = "") => Logger?.LogInformation($"[{action}]");
 
     public static partial class ApiPath { }

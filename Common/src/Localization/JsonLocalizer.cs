@@ -47,11 +47,7 @@ public sealed class JsonLocalizer : Localizer
         return false;
     }
 
-    private sealed class Snapshot(
-        CultureInfo culture,
-        ImmutableArray<ImmutableDictionary<string, string>> layers)
-    {
-        public CultureInfo Culture { get; } = culture;
-        public ImmutableArray<ImmutableDictionary<string, string>> Layers { get; } = layers;
-    }
+    private record Snapshot(
+        CultureInfo Culture,
+        ImmutableArray<ImmutableDictionary<string, string>> Layers);
 }

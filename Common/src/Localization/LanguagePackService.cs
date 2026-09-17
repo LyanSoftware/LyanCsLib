@@ -28,7 +28,7 @@ public interface ILanguagePackService
         CancellationToken cancellationToken = default);
 }
 
-public sealed class JsonLanguagePackService(
+public record JsonLanguagePackService(
     JsonLocalizer localizer,
     ILanguagePreferenceStore? preferenceStore = null,
     ILocalizationLogSink? log = null,
@@ -50,7 +50,7 @@ public sealed class JsonLanguagePackService(
 
     private ImmutableDictionary<string, LanguagePack> packs =
         ImmutableDictionary.Create<string, LanguagePack>(StringComparer.OrdinalIgnoreCase);
-    private IReadOnlyList<LanguagePackInfo> availableLanguages = [];
+    private IReadOnlyList<LanguagePackInfo> availableLanguages = Array.Empty<LanguagePackInfo>();
     private long changeVersion;
 
     public event EventHandler? CurrentLanguageChanged;
@@ -122,7 +122,7 @@ public sealed class JsonLanguagePackService(
                 ex);
             result = new DiscoveryResult(
                 ImmutableDictionary.Create<string, LanguagePack>(StringComparer.OrdinalIgnoreCase),
-                []);
+                Array.Empty<LanguagePackInfo>());
         }
 
         packs = result.Packs;
@@ -453,19 +453,11 @@ public sealed class JsonLanguagePackService(
             }, (this, handler));
     }
 
-    private sealed class LanguagePack(
-        CultureInfo culture,
-        ImmutableDictionary<string, string> data)
-    {
-        public CultureInfo Culture { get; } = culture;
-        public ImmutableDictionary<string, string> Data { get; } = data;
-    }
+    private record LanguagePack(
+        CultureInfo Culture,
+        ImmutableDictionary<string, string> Data);
 
-    private sealed class DiscoveryResult(
-        ImmutableDictionary<string, LanguagePack> packs,
-        IReadOnlyList<LanguagePackInfo> languages)
-    {
-        public ImmutableDictionary<string, LanguagePack> Packs { get; } = packs;
-        public IReadOnlyList<LanguagePackInfo> Languages { get; } = languages;
-    }
+    private record DiscoveryResult(
+        ImmutableDictionary<string, LanguagePack> Packs,
+        IReadOnlyList<LanguagePackInfo> Languages);
 }
