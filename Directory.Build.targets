@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+  <!-- 仅为兼容的框架（net8.0 及以上）启用 AOT/裁剪分析器 -->
+  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DocumentationFile>$(TargetDir)\$(AssemblyName).doc.xml</DocumentationFile>
   </PropertyGroup>

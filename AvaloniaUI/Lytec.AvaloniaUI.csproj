@@ -4,11 +4,6 @@
     <TargetFrameworks>$(AvaloniaTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-    <EnableAotAnalyzer>true</EnableAotAnalyzer>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-  </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <!-- 启用Native AOT发布 -->
     <PublishAot>true</PublishAot>

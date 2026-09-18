@@ -52,6 +52,11 @@
     <PackageVersion Include="System.Collections.Immutable" Version="[7.0.0,11.0)" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Shiny lib -->
+    <PackageVersion Include="Shiny.BluetoothLE" Version="$(ShinyVersion)" />
+    <PackageVersion Include="Shiny.BluetoothLE.Hosting" Version="$(ShinyVersion)" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- AvaloniaUI -->
     <PackageVersion Include="Avalonia" Version="$(AvaloniaVersion)" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
