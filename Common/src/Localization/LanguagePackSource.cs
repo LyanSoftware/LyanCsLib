@@ -54,7 +54,7 @@ public record LanguagePackResource
 /// <summary>
 /// Reads language packs from a file-system directory.
 /// </summary>
-public sealed class DirectoryLanguagePackSource : ILanguagePackSource
+public record DirectoryLanguagePackSource : ILanguagePackSource
 {
     /// <summary>
     /// Initializes a directory source. A null directory uses
@@ -129,7 +129,7 @@ public sealed class EmbeddedResourceLanguagePackSource : ILanguagePackSource
             .Select(name => new
             {
                 ResourceName = name,
-                FileName = name.Substring(resourcePrefix.Length),
+                FileName = name[resourcePrefix.Length..],
             })
             .Where(static item => string.Equals(
                 Path.GetExtension(item.FileName),
