@@ -145,10 +145,10 @@ namespace Lytec.WinForms
         {
             if (!Hexadecimal)
             {
-                var format = new string(Enumerable.Repeat('0', (int)ValueWidth).ToArray());
+                var format = new string([.. Enumerable.Repeat('0', (int)ValueWidth)]);
                 var fp = ValueWidth.ToString().Split('.');
                 if (fp.Length > 1)
-                    format = $"{format}.{new string(Enumerable.Repeat('0', Convert.ToInt32(fp[1])).ToArray())}";
+                    format = $"{format}.{new string([.. Enumerable.Repeat('0', Convert.ToInt32(fp[1]))])}";
                 Text = $"{TextPrefix ?? ""}{(Hexadecimal ? ((ulong)Value).ToString($"X{(uint)ValueWidth}") : Value.ToString(format))}{TextSuffix ?? ""}";
             }
             else Text = $"{TextPrefix ?? ""}{((ulong)Value).ToString($"X{(uint)ValueWidth}")}{TextSuffix ?? ""}";

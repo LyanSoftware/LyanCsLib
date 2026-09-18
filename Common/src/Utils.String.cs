@@ -50,7 +50,7 @@ namespace Lytec.Common
                     break;
                 data.Add((byte)((ChrToInt(chars[i]) << 4) | ChrToInt(chars[i + 1])));
             }
-            return data.ToArray();
+            return [.. data];
         }
 
         public static int[] ToUtf32CharArray(this string str)

@@ -282,7 +282,7 @@ namespace Lytec.Protocol.Images.SCL
                         buf.AddRange(((ushort)Count).ToBytes(Endian));
                         break;
                 }
-                data.Add(buf.ToArray());
+                data.Add([.. buf]);
             }
             foreach (var img in this)
             {

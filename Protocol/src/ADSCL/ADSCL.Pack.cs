@@ -3,6 +3,7 @@ using Lytec.Common.Communication;
 using Lytec.Common.Data;
 using Lytec.Common.Serialization;
 using Lytec.Common;
+using ITimer = Lytec.Common.ITimer;
 
 namespace Lytec.Protocol
 {
@@ -17,13 +18,13 @@ namespace Lytec.Protocol
                 get => _SendIdentifier ?? throw new NullReferenceException();
                 set => _SendIdentifier = value;
             }
-            static byte[] _SendIdentifier = Array.Empty<byte>();
+            static byte[] _SendIdentifier = [];
             public static byte[] RecvIdentifier
             {
                 get => _RecvIdentifier ?? throw new NullReferenceException();
                 set => _RecvIdentifier = value;
             }
-            static byte[] _RecvIdentifier = Array.Empty<byte>();
+            static byte[] _RecvIdentifier = [];
 
             public static int MinDataLength { get; set; }
 
@@ -46,7 +47,7 @@ namespace Lytec.Protocol
                 return id;
             };
 
-            public virtual byte[] Identifier { get; set; } = Array.Empty<byte>();
+            public virtual byte[] Identifier { get; set; } = [];
             public virtual bool IsSend => Identifier.SequenceEqual(SendIdentifier);
             public virtual bool IsRecv => Identifier.SequenceEqual(RecvIdentifier);
 
@@ -99,7 +100,7 @@ namespace Lytec.Protocol
                 else buf.Add(dlen.ToBytes(DefaultEndian));
                 buf.Add(CheckSum.ToBytes(Endian.Big));
 #pragma warning restore IDE0028 // 简化集合初始化
-                return buf.ToArray();
+                return [.. buf];
             }
 
             public class Deserializer : ISequenceVLDeserializer<TImpl>
@@ -119,7 +120,7 @@ namespace Lytec.Protocol
                 public Deserializer(int recvTimeout = 500)
                 {
                     RecvTimeout = recvTimeout;
-                    Cache = new List<byte>();
+                    Cache = [];
                     Reset();
                     RecvTimeoutTimer = CreateAutoResetTimer?.Invoke();
                     if (RecvTimeoutTimer != null)
@@ -155,7 +156,7 @@ namespace Lytec.Protocol
                     Fin
                 }
 
-                static readonly IReadOnlyDictionary<Steps, int> NoValidStepLens = new Dictionary<Steps, int>()
+                static readonly Dictionary<Steps, int> NoValidStepLens = new Dictionary<Steps, int>()
                 {
                     { Steps.AddrCode  , 1 }, // 1字节地址码
                     { Steps.PackIndex , 2 }, // 2字节包序号
@@ -232,8 +233,8 @@ namespace Lytec.Protocol
                             RecvTimeoutTimer?.Stop();
                             p = new TImpl();
                             var offset = 0;
-                            var span = new ReadOnlySpan<byte>(Cache.ToArray());
-                            p.Identifier = (span[offset] == RecvIdentifier[offset] ? RecvIdentifier : SendIdentifier).ToArray();
+                            var span = new ReadOnlySpan<byte>([.. Cache]);
+                            p.Identifier = [.. (span[offset] == RecvIdentifier[offset] ? RecvIdentifier : SendIdentifier)];
                             offset += p.Identifier.Length;
                             p.AddrCode = span[offset++];
                             p.PackIndex = span[offset..].ToStruct<ushort>(DefaultEndian);
@@ -324,8 +325,8 @@ namespace Lytec.Protocol
         {
             static Pack()
             {
-                SendIdentifier = new byte[7] { (byte)'\x1b', (byte)'$', (byte)'A', (byte)'d', (byte)'S', (byte)'c', (byte)'L' };
-                RecvIdentifier = new byte[7] { (byte)'\x1b', (byte)'$', (byte)'a', (byte)'D', (byte)'s', (byte)'C', (byte)'l' };
+                SendIdentifier = [(byte)'\x1b', (byte)'$', (byte)'A', (byte)'d', (byte)'S', (byte)'c', (byte)'L'];
+                RecvIdentifier = [(byte)'\x1b', (byte)'$', (byte)'a', (byte)'D', (byte)'s', (byte)'C', (byte)'l'];
                 MinDataLength = CommandPack.MinDataLength;
             }
         }
@@ -337,7 +338,7 @@ namespace Lytec.Protocol
             public virtual int Command { get; set; }
             public virtual int Arg1 { get; set; }
             public virtual int Arg2 { get; set; }
-            public virtual byte[] Arg3 { get; set; } = Array.Empty<byte>();
+            public virtual byte[] Arg3 { get; set; } = [];
 
             public CommandPack() { }
             public CommandPack(int command, int arg1, int arg2, byte[]? arg3 = null)
@@ -345,15 +346,12 @@ namespace Lytec.Protocol
                 Command = command;
                 Arg1 = arg1;
                 Arg2 = arg2;
-                Arg3 = arg3 ?? Array.Empty<byte>();
+                Arg3 = arg3 ?? [];
             }
 
             public virtual byte[] Serialize()
-            => Command.ToBytes(Endian.Little)
-                .Concat(Arg1.ToBytes(Endian.Little))
-                .Concat(Arg2.ToBytes(Endian.Little))
-                .Concat(Arg3)
-                .ToArray();
+            => [.. Command.ToBytes(Endian.Little)
+, .. Arg1.ToBytes(Endian.Little), .. Arg2.ToBytes(Endian.Little), .. Arg3];
 
             class Deserializer : IDeserializer<CommandPack>
             {
@@ -372,7 +370,7 @@ namespace Lytec.Protocol
                         Command = cmd.ToStruct<int>(Endian.Little),
                         Arg1 = arg1.ToStruct<int>(Endian.Little),
                         Arg2 = arg2.ToStruct<int>(Endian.Little),
-                        Arg3 = b.ToArray(),
+                        Arg3 = [.. b],
                     };
                 }
 

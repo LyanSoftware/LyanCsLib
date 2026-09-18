@@ -41,7 +41,7 @@ namespace Lytec.Protocol
                 switch (Images[0].Type)
                 {
                     case XmpType.R1:
-                        head = Array.Empty<byte>();
+                        head = [];
                         break;
                     case XmpType.RG11:
                     case XmpType.RGBn1111:
@@ -163,7 +163,7 @@ namespace Lytec.Protocol
             public XmpType Type { get; set; }
             public ushort Width { get; protected set; }
             public ushort Height { get; protected set; }
-            public Rgba8888Color[] Pixels { get; protected set; } = Array.Empty<Rgba8888Color>();
+            public Rgba8888Color[] Pixels { get; protected set; } = [];
 
             public Rgba8888Color this[int x, int y]
             {

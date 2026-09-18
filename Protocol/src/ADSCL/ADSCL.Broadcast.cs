@@ -39,7 +39,7 @@ public partial class ADSCL
             public bool IsAnswer { get; set; }
             public BroadcastCommand Command { get; set; }
             public MacAddress MacAddress { get; set; }
-            public byte[] Data { get; set; } = Array.Empty<byte>();
+            public byte[] Data { get; set; } = [];
 
             public const string Id_Send = "LYTecSCL";
             public const string Id_Recv = "lytECscl";
@@ -64,7 +64,7 @@ public partial class ADSCL
                         buf.AddRange(Data);
                         break;
                 }
-                return buf.ToArray();
+                return [.. buf];
             }
 
             public static BCPack? Deserialize(byte[] bytes, int offset = 0)
@@ -87,7 +87,7 @@ public partial class ADSCL
                 var mac = MacAddress.Empty;
                 if (len >= 8)
                 {
-                    mac = new(bytes.Skip(offset).Take(6).ToArray());
+                    mac = new([.. bytes.Skip(offset).Take(6)]);
                     offset += 8;
                     len -= 8;
                 }
@@ -107,7 +107,7 @@ public partial class ADSCL
                                 Command = BroadcastCommand.ConfigData,
                                 IsAnswer = isRcv,
                                 MacAddress = mac,
-                                Data = bytes.Skip(offset).Take(1024).ToArray(),
+                                Data = [.. bytes.Skip(offset).Take(1024)],
                             };
                         }
                     case (int)BroadcastCommand.SetConfig:
@@ -120,7 +120,7 @@ public partial class ADSCL
                                 Command = BroadcastCommand.SetConfig,
                                 IsAnswer = isRcv,
                                 MacAddress = mac,
-                                Data = bytes.Skip(offset).Take(1024).ToArray(),
+                                Data = [.. bytes.Skip(offset).Take(1024)],
                             };
                         }
                     case (int)BroadcastCommand.OpResult:

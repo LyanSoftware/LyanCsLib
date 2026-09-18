@@ -199,7 +199,7 @@ namespace Lytec.Protocol
                     bytes[pxOffset++] = (byte)b;
                 }
             }
-            return addHeader ? GetXMPHeader(width, height, 1, type).Concat(bytes).ToArray() : bytes;
+            return addHeader ? [.. GetXMPHeader(width, height, 1, type), .. bytes] : bytes;
         }
 
         public static byte[] ConvertToXMP(IEnumerable<ImageInfo> infos, ColorType xmpType)
@@ -212,7 +212,7 @@ namespace Lytec.Protocol
                     data.AddRange(GetXMPHeader(info.Width, info.Height, infos.Count(), xmpType));
                 data.AddRange(bytes);
             }
-            return data.ToArray();
+            return [.. data];
         }
     }
 }

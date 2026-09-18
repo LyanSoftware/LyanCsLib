@@ -58,12 +58,12 @@ namespace Lytec.Protocol.Huidu
         public static ushort Exec(ISendAndGetAnswerConfig cfg, CommandCode cmd, params byte[] data) => Exec(cfg, cmd, data.AsEnumerable());
         public static ushort Exec(ISendAndGetAnswerConfig cfg, CommandCode cmd, IEnumerable<byte>? data = null)
         {
-            var databuf = data?.ToArray() ?? Array.Empty<byte>();
+            var databuf = data?.ToArray() ?? [];
             var buf = new List<byte>(databuf.Length + 4);
             buf.AddRange(((ushort)(databuf.Length + 4)).ToBytes(DefaultEndian));
             buf.AddRange(((ushort)cmd).ToBytes(DefaultEndian));
             buf.AddRange(databuf);
-            databuf = buf.ToArray();
+            databuf = [.. buf];
 
             for (var retry = cfg.Retries + 1; retry > 0; retry--)
             {

@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Lytec.Common.Data;
@@ -35,7 +36,7 @@ public class PicFileHdr
     public ColorType ColorType { get => (ColorType)Type; set => Type = (byte)value; }
 
     public const int SizeConst = 12;
-    static PicFileHdr() => Debug.Assert(Marshal.SizeOf(typeof(PicFileHdr)) == SizeConst);
+    static PicFileHdr() => Debug.Assert(Marshal.SizeOf<PicFileHdr>() == SizeConst);
 
     public byte[] ToBytes()
     {
@@ -216,8 +217,7 @@ public struct ProgramItem
                 min = 1;
             else if (Type == ProgramType.RamText)
                 max = 3;
-            if (value < min || value > max)
-                throw new ArgumentOutOfRangeException();
+            ArgumentOutOfRangeException.ThrowIfOutOfRange(value, min, max);
             PicFIndex = (ushort)value;
         }
     }

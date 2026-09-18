@@ -9,6 +9,8 @@ public interface ILocalizeString
 
 public record LocalizeString(string Key, object? Arguments, string? DefaultMessage) : ILocalizeString
 {
+    public LocalizeString(string Key, object? Arguments) : this(Key, Arguments, DefaultMessage: null) { }
+    
     public LocalizeString(string Key, string? DefaultMessage) : this(Key, Arguments: null, DefaultMessage) { }
 
     public LocalizeString(string Scope, string Key, object? Arguments, string? DefaultMessage)

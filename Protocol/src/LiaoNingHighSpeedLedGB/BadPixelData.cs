@@ -47,7 +47,7 @@ public class BadPixelData
                     pts.Add(new(x, y));
             }
         }
-        return pts.ToArray();
+        return [.. pts];
     }
 }
 

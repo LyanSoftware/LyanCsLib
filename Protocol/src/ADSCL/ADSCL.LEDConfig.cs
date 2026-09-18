@@ -312,17 +312,17 @@ namespace Lytec.Protocol
             public Module2500Configs Module2500Configs
             {
                 get => ModuleConfigsData.ToStruct<Module2500Configs>();
-                set => ModuleConfigsData = value.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16).ToArray();
+                set => ModuleConfigsData = [.. value.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16)];
             }
             public Module2800Configs Module2800Configs
             {
                 get => ModuleConfigsData.ToStruct<Module2800Configs>();
-                set => ModuleConfigsData = value.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16).ToArray();
+                set => ModuleConfigsData = [.. value.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16)];
             }
             public Module2900Configs Module2900Configs
             {
                 get => ModuleConfigsData.ToStruct<Module2900Configs>();
-                set => ModuleConfigsData = value.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16).ToArray();
+                set => ModuleConfigsData = [.. value.Serialize().Concat(Enumerable.Repeat<byte>(0, 16)).Take(16)];
             }
 
             public byte OptionBits2 { get; set; }

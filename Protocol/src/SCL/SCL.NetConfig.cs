@@ -351,7 +351,7 @@ public static partial class SCL
 
         public string Name
         {
-            get => GetStringFromFixedLength(Data.Take(NameSize).ToArray());
+            get => GetStringFromFixedLength([.. Data.Take(NameSize)]);
             set => Array.Copy(GetFixedLengthStringWithFlash(value, NameSize), Data, NameSize);
         }
         [field: FieldOffset(16)]
@@ -371,7 +371,7 @@ public static partial class SCL
         public TimeZone TimeZone { get; set; }
         public string ServerAddr
         {
-            get => GetStringFromFixedLength(Data.Skip(166).Take(ServerAddrMaxLength).ToArray());
+            get => GetStringFromFixedLength([.. Data.Skip(166).Take(ServerAddrMaxLength)]);
             set
             {
                 var buf = GetFixedLengthStringWithFlash(value, ServerAddrMaxLength);

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Text;
 using SkiaSharp;
@@ -18,6 +19,8 @@ public static class FontLibUtils
     public static Expression<Func<CharImg, bool>> GetCharImg(int chr)
     => cg => cg.Char == chr;
 
+    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
+    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
     static CharImg? GetCharImg(this FontInfo font, int chr)
     {
         try
@@ -29,16 +32,24 @@ public static class FontLibUtils
             return font.ModifiedChars.FirstOrDefault(GetCharImg(chr).Compile());
         }
     }
+    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
+    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
     public static SKBitmap GetCharImage(this FontInfo font, string str, int index = 0, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
     => font.GetCharImage(str.GetUtf32Char(index), FontFileTypefaces);
+    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
+    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
     public static SKBitmap GetCharImage(this FontInfo font, int chr, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
     {
         var img = font.GetCharImg(chr);
         return img == default ? font.GenerateCharImage(font.GetFont(chr, FontFileTypefaces), chr) : SKBitmap.Decode(img.ImageData);
     }
 
+    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
+    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
     public static SKBitmap GetCharImageWithString(this FontInfo font, string renderStr, string str, int index = 0, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
     => font.GetCharImageWithString(renderStr, str.GetUtf32Char(index), FontFileTypefaces);
+    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
+    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
     public static SKBitmap GetCharImageWithString(this FontInfo font, string renderStr, int chr, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
     {
         var img = font.GetCharImg(chr);
@@ -443,6 +454,8 @@ public static class FontLibUtils
     public static int GetSCLFormatBytesCountPerChar(this FontInfo font)
     => (font.Height + 7) / 8 * font.Width;
 
+    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
+    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
     public static FontLib ExportSBCS(this FontInfo font, Encoding encoding, byte codeEnd = 0xFF)
     {
         var count = codeEnd + 1;
@@ -505,8 +518,12 @@ public static class FontLibUtils
         return (int)Math.Ceiling(byte1Count / (float)filemaxblock);
     }
     public record ExportDBCSArgs(Encoding Encoding, byte Byte1Start = 0xA0, byte Byte1End = 0xFF, byte Byte2Start = 0xA0, bool Split = false, bool Average = true);
+    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
+    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
     public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, Action<(int Current, int Total)>? progress)
     => ExportDBCS(font, args, progress != null ? new Progress<(int, int)>(progress) : null);
+    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
+    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
     public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, IProgress<(int Current, int Total)>? progress = null, int maxThreads = 1)
     {
         const byte byte2End = Byte2End;

@@ -83,8 +83,8 @@ namespace Lytec.Common.Text.Encoding
             0x0060,
         };
 
-        public static readonly int[] CustomTablePart1 = CustomTable.Take(120).Concat(Enumerable.Repeat<int>(0, 256)).Take(256).ToArray();
-        public static readonly int[] CustomTablePart2 = CustomTable.Skip(120).Concat(Enumerable.Repeat<int>(0, 256)).Take(256).ToArray();
+        public static readonly int[] CustomTablePart1 = [.. CustomTable.Take(120).Concat(Enumerable.Repeat<int>(0, 256)).Take(256)];
+        public static readonly int[] CustomTablePart2 = [.. CustomTable.Skip(120).Concat(Enumerable.Repeat<int>(0, 256)).Take(256)];
 
         public static readonly SysEncoding VSCII = new SBCSVSCIIEncoding();
         public static readonly SysEncoding VISCII = new SBCSVISCIIEncoding();

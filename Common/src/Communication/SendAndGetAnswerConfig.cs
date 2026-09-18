@@ -38,7 +38,7 @@ namespace Lytec.Common.Communication
             Send = _ => false;
             static bool ga(out byte[] data, int timeout)
             {
-                data = Array.Empty<byte>();
+                data = [];
                 return false;
             }
             TryGetAnswer = ga;
@@ -94,7 +94,7 @@ namespace Lytec.Common.Communication
     {
         public static bool SendAndGetAnswer(this ISendAndGetAnswerConfig conf, byte[] send, out byte[] data, int extTimeout = 0)
         {
-            data = Array.Empty<byte>();
+            data = [];
             if (!conf.Send(send))
                 return false;
             return conf.TryGetAnswer(out data, extTimeout);
@@ -107,7 +107,7 @@ namespace Lytec.Common.Communication
             bool tryGetAnswer(out byte[] Data, int ftimeout = 0)
             {
                 var xtimeout = DateTime.Now.AddMilliseconds(ftimeout);
-                Data = Array.Empty<byte>();
+                Data = [];
                 while (xtimeout > DateTime.Now)
                 {
                     if (udp!.Available < 1)

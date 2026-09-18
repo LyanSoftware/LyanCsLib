@@ -35,7 +35,24 @@ public class STBootloader
         STM32U5,
     }
 
-    public class DeviceInfo
+    public record DeviceInfo(
+        ushort DeviceId,
+        string Name,
+        int RamStartAddress,
+        int RamEndAddress,
+        int FlashStartAddress,
+        int FlashEndAddress,
+        ushort FlashPagePerSector,
+        int[] FlashPageSizes,
+        int OptionBytesStartAddress,
+        int OptionBytesEndAddress,
+        int SystemMemoryStartAddress,
+        int SystemMemoryEndAddress,
+        DeviceInfo.Flag Flags,
+        int[]? UniqueIdAddresses = null,
+        int FlashSizeAddress = 0,
+        Series Series = Series.Unknown
+            )
     {
         [Flags]
         public enum Flag
@@ -45,59 +62,22 @@ public class STBootloader
             F_PEMPTY = 1 << 2,  /* clear PEMPTY bit required */
         }
 
-        public ushort DeviceId { get; set; }
-        public Series Series { get; set; }
-        public string Name { get; set; }
-        public int RamStartAddress { get; set; }
-        public int RamEndAddress { get; set; }
-        public int FlashStartAddress { get; set; }
-        public int FlashEndAddress { get; set; }
-        public ushort FlashPagePerSector { get; set; }
-        public int[] FlashPageSizes { get; set; }
-        public int OptionBytesStartAddress { get; set; }
-        public int OptionBytesEndAddress { get; set; }
-        public int SystemMemoryStartAddress { get; set; }
-        public int SystemMemoryEndAddress { get; set; }
-        public Flag Flags { get; set; }
-        public int[]? UniqueIdAddresses { get; set; }
-        public int FlashSizeAddress { get; set; }
-
-        public DeviceInfo(
-            ushort deviceId,
-            string name,
-            int ramStartAddress,
-            int ramEndAddress,
-            int flashStartAddress,
-            int flashEndAddress,
-            ushort flashPagePerSector,
-            int[] flashPageSizes,
-            int optionBytesStartAddress,
-            int optionBytesEndAddress,
-            int systemMemoryStartAddress,
-            int systemMemoryEndAddress,
-            Flag flags,
-            int[]? uniqueIdAddresses = null,
-            int flashSizeAddress = 0,
-            Series series = Series.Unknown
-            )
-        {
-            DeviceId = deviceId;
-            Name = name;
-            RamStartAddress = ramStartAddress;
-            RamEndAddress = ramEndAddress;
-            FlashStartAddress = flashStartAddress;
-            FlashEndAddress = flashEndAddress;
-            FlashPagePerSector = flashPagePerSector;
-            FlashPageSizes = flashPageSizes;
-            OptionBytesStartAddress = optionBytesStartAddress;
-            OptionBytesEndAddress = optionBytesEndAddress;
-            SystemMemoryStartAddress = systemMemoryStartAddress;
-            SystemMemoryEndAddress = systemMemoryEndAddress;
-            Flags = flags;
-            UniqueIdAddresses = uniqueIdAddresses;
-            FlashSizeAddress = flashSizeAddress;
-            Series = series;
-        }
+        public ushort DeviceId { get; set; } = DeviceId;
+        public Series Series { get; set; } = Series;
+        public string Name { get; set; } = Name;
+        public int RamStartAddress { get; set; } = RamStartAddress;
+        public int RamEndAddress { get; set; } = RamEndAddress;
+        public int FlashStartAddress { get; set; } = FlashStartAddress;
+        public int FlashEndAddress { get; set; } = FlashEndAddress;
+        public ushort FlashPagePerSector { get; set; } = FlashPagePerSector;
+        public int[] FlashPageSizes { get; set; } = FlashPageSizes;
+        public int OptionBytesStartAddress { get; set; } = OptionBytesStartAddress;
+        public int OptionBytesEndAddress { get; set; } = OptionBytesEndAddress;
+        public int SystemMemoryStartAddress { get; set; } = SystemMemoryStartAddress;
+        public int SystemMemoryEndAddress { get; set; } = SystemMemoryEndAddress;
+        public Flag Flags { get; set; } = Flags;
+        public int[]? UniqueIdAddresses { get; set; } = UniqueIdAddresses;
+        public int FlashSizeAddress { get; set; } = FlashSizeAddress;
 
 
 
@@ -116,22 +96,22 @@ public class STBootloader
         const int SZ_256K = 0x00040000;
 
         /* fixed size pages */
-        static readonly int[] p_128 = new int[] { SZ_128 };
-        static readonly int[] p_256 = new int[] { SZ_256 };
-        static readonly int[] p_1k = new int[] { SZ_1K };
-        static readonly int[] p_2k = new int[] { SZ_2K };
-        static readonly int[] p_4k = new int[] { SZ_4K };
-        static readonly int[] p_8k = new int[] { SZ_8K };
-        static readonly int[] p_128k = new int[] { SZ_128K };
+        static readonly int[] p_128 = [SZ_128];
+        static readonly int[] p_256 = [SZ_256];
+        static readonly int[] p_1k = [SZ_1K];
+        static readonly int[] p_2k = [SZ_2K];
+        static readonly int[] p_4k = [SZ_4K];
+        static readonly int[] p_8k = [SZ_8K];
+        static readonly int[] p_128k = [SZ_128K];
         /* F2 and F4 page size */
-        static readonly int[] f2f4 = new int[] { SZ_16K, SZ_16K, SZ_16K, SZ_16K, SZ_64K, SZ_128K };
+        static readonly int[] f2f4 = [SZ_16K, SZ_16K, SZ_16K, SZ_16K, SZ_64K, SZ_128K];
         /* F4 dual bank page size */
-        static readonly int[] f4db = new int[]{
+        static readonly int[] f4db = [
             SZ_16K, SZ_16K, SZ_16K, SZ_16K, SZ_64K, SZ_128K, SZ_128K, SZ_128K,
             SZ_16K, SZ_16K, SZ_16K, SZ_16K, SZ_64K, SZ_128K
-        };
+        ];
         /* F7 page size */
-        static readonly int[] f7 = new int[] { SZ_32K, SZ_32K, SZ_32K, SZ_32K, SZ_128K, SZ_256K };
+        static readonly int[] f7 = [SZ_32K, SZ_32K, SZ_32K, SZ_32K, SZ_128K, SZ_256K];
 
         public static readonly DeviceInfo[] BuiltInList;
 
@@ -229,7 +209,7 @@ public class STBootloader
                 new DeviceInfo(0x9b0, "STM32W-256K"                     , 0x20000200, 0x20004000, 0x08000000, 0x08040000,  4, p_2k  , 0x08040800, 0x0804080F, 0x08040000, 0x08040800, 0),
 	                /* sentinel */
             };
-            var slst = Enum.GetValues(typeof(Series))
+            var slst = Enum.GetValues<Series>()
                 .Cast<Series>()
                 .ToDictionary(v => v.ToString().ToUpper());
             foreach (var info in list)
@@ -244,25 +224,25 @@ public class STBootloader
                 {
                     case Series.STM32F0:
                     case Series.STM32F3:
-                        info.UniqueIdAddresses = new int[] { 0x1FFFF7AC };
+                        info.UniqueIdAddresses = [0x1FFFF7AC];
                         info.FlashSizeAddress = 0x1FFFF7CC;
                         break;
                     case Series.STM32F1:
-                        info.UniqueIdAddresses = new int[] { 0x1FFFF7E8 };
+                        info.UniqueIdAddresses = [0x1FFFF7E8];
                         info.FlashSizeAddress = 0x1FFFF7E0;
                         break;
                     case Series.STM32F2:
                     case Series.STM32F4:
-                        info.UniqueIdAddresses = new int[] { 0x1FFF7A10 };
+                        info.UniqueIdAddresses = [0x1FFF7A10];
                         info.FlashSizeAddress = 0x1FFF7A22;
                         break;
                     case Series.STM32F7:
                     case Series.STM32H7:
-                        info.UniqueIdAddresses = new int[] { 0x1FF0F420 };
+                        info.UniqueIdAddresses = [0x1FF0F420];
                         info.FlashSizeAddress = 0x1FF0F442;
                         break;
                     case Series.STM32L0:
-                        info.UniqueIdAddresses = new int[] { 0x1FF80050 };
+                        info.UniqueIdAddresses = [0x1FF80050];
                         info.FlashSizeAddress = 0x1FF8007C;
                         break;
                     //case Series.STM32L1:
@@ -270,7 +250,7 @@ public class STBootloader
                     //    info.FlashSizeAddress = 0x1FF8004C; // 0x1FF800CC
                     //    break;
                     case Series.STM32L4:
-                        info.UniqueIdAddresses = new int[] { 0x1FFF7590 };
+                        info.UniqueIdAddresses = [0x1FFF7590];
                         info.FlashSizeAddress = 0x1FFF75E0;
                         break;
                 }
@@ -299,13 +279,13 @@ public class STBootloader
     public const int MinBaudrate = 9600;
     public const int RecommendedBaudrate = 38400;
     public const int MaxBaudrate = 115200;
-    public static readonly int[] SupportedBaudrates = new int[]
-    {
+    public static readonly int[] SupportedBaudrates =
+    [
         9600,
         19200,
         38400,
         115200,
-    };
+    ];
 
     public enum Command : byte
     {
@@ -339,7 +319,7 @@ public class STBootloader
     }
 
     public static readonly IReadOnlyDictionary<byte, Command> SupportedCommands
-    = Enum.GetValues(typeof(Command))
+    = Enum.GetValues<Command>()
         .Cast<Command>()
         .ToDictionary(v => (byte)v);
 
@@ -363,12 +343,11 @@ public class STBootloader
         {
             VersionCode = versionCode;
             SupportedRawCommands = supportedRawCommands;
-            SupportedCommands = supportedRawCommands
+            SupportedCommands = [.. supportedRawCommands
                 .ToDictionary(d => d)
                 .Select(k => k.Key)
                 .Where(STBootloader.SupportedCommands.ContainsKey)
-                .Select(v => STBootloader.SupportedCommands[v])
-                .ToArray();
+                .Select(v => STBootloader.SupportedCommands[v])];
             SupportedExtendedErase = SupportedCommands.Contains(Command.ExtendedErase);
             var eraseTypes = new List<EraseSupportType>();
             if (SupportedCommands.Contains(Command.Erase))
@@ -382,19 +361,12 @@ public class STBootloader
         }
     }
 
-    public class ReadProtectionStatus
+    public record ReadProtectionStatus(byte OptionByte0, byte OptionByte1)
     {
-        public byte OptionByte0 { get; }
-        public byte OptionByte1 { get; }
         public int ReadoutUnprotectCount => OptionByte0;
         public int ReadoutProtectCount => OptionByte1;
         public bool ReadoutProtectionEnabled => ReadoutProtectCount > ReadoutUnprotectCount;
 
-        public ReadProtectionStatus(byte optionByte1, byte optionByte2)
-        {
-            OptionByte0 = optionByte1;
-            OptionByte1 = optionByte2;
-        }
     }
 
     public enum CheckSumType
@@ -418,7 +390,7 @@ public class STBootloader
         public void Deconstruct(out int Current, out int Total) => (Current, Total) = (CurrentStep, TotalStep);
     }
 
-    static readonly byte[] CallBytes = new[] { (byte)SpBytes.Call };
+    static readonly byte[] CallBytes = [(byte)SpBytes.Call];
     public static bool Call(ISendAndGetAnswerConfig conf, int timeout = 200)
     {
         var rTimeout = DateTime.Now.AddMilliseconds(timeout);
@@ -444,12 +416,7 @@ public class STBootloader
     public static bool Send(ISendAndGetAnswerConfig conf, byte[] data, CheckSumType checkSum = CheckSumType.Xor_Init0x00)
     {
         if (checkSum != CheckSumType.None)
-            data = data.Append(GetCheckSum(data, checkSum switch
-            {
-                CheckSumType.Xor_Init0x00 => 0x00,
-                CheckSumType.Xor_Init0xFF => 0xFF,
-                _ => throw new ArgumentException(),
-            })).ToArray();
+            data = [.. data.Append(GetCheckSum(data, checkSum switch { CheckSumType.Xor_Init0x00 => 0x00, CheckSumType.Xor_Init0xFF => 0xFF, _ => throw new ArgumentException(""), }))];
         conf.ClearReceiveBuffer();
         return conf.Send(data);
     }
@@ -474,7 +441,7 @@ public class STBootloader
         bool ackAfterData = true
         )
     {
-        Answer = Array.Empty<byte>();
+        Answer = [];
         var rbuf = new Queue<byte>();
         var step = WaitAnswerStep.WaitAck;
         if (!waitAck)
@@ -514,7 +481,7 @@ public class STBootloader
                         var lst = new List<byte>();
                         for (; answerLen > 0; answerLen--)
                             lst.Add(rbuf.Dequeue());
-                        Answer = lst.ToArray();
+                        Answer = [.. lst];
                         goto case WaitAnswerStep.WaitAfterAck;
                     }
                     break;
@@ -551,7 +518,7 @@ public class STBootloader
         bool ackAfterData = false
         )
     {
-        Answer = Array.Empty<byte>();
+        Answer = [];
         for (var retryCount = -1; retryCount < conf.Retries; retryCount++)
         {
             if (data.Length > 0)
@@ -571,14 +538,14 @@ public class STBootloader
     //      -1  变长数据, 数据中的第1字节为数据长度
     //     其他 定长数据
     public static bool Exec(ISendAndGetAnswerConfig conf, Command cmd, out byte[] Answer, int answerLen, int extTimeout = 0)
-    => Exec(conf, new byte[] { (byte)cmd }, out Answer, answerLen, extTimeout, true, CheckSumType.Xor_Init0xFF);
+    => Exec(conf, [(byte)cmd], out Answer, answerLen, extTimeout, true, CheckSumType.Xor_Init0xFF);
 
     public static bool GetBootloaderInfo(ISendAndGetAnswerConfig conf, [NotNullWhen(true)] out BootloaderInfo? Info, int extTimeout = 0)
     {
         Info = null;
         if (!Exec(conf, Command.Get, out var data, -1, extTimeout))
             return false;
-        Info = new BootloaderInfo(data[0], data.Skip(1).ToArray());
+        Info = new BootloaderInfo(data[0], [.. data.Skip(1)]);
         return true;
     }
 
@@ -617,7 +584,7 @@ public class STBootloader
 
     public static bool Read(ISendAndGetAnswerConfig conf, int address, int length, out byte[] Data, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
     {
-        Data = Array.Empty<byte>();
+        Data = [];
         if (address < 1) // >= 0x80000000
             return false;
         // 地址可能需要对齐到128字节才能正常读取
@@ -639,13 +606,13 @@ public class STBootloader
                 return false;
             if (!Exec(conf, addr.ToBytes(Endian.Big), out _, 0, extTimeout))
                 return false;
-            if (!Exec(conf, new byte[] { (byte)(plen - 1) }, out var d, plen, extTimeout, true, CheckSumType.Xor_Init0xFF))
+            if (!Exec(conf, [(byte)(plen - 1)], out var d, plen, extTimeout, true, CheckSumType.Xor_Init0xFF))
                 return false;
             buf.AddRange(d);
             if (rlen > MaxReadStepSize)
                 onProcess?.Invoke((offset + plen, rlen));
         }
-        Data = buf.Skip(address - addr).Take(length).ToArray();
+        Data = [.. buf.Skip(address - addr).Take(length)];
         return true;
     }
 
@@ -699,7 +666,7 @@ public class STBootloader
     public const int WriteSizeAlign = 4;
 
     public static bool Write(ISendAndGetAnswerConfig conf, int address, IEnumerable<byte> data, int extTimeout = 0, Action<OnProcessEventArgs>? onProcess = null)
-    => WriteAligned(conf, address, data.ToArray(), extTimeout, onProcess);
+    => WriteAligned(conf, address, [.. data], extTimeout, onProcess);
     public static bool WriteAligned(ISendAndGetAnswerConfig conf, int address, byte[] data, int extTimeout = 0, Action<OnProcessEventArgs>? onProcess = null, int addrAlign = WriteAddressAlign, int sizeAlign = WriteSizeAlign)
     {
         var alignedAddr = address / addrAlign * addrAlign;
@@ -737,7 +704,7 @@ public class STBootloader
     }
 
     public static bool WriteValid(ISendAndGetAnswerConfig conf, int address, IEnumerable<byte> data, int extTimeout = 0, Action<OnProcessEventArgs>? onProcess = null)
-    => WriteAlignedValid(conf, address, data.ToArray(), extTimeout, onProcess);
+    => WriteAlignedValid(conf, address, [.. data], extTimeout, onProcess);
     public static bool WriteAlignedValid(ISendAndGetAnswerConfig conf, int address, byte[] data, int extTimeout = 0, Action<OnProcessEventArgs>? onProcess = null, int addrAlign = WriteAddressAlign, int sizeAlign = WriteSizeAlign)
     {
         if (!WriteAligned(conf, address, data, extTimeout, onProcess, addrAlign, sizeAlign))
@@ -752,7 +719,7 @@ public class STBootloader
         if (!Exec(conf, Command.Erase, out _, 0, extTimeout))
             return false;
         var pages = pageIndexes.Select(v => (byte)v).Distinct().ToList();
-        return Exec(conf, pages.Prepend((byte)(pages.Count - 1)).ToArray(), out _, 0, extTimeout);
+        return Exec(conf, [.. pages.Prepend((byte)(pages.Count - 1))], out _, 0, extTimeout);
     }
 
     private static bool ExtendedErase(ISendAndGetAnswerConfig conf, IEnumerable<int> pageIndexes, int extTimeout = 0)
@@ -760,7 +727,7 @@ public class STBootloader
         if (!Exec(conf, Command.ExtendedErase, out _, 0, extTimeout))
             return false;
         var pages = pageIndexes.Select(v => (ushort)v).Distinct().ToList();
-        return Exec(conf, pages.Prepend((ushort)(pages.Count - 1)).SelectMany(v => v.ToBytes(Endian.Big)).ToArray(), out _, 0, extTimeout);
+        return Exec(conf, [.. pages.Prepend((ushort)(pages.Count - 1)).SelectMany(v => v.ToBytes(Endian.Big))], out _, 0, extTimeout);
     }
 
     public enum ExtendedEraseBank : ushort
@@ -786,7 +753,7 @@ public class STBootloader
         {
             if (!Exec(conf, Command.Erase, out _, 0, extTimeout))
                 return false;
-            return Exec(conf, new byte[] { 0xFF }, out _, 0, extTimeout, true, CheckSumType.Xor_Init0xFF);
+            return Exec(conf, [0xFF], out _, 0, extTimeout, true, CheckSumType.Xor_Init0xFF);
         }
     }
 
@@ -828,7 +795,7 @@ public class STBootloader
             alignedEndAddr = (endAddr - alignedStartAddr + pageSize - 1) / pageSize * pageSize + alignedStartAddr;
             var pageCount = (alignedEndAddr - alignedStartAddr) / pageSize;
             var startPageIndex = (alignedStartAddr - flashStartAddr) / pageSize;
-            pageIndexes = Enumerable.Range(startPageIndex, pageCount).ToList();
+            pageIndexes = [.. Enumerable.Range(startPageIndex, pageCount)];
         }
         else
         {
@@ -853,7 +820,7 @@ public class STBootloader
                     break;
                 endPage++;
             }
-            pageIndexes = Enumerable.Range(startPage, endPage - startPage + 1).ToList();
+            pageIndexes = [.. Enumerable.Range(startPage, endPage - startPage + 1)];
         }
         var beforeSize = keepAlignData ? (startAddr - alignedStartAddr) : 0;
         var afterSize = keepAlignData ? (alignedEndAddr - endAddr) : 0;
@@ -908,7 +875,7 @@ public class STBootloader
         if (!Exec(conf, Command.WriteProtect, out _, 0, extTimeout))
             return false;
         var pages = pageIndexes.Select(v => (byte)v).Distinct().ToList();
-        return Exec(conf, pages.Prepend((byte)(pages.Count - 1)).ToArray(), out _, 0, extTimeout);
+        return Exec(conf, [.. pages.Prepend((byte)(pages.Count - 1))], out _, 0, extTimeout);
     }
 
     public static bool WriteUnprotect(ISendAndGetAnswerConfig conf, int extTimeout = 0)

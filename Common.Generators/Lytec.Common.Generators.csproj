@@ -13,10 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="IsExternalInit" />
-  </ItemGroup>
-
-  <ItemGroup>
     <!-- Take a public dependency on Json.Net. Consumers of this generator will get a reference to this package -->
     <ProjectReference Include="..\Common\Lytec.Common.csproj" GeneratePathProperty="true"
                       PrivateAssets="all"

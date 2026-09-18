@@ -6,6 +6,7 @@ using static Lytec.Protocol.SCL.Constants;
 using Lytec.Common;
 using System.Text;
 using System.Data;
+using ITimer = Lytec.Common.ITimer;
 
 namespace Lytec.Protocol;
 
@@ -61,7 +62,7 @@ public static partial class SCL
         public int CommandCode { get; set; }
         public int Arg1 { get; set; }
         public int Arg2 { get; set; }
-        public byte[] Arg3 { get; set; } = Array.Empty<byte>();
+        public byte[] Arg3 { get; set; } = [];
 
 
         public Encoding Encoding { get; set; } = DefaultEncode;
@@ -76,7 +77,7 @@ public static partial class SCL
             CommandCode = other.CommandCode;
             Arg1 = other.Arg1;
             Arg2 = other.Arg2;
-            Arg3 = other.Arg3.ToArray();
+            Arg3 = [.. other.Arg3];
             Encoding = other.Encoding;
         }
 
@@ -129,7 +130,7 @@ public static partial class SCL
             UartSCLRecv = IsSCL | IsRcv,
         }
 
-        public static IReadOnlyDictionary<IdentifierType, byte[]> IdentifierBytes = new (IdentifierType, byte[])[]
+        public static IReadOnlyDictionary<IdentifierType, byte[]> IdentifierBytes { get; set; } = new (IdentifierType, byte[])[]
         {
             ( IdentifierType.NetSCSend   , NetSCSend   ),
             ( IdentifierType.NetSCRecv   , NetSCRecv   ),
@@ -202,7 +203,7 @@ public static partial class SCL
                 for (var i = 0; i < buf2.Length; i++)
                     buf[crcpos + i] = buf2[i];
             }
-            return buf.ToArray();
+            return [.. buf];
         }
 
         public class Deserializer
@@ -219,15 +220,15 @@ public static partial class SCL
             protected virtual int Step { get; set; }
             protected virtual int StepLen { get; set; }
 
-            public IReadOnlyList<KeyValuePair<IdentifierType, byte[]>> AllIdentifiers { get; set; } = IdentifierBytes.ToArray();
-            protected virtual IList<KeyValuePair<IdentifierType, byte[]>> Identifiers { get; set; } = IdentifierBytes.ToArray();
+            public IReadOnlyList<KeyValuePair<IdentifierType, byte[]>> AllIdentifiers { get; set; } = [.. IdentifierBytes];
+            protected virtual IList<KeyValuePair<IdentifierType, byte[]>> Identifiers { get; set; } = [.. IdentifierBytes];
 
             protected virtual Pack Pack { get; set; } = new();
 
             public Deserializer(int recvTimeout = 500)
             {
                 RecvTimeout = recvTimeout;
-                Cache = new List<byte>();
+                Cache = [];
                 Reset();
                 RecvTimeoutTimer = CreateAutoResetTimer?.Invoke();
                 if (RecvTimeoutTimer != null)
@@ -245,7 +246,7 @@ public static partial class SCL
 
             public virtual void Reset()
             {
-                Identifiers = AllIdentifiers.ToList();
+                Identifiers = [.. AllIdentifiers];
                 RecvTimeoutTimer?.Stop();
                 Cache.Clear();
                 Pack = new();
@@ -264,26 +265,26 @@ public static partial class SCL
                 CheckSum,
             }
 
-            static readonly IReadOnlyList<Steps> NetSteps = new Steps[]
-            {
+            static readonly IReadOnlyList<Steps> NetSteps =
+            [
                 Steps.Identifier,
                 Steps.PackIndex,
                 Steps.DataLen,
                 Steps.Password,
                 Steps.Data,
-            };
+            ];
 
-            static readonly IReadOnlyList<Steps> UartSteps = new Steps[]
-            {
+            static readonly IReadOnlyList<Steps> UartSteps =
+            [
                 Steps.Identifier,
                 Steps.AddrCode,
                 Steps.PackIndex,
                 Steps.CheckSum,
                 Steps.DataLen,
                 Steps.Data,
-            };
+            ];
 
-            static IReadOnlyDictionary<Steps, int> GetNoValidStepLens(IEnumerable<Steps> steps)
+            static Dictionary<Steps, int> GetNoValidStepLens(IEnumerable<Steps> steps)
             => steps.Select(d =>
             {
                 var len = d switch
@@ -409,8 +410,8 @@ public static partial class SCL
                                 Pack.Arg2 = Cache.Skip(offset).Take(4).ToArray().ToStruct<int>(DefaultEndian);
                                 offset += 4;
                                 if (offset < Cache.Count)
-                                    Pack.Arg3 = Cache.Skip(offset).ToArray();
-                                else Pack.Arg3 = Array.Empty<byte>();
+                                    Pack.Arg3 = [.. Cache.Skip(offset)];
+                                else Pack.Arg3 = [];
                                 moveStep = true;
                             }
                             break;

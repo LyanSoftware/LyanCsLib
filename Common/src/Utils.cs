@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Lytec.Common.Data;
+using Lytec.Common.Localization.Extensions;
 
 namespace Lytec.Common
 {
@@ -104,11 +105,11 @@ namespace Lytec.Common
             if (obj.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) is FieldInfo field
                 && field.GetValue(obj) is MulticastDelegate func)
                 foreach (Delegate dlg in func.GetInvocationList())
-                    dlg.Method.Invoke(dlg.Target, new object?[] { obj, e ?? EventArgs.Empty });
+                    dlg.Method.Invoke(dlg.Target, [obj, e ?? EventArgs.Empty]);
         }
 
         public static Type[] GetGenericArguments(this Type t, Type baseType)
-        => t.IsGenericType && t.GetGenericTypeDefinition() == baseType ? t.GetGenericArguments() : Array.Empty<Type>();
+        => t.IsGenericType && t.GetGenericTypeDefinition() == baseType ? t.GetGenericArguments() : [];
 
         public static bool IsDecChar(this char c) => (c >= '0' && c <= '9');
 
@@ -152,10 +153,14 @@ namespace Lytec.Common
         public static bool IsNullOrEmpty([AllowNull][NotNullWhen(false)] this string str) => string.IsNullOrEmpty(str);
         public static bool IsNullOrWhiteSpace([AllowNull][NotNullWhen(false)] this string str) => string.IsNullOrWhiteSpace(str);
 
+        [RequiresUnreferencedCode("调用此方法需要确保 T 的静态构造函数不会被裁剪。")]
         public static void ForceLoadClass<T>() => typeof(T).ForceLoadClass();
+        [RequiresUnreferencedCode("调用此方法需要确保 T 的静态构造函数不会被裁剪。")]
         public static void ForceLoadClass(this Type t) => System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(t.TypeHandle);
 
+        [RequiresUnreferencedCode("调用此方法需要确保 T 的静态构造函数不会被裁剪。")]
         public static void ForceLoadBaseClass<T>() => typeof(T).BaseType?.ForceLoadClass();
+        [RequiresUnreferencedCode("调用此方法需要确保 T 的静态构造函数不会被裁剪。")]
         public static void ForceLoadBaseClass(this Type t) => t.BaseType?.ForceLoadClass();
 
         public static IDictionary<Type, string> NestedClassNames { get; set; } = new ConcurrentDictionary<Type, string>();
@@ -257,19 +262,27 @@ namespace Lytec.Common
             return false;
         }
 
+#if NET7_0_OR_GREATER
+        [GeneratedRegex("(?<=[a-z0-9])[A-Z]")]
+        private static partial Regex CamelCase2SnakeCaseRegex();
+        public static string CamelCase2SnakeCase(this string input)
+        => CamelCase2SnakeCaseRegex().Replace(input, m => "_" + m.Value).ToLower();
+
+#else
         public static string CamelCase2SnakeCase(this string input)
         => Regex.Replace(input, @"(?<=[a-z0-9])[A-Z]", m => "_" + m.Value).ToLower();
+#endif
 
 #if !NETCOREAPP3_2_OR_GREATER && !NET6
         public static bool IsAssignableTo(this Type t, Type c) => c.IsAssignableFrom(t);
 #endif
 
-        public static IEnumerable<object> GetPredefineObjects(this Type t)
+        public static IEnumerable<object> GetPredefineObjects([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)] this Type t)
             => from field in t.GetFields(BindingFlags.Public | BindingFlags.Static)
                where field.FieldType.IsAssignableFrom(t)
                select field.GetValue(null);
 
-        public static IEnumerable<T> GetPredefineObjects<T>()
+        public static IEnumerable<T> GetPredefineObjects<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)] T>()
             => from field in typeof(T).GetFields(BindingFlags.Public | BindingFlags.Static)
                where field.FieldType.IsAssignableFrom(typeof(T))
                select (T)field.GetValue(null)!;
@@ -282,7 +295,7 @@ namespace Lytec.Common
             encode = encode ?? Encoding.UTF8;
             var buf = algorithm.ComputeHash(encode.GetBytes(source));
             if (!string.IsNullOrEmpty(salt))
-                algorithm.ComputeHash(buf.Concat(encode.GetBytes(salt)).ToArray());
+                algorithm.ComputeHash([.. buf, .. encode.GetBytes(salt)]);
             if (algorithm.Hash is byte[] bytes)
                 return bytes.ToHex("");
             else throw new InvalidOperationException();
@@ -314,36 +327,6 @@ namespace Lytec.Common
         //    }
         //    return args;
         //}
-
-        public static string GetDescription<T>(this T obj) where T : Enum
-        => obj.GetEnumFieldInfo()?.GetCustomAttributes<DescriptionAttribute>().FirstOrDefault()?.Description ?? obj.ToString()!;
-
-        public static T GetDefault<T>() where T : Enum => (T)Enum.ToObject(typeof(T), 0);
-
-        public class EnumDataWithDescription : EnumDataWithDescription<Enum> { }
-        public class EnumDataWithDescription<T> where T : Enum
-        {
-            public string Name { get; } = "";
-            public T Value { get; } = (T)Activator.CreateInstance(typeof(T))!;
-            public string Description { get; } = "";
-
-            protected EnumDataWithDescription() { }
-            public EnumDataWithDescription(string name, T value, string description)
-            {
-                Name = name;
-                Value = value;
-                Description = description;
-            }
-            public void Deconstruct(out string Name, out T Value, out string Description)
-            {
-                Name = this.Name;
-                Value = this.Value;
-                Description = this.Description;
-            }
-        }
-        public static IEnumerable<EnumDataWithDescription<TEnum>> GetEnumDatasWithDescription<TEnum>() where TEnum : Enum
-        => from TEnum Value in Enum.GetValues(typeof(TEnum))
-           select new EnumDataWithDescription<TEnum>(Value.ToString(), Value, Value.GetDescription());
 
         public static string GetInnerMessage(this Exception err)
         {
@@ -440,7 +423,7 @@ namespace Lytec.Common
         => origin.ToDictionary(kv => kv.Key, kv => kv.Value);
 
         public static (TKey Key, TValue Value)[] ToArray<TKey, TValue>(this IDictionary<TKey, TValue> dic)
-        => dic.Select(kv => (kv.Key, kv.Value)).ToArray();
+        => [.. dic.Select(kv => (kv.Key, kv.Value))];
 
         /// <summary>
         /// 交换两个对象
@@ -493,14 +476,19 @@ namespace Lytec.Common
         /// </summary>
         /// <returns></returns>
         public static (NetworkInterface, IPAddress[])[] GetAllLocalNetIPAddresses()
-        => (from ni in NetworkInterface.GetAllNetworkInterfaces()
+        => [.. (from ni in NetworkInterface.GetAllNetworkInterfaces()
             select (
                 ni,
                 ni.GetIPProperties().UnicastAddresses.Select(i => i.Address).ToArray()
-            )).ToArray();
+            ))];
 
         public static uint GetIPv4AddressValue(this IPAddress addr)
-        => addr.AddressFamily == AddressFamily.InterNetwork ? BitConverter.ToUInt32(addr.GetAddressBytes(), 0) : throw new ArgumentException();
+        {
+            if (addr.AddressFamily == AddressFamily.InterNetwork)
+                return BitConverter.ToUInt32(addr.GetAddressBytes(), 0);
+            throw new ArgumentException("Not IPv4 Address", nameof(addr))
+                .Localize("Lytec.Common.Utils.GetIPv4AddressValue.NotIPv4AddrError", "Not a vaild IPv4 address");
+        }
 
         public static IPAddress GetBroadcastAddress(this UnicastIPAddressInformation unicastAddress)
         => GetBroadcastAddress(unicastAddress.Address, unicastAddress.IPv4Mask);
@@ -591,65 +579,6 @@ namespace Lytec.Common
                 else break;
             }
             return left;
-        }
-
-        /// <summary>
-        /// 将Flags转换为Flag[]
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="flags"></param>
-        /// <returns></returns>
-        public static T[] GetFlags<T>(this T flags) where T : Enum
-        {
-            List<T> list = new List<T>();
-            foreach (T flag in Enum.GetValues(typeof(T)))
-                if (flags.HasFlag(flag))
-                    list.Add(flag);
-            return list.ToArray();
-        }
-
-        public static bool HasFlags<T>(this T flags, T flag) where T : struct, Enum => flags.HasFlag(flag);
-
-        /// <summary>
-        /// 修改Flag
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="flags"></param>
-        /// <param name="flag"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public static T SetFlag<T>(this T flags, T flag, bool value) where T : struct, Enum
-        {
-            long c, t;
-            try
-            {
-                c = Convert.ToInt64(flags);
-                t = Convert.ToInt64(flag);
-            }
-            catch (OverflowException)
-            {
-                c = (long)Convert.ToUInt64(flags);
-                t = (long)Convert.ToUInt64(flag);
-            }
-            return (T)Enum.ToObject(typeof(T), value ? (c | t) : (c & (~t)));
-        }
-
-        /// <summary>
-        /// 修改Flag
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="flags"></param>
-        /// <param name="flag"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public static T SetFlag_safe<T>(this T flags, T flag, bool value) where T : struct, Enum
-        {
-            var fs = (ulong)(object)flags;
-            var f = (ulong)(object)flag;
-            if (typeof(T).GetCustomAttributes(typeof(FlagsAttribute), false).Length > 0
-                && Enum.TryParse<T>((value ? (fs | f) : (fs & (~f))).ToString(), out var t))
-                return t;
-            throw new ArgumentException();
         }
 
         /// <summary>
@@ -768,7 +697,7 @@ namespace Lytec.Common
             return func;
         }
 
-        public static IEnumerable<T> GetOrInherited<T>(this Type t, Func<Type, T> func, Type? top = null)
+        public static IEnumerable<T> GetOrInherited<T>([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this Type t, Func<Type, T> func, Type? top = null)
         {
             for (var t1 = t; t1 != null; t1 = t1.BaseType)
             {
@@ -780,7 +709,7 @@ namespace Lytec.Common
                 yield return func(t1);
         }
 
-        public static bool IsSubtypeOf(this Type t, Type baseType)
+        public static bool IsSubtypeOf([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this Type t, Type baseType)
         {
             if (baseType.IsEnum || t.IsEnum)
                 return t == baseType;
@@ -789,7 +718,7 @@ namespace Lytec.Common
             return t.GetGenericArgumentsOf(baseType).Any();
         }
 
-        public static IEnumerable<Type[]> GetGenericArgumentsOf(this Type t, Type baseType)
+        public static IEnumerable<Type[]> GetGenericArgumentsOf([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this Type t, Type baseType)
         {
             if (!baseType.IsGenericType)
                 yield break;
@@ -815,7 +744,7 @@ namespace Lytec.Common
 
         public static bool IsPrimitiveOrEnum(this Type t) => t.IsPrimitive || t.IsEnum;
 
-        public static bool IsSubtypeOf<T>(this Type t) => t.IsSubtypeOf(typeof(T));
+        public static bool IsSubtypeOf<T>([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this Type t) => t.IsSubtypeOf(typeof(T));
 
         public static bool IsSubtypeObjectOf<T>(this T t, Type baseType) => t!.GetType().IsSubtypeOf(baseType);
 

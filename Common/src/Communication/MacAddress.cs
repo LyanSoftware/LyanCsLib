@@ -1,13 +1,15 @@
+using Lytec.Common.Data;
+using Lytec.Common.Localization.Extensions;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Lytec.Common.Data;
-using Newtonsoft.Json;
 
 #nullable enable
 
@@ -21,7 +23,7 @@ namespace Lytec.Common.Communication;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [TypeConverter(typeof(Converters.StringTypeConverter<MacAddress>))]
 [JsonObject]
-[JsonConverter(typeof(Converters.StringJsonConverter))]
+[JsonConverter(typeof(MacAddressJsonConverter))]
 public struct MacAddress : IPackage, IEquatable<MacAddress>, IComparable<MacAddress>
 {
     public const int SizeConst = 6;
@@ -163,6 +165,32 @@ public struct MacAddress : IPackage, IEquatable<MacAddress>, IComparable<MacAddr
 
     public static implicit operator PhysicalAddress(MacAddress mac) => new PhysicalAddress(mac.Bytes);
     public static implicit operator MacAddress(PhysicalAddress mac) => new MacAddress(mac);
+}
+
+public class MacAddressJsonConverter : JsonConverter
+{
+    private const string LocalizeScope = "Lytec.Common.MacAddressJsonConverter";
+
+    public override bool CanConvert(Type objectType) => objectType == typeof(MacAddress);
+
+    public override object ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
+    {
+        if (reader.Value is string str)
+            return MacAddress.Parse(str);
+        throw new JsonSerializationException()
+            .Localize(
+                LocalizeScope,
+                "ParseFailedError",
+                new { Type = reader.Value?.GetType() },
+                "无法从 {Type} 解析 MacAddress"
+                );
+    }
+
+    public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
+    {
+        if (value != null)
+            writer.WriteValue(value.ToString());
+    }
 }
 
 #nullable restore

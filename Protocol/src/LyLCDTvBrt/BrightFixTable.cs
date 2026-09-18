@@ -22,7 +22,7 @@ public class BrightFixTable
     {
         var lines = data.Select((v, i) => (i: i / ItemSize, v))
             .GroupBy(d => d.i)
-            .Select(g => Config.Encoding.GetString(g.Select(d => d.v).TakeWhile(c => c != 0).ToArray()))
+            .Select(g => Config.Encoding.GetString([.. g.Select(d => d.v).TakeWhile(c => c != 0)]))
             .Take(ItemCount + 1)
             .ToList();
         if (lines.Count != ItemCount + 1 || lines[0] != BrightFixTableIdentifier)
@@ -68,13 +68,13 @@ public class BrightFixTable
             .ToDictionary(kv => kv.i, kv => kv.v);
         if (table.Count != ItemCount)
             return false;
-        Data = table.Select(kv => $"Duty{kv.Key:D2}={kv.Value,4}")
+        Data = [.. table.Select(kv => $"Duty{kv.Key:D2}={kv.Value,4}")
             .Prepend(BrightFixTableIdentifier)
             .SelectMany(s => Config.Encoding.GetBytes(s)
                 .Append<byte>(0)
                 .Concat(Enumerable.Repeat<byte>(0xFF, ItemSize))
                 .Take(ItemSize)
-            ).ToArray();
+            )];
         return true;
     }
 

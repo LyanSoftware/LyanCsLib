@@ -1,12 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Diagnostics.CodeAnalysis;
 using static Lytec.Common.Localization.Extensions.Extensions;
 
 namespace Lytec.Common.Localization.Extensions;
 
+using System;
+
 public static class Extensions
 {
-    public static IServiceCollection AddLocalization<T>(this IServiceCollection collection)
+    public static IServiceCollection AddLocalization<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(this IServiceCollection collection)
         where T : class, ILocalizer
     {
         collection.AddSingleton<T>();
@@ -20,8 +23,7 @@ public static class Extensions
         T localizer)
         where T : class, ILocalizer
     {
-        if (localizer is null)
-            throw new ArgumentNullException(nameof(localizer));
+        ArgumentNullException.ThrowIfNull(localizer);
 
         collection.AddSingleton(localizer);
         collection.AddSingleton<ILocalizer>(
@@ -33,8 +35,7 @@ public static class Extensions
         this IServiceCollection collection,
         Action<JsonLocalizationOptions>? configure = null)
     {
-        if (collection is null)
-            throw new ArgumentNullException(nameof(collection));
+        ArgumentNullException.ThrowIfNull(collection);
 
         var options = new JsonLocalizationOptions();
         configure?.Invoke(options);

@@ -69,7 +69,7 @@ public static partial class SCL
         DefaultEncode = enc;
     }
 
-    public static byte[] InitFlashDataBlock(int size, byte fillByte = 0xFF) => GetFlashDataBlock(size, fillByte).ToArray();
+    public static byte[] InitFlashDataBlock(int size, byte fillByte = 0xFF) => [.. GetFlashDataBlock(size, fillByte)];
     public static IEnumerable<byte> GetFlashDataBlock(int size, byte fillByte = 0xFF) => Enumerable.Repeat(fillByte, size);
 
     public static byte[] GetFixedLengthStringWithFlash(string str, int size, bool addEnd = true)
@@ -81,14 +81,14 @@ public static partial class SCL
             r = r.Take(size - 1).Append<byte>(0);
         else r = r.Take(size);
         r = r.Concat(GetFlashDataBlock(size)).Take(size);
-        return r.ToArray();
+        return [.. r];
     }
 
     public static string GetStringFromFixedLength(byte[] str)
     {
         if (str == null || str.Length == 0 || str[0] == '\0')
             return "";
-        return DefaultEncode.GetString(str.TakeWhile(c => c != '\0').ToArray());
+        return DefaultEncode.GetString([.. str.TakeWhile(c => c != '\0')]);
     }
 
     public static bool IsFullColor(this in LEDConfig cfg, in RuntimeInfo rs) => rs.FPGAMaker == FPGAMaker.GaoYun ? cfg.IsFullColor : cfg.Range == ControlRange.Range1024x256FullColor || cfg.Range == ControlRange.Range1024x256FullColorCompact;

@@ -10,8 +10,6 @@
 
   <ItemGroup>
     <PackageReference Include="System.IO.Ports" />
-    <PackageReference Include="Nullable" />
-    <PackageReference Include="IsExternalInit" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text;
 
@@ -12,6 +13,7 @@ namespace Lytec.Common
             public static T? Value => default;
         }
 
+        [RequiresDynamicCode("依赖Type.MakeGenericType(type)")]
         public static object? GetDefaultValue(this Type type)
         {
             if (type.IsValueType)

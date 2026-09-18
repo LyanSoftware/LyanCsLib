@@ -102,12 +102,11 @@ partial class ADSCL
         public byte[] NameBytes { get; set; }
         public string Name
         {
-            get => DefaultEncode.GetString(NameBytes.Take(NameMaxLength).Reverse().SkipWhile(c => c == (byte)' ').Reverse().ToArray());
-            set => NameBytes = DefaultEncode.GetBytes(value)
+            get => DefaultEncode.GetString([.. NameBytes.Take(NameMaxLength).Reverse().SkipWhile(c => c == (byte)' ').Reverse()]);
+            set => NameBytes = [.. DefaultEncode.GetBytes(value)
                 .Take(NameMaxLength)
                 .Concat(Enumerable.Repeat<byte>(0, NameMaxLength))
-                .Take(NameMaxLength)
-                .ToArray();
+                .Take(NameMaxLength)];
         }
         public int NameMaxLength => Type == Fat16ItemType.Dir ? 3 : 8;
         public int ExtMaxLength => Type == Fat16ItemType.Dir ? 0 : 3;
@@ -115,12 +114,11 @@ partial class ADSCL
         public byte[] ExtBytes { get; set; }
         public string Ext
         {
-            get => DefaultEncode.GetString(ExtBytes.Take(ExtMaxLength).Reverse().SkipWhile(c => c == (byte)' ').Reverse().ToArray());
-            set => ExtBytes = DefaultEncode.GetBytes(value)
+            get => DefaultEncode.GetString([.. ExtBytes.Take(ExtMaxLength).Reverse().SkipWhile(c => c == (byte)' ').Reverse()]);
+            set => ExtBytes = [.. DefaultEncode.GetBytes(value)
                 .Take(ExtMaxLength)
                 .Concat(Enumerable.Repeat<byte>(0, ExtMaxLength))
-                .Take(ExtMaxLength)
-                .ToArray();
+                .Take(ExtMaxLength)];
         }
         public Fat16ItemType Type { get; set; }
 

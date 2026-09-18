@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 
@@ -8,9 +7,6 @@ namespace Lytec.Common;
 
 public static partial class EnumerableUtils
 {
-    public static IEnumerable<T> GetEnumValues<T>() where T : struct, Enum
-    => Enum.GetValues(typeof(T)).Cast<T>();
-
     public static IEnumerable<T> Distinct<T>(this IEnumerable<T> source, Func<T?, T?, bool> equals, Func<T, int>? getHashCode = null)
     => source.Distinct(new IEqualityComparerWrapper<T>(equals, getHashCode));
 
@@ -115,7 +111,7 @@ public static partial class EnumerableUtils
         {
             case IReadOnlyList<T> rd: return IndexOf(source, rd);
             case IList<T> d: return IndexOf(source, d);
-            default: return IndexOf(source, (IReadOnlyList<T>)data.ToList());
+            default: return IndexOf(source, (IReadOnlyList<T>)[.. data]);
         }
     }
 
@@ -125,7 +121,7 @@ public static partial class EnumerableUtils
         {
             case IReadOnlyList<T> rd: return IndexOf(source, rd);
             case IList<T> d: return IndexOf(source, d);
-            default: return IndexOf(source, (IReadOnlyList<T>)data.ToList());
+            default: return IndexOf(source, (IReadOnlyList<T>)[.. data]);
         }
     }
 

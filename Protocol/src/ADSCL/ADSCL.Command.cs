@@ -70,7 +70,7 @@ namespace Lytec.Protocol
             {
                 AddrCode = (byte)(conf.AddrCode ?? 0),
                 Data = command.Clone(),
-                Identifier = Pack.SendIdentifier.ToArray(),
+                Identifier = [.. Pack.SendIdentifier],
             };
             if (!password.IsNullOrEmpty())
                 cmd.Password = Pack.PasswordConverter.Convert(password);

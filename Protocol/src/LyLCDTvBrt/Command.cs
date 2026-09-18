@@ -44,7 +44,7 @@ public class Command
         {
             AddrCode = (byte)(conf.AddrCode ?? 0),
             Data = command.Clone(),
-            Identifier = Pack.SendIdentifier.ToArray(),
+            Identifier = [.. Pack.SendIdentifier],
         };
         cmd.UpdatePackIndex();
         cmd.UpdateCheckSum();

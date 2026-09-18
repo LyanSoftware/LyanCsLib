@@ -9,7 +9,7 @@ namespace Lytec.Common.Algorithm.HammingCode;
 /// </summary>
 public static class Hamming16_8
 {
-    static readonly byte[] DataBitPos = GetDataBitPos(16).Take(11).Select(i => (byte)i).ToArray();
+    static readonly byte[] DataBitPos = [.. GetDataBitPos(16).Take(11).Select(i => (byte)i)];
 
     /// <summary>
     /// 计算可用数据位

@@ -41,7 +41,8 @@ public class Result<T> : JsonResult
     };
 }
 
-public class App
+#pragma warning disable IDE1006 // 命名样式
+public partial class App
 {
     public ILogger? Logger { get; set; }
     public ILocalizer? Localizer { get; set; }
@@ -65,7 +66,7 @@ public class App
         }
         catch (Exception)
         {
-            data = Array.Empty<byte>();
+            data = [];
             return false;
         }
     }
@@ -327,12 +328,12 @@ public class App
     public record Capabilities(SupportedFunction[] Functions, MediaType[] MediaTypes, string Version);
 
     public static readonly IReadOnlyDictionary<int, SupportedFunction> Functions
-    = Enum.GetValues(typeof(SupportedFunction))
+    = Enum.GetValues<SupportedFunction>()
         .Cast<SupportedFunction>()
         .ToDictionary(v => (int)v);
 
     public static readonly IReadOnlyDictionary<string, MediaType> MediaTypes
-    = Enum.GetValues(typeof(MediaType))
+    = Enum.GetValues<MediaType>()
         .Cast<MediaType>()
         .ToDictionary(v => v.ToString().ToLower());
 
@@ -350,18 +351,16 @@ public class App
                 && result.Query("data.version", JsonValueType.String) is string ver)
             {
                 return new Capabilities(
-                    funcsStr.Split(',')
+                    [.. funcsStr.Split(',')
                         .Select(f => int.TryParse(f, out var fi) ? fi : 0)
                         .Where(f => f > 0)
                         .OrderBy(f => f)
                         .Select(f => Functions.TryGetValue(f, out var fv) ? fv : 0)
-                        .Where(f => f != 0)
-                        .ToArray(),
-                    mediasStr.Split(',')
+                        .Where(f => f != 0)],
+                    [.. mediasStr.Split(',')
                         .Select(m => MediaTypes.TryGetValue(m, out var mv) ? mv : 0)
                         .Where(m => m != 0)
-                        .OrderBy(m => (int)m)
-                        .ToArray(),
+                        .OrderBy(m => (int)m)],
                     ver
                     );
             }
@@ -379,13 +378,13 @@ public class App
         return Request(ApiPath.controlDeviceReboot, true, result => true);
     }
 
-    public static readonly string[] TimeFormats = new[]
-    {
+    public static readonly string[] TimeFormats =
+    [
         "yyyy-MM-dd'T'HH:mm:ss.fff'Z'zzz",
         "yyyy-MM-dd'T'HH:mm:ss.fff'Z'",
         "yyyy-MM-dd'T'HH:mm:ss'Z'zzz",
         "yyyy-MM-dd'T'HH:mm:ss'Z'",
-    };
+    ];
     partial class ApiPath
     {
         public static string querySystemTime { get; set; } = "/api/led/querySystemTime";
@@ -696,8 +695,17 @@ public class App
         });
     }
 
-    public static readonly Regex ParseResolutionRegex = new Regex(@"^(?<Width>\d+)\*(?<Height>\d+)$", RegexOptions.Compiled);
-    public static readonly Regex HexStringRegex = new Regex(@"^[a-fA-F0-9]*$", RegexOptions.Compiled);
+#if NET7_0_OR_GREATER
+    [GeneratedRegex("^(?<Width>\\d+)\\*(?<Height>\\d+)$", RegexOptions.Compiled)]
+    private static partial Regex GetParseResolutionRegex();
+    public static Regex ParseResolutionRegex { get; } = GetParseResolutionRegex();
+    [GeneratedRegex("^[a-fA-F0-9]*$", RegexOptions.Compiled)]
+    private static partial Regex GetHexStringRegex();
+    public static Regex HexStringRegex { get; } = GetHexStringRegex();
+#else
+    public static Regex ParseResolutionRegex { get; } = new Regex(@"^(?<Width>\d+)\*(?<Height>\d+)$", RegexOptions.Compiled);
+    public static Regex HexStringRegex { get; } = new Regex(@"^[a-fA-F0-9]*$", RegexOptions.Compiled);
+#endif
 
     partial class ApiPath
     {
@@ -718,7 +726,7 @@ public class App
                     var h = int.Parse(m.Groups["Height"].Value);
                     var pxs = new Dictionary<long, BadColor>();
                     var colors = BadColor.None;
-                    foreach (var color in Enum.GetValues(typeof(BadColor)).Cast<BadColor>().Where(c => c != 0))
+                    foreach (var color in Enum.GetValues<BadColor>().Where(c => c != 0))
                     {
                         if (result.Query($"data.{color.ToString().ToLower()}", JsonValueType.String) is string dataStr
                             && !dataStr.IsNullOrEmpty()
@@ -727,8 +735,8 @@ public class App
                             colors |= color;
                             foreach (var px in BadPixelData.Decode(w, h, dataStr))
                             {
-                                var key = ((long)px.X << 32) | (uint)px.Y;
-                                pxs[key] = pxs.TryGetValue(key, out var bpx) ? (bpx | color) : color;
+                                var key = (long)px.X << 32 | (uint)px.Y;
+                                pxs[key] = pxs.TryGetValue(key, out var bpx) ? bpx | color : color;
                             }
                         }
                     }
@@ -739,11 +747,11 @@ public class App
                         badCount,
                         new(w, h),
                         colors,
-                        pxs.Select(kv => new BadPixel(
+                        [.. pxs.Select(kv => new BadPixel(
                             (int)(kv.Key >> 32),
                             (int)(kv.Key & BitHelper.MakeMask(32)),
                             kv.Value
-                            )).ToList(),
+                            ))],
                         time);
                 }
             }
@@ -799,3 +807,4 @@ public class App
 
     public Task<Result<bool>> controlNetRestartTimeDisable() => controlNetRestartTime("", "", 0, 0, false);
 }
+#pragma warning restore IDE1006 // 命名样式

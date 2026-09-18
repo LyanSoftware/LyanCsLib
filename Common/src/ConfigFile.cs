@@ -94,7 +94,7 @@ namespace Lytec.Common
         /// 日志级别
         /// </summary>
         [JsonProperty]
-        [DefaultValue(typeof(LogLevel), nameof(LogLevel.Information))]
+        [DefaultValue(LogLevel.Information)]
         [JsonConverter(typeof(StringEnumConverter))]
         public virtual LogLevel LogLevel
         {

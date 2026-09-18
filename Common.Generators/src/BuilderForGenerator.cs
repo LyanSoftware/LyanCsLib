@@ -187,7 +187,7 @@ public class BuilderForGenerator : IIncrementalGenerator
         var targetTypeName = GetTypeName(target);
         var members = GetSettableMembers(target, options, compilation).ToArray();
         var constructorPlan = SelectConstructor(target, compilation);
-        var constructorArguments = constructorPlan?.Arguments.ToArray() ?? Array.Empty<ConstructorArgument>();
+        var constructorArguments = constructorPlan?.Arguments.ToArray() ?? [];
         var constructorMemberNames = new HashSet<string>(
             constructorArguments.Select(argument => argument.Name),
             StringComparer.OrdinalIgnoreCase);

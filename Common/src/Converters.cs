@@ -21,21 +21,28 @@ namespace Lytec.Common.Converters
 
     public static class ConvertUtils
     {
-        public static MethodInfo? GetParseMethod<Input>(this Type type) => GetParseMethod(type, typeof(Input));
-        public static MethodInfo? GetParseMethod(this Type type, Type input)
+        public static MethodInfo? GetParseMethod<Input>([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type)
+        => GetParseMethod(type, typeof(Input));
+        public static MethodInfo? GetParseMethod(
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type,
+            Type input)
         {
             var parse = type.GetMethod("Parse", new Type[] { input });
             return parse != null && parse.IsStatic && parse.ReturnType == type ? parse : null;
         }
 
-        public static MethodInfo? GetTryParseMethod<Input>(this Type type) => GetTryParseMethod(type, typeof(Input));
-        public static MethodInfo? GetTryParseMethod(this Type type, Type input)
+        public static MethodInfo? GetTryParseMethod<Input>([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type) => GetTryParseMethod(type, typeof(Input));
+        public static MethodInfo? GetTryParseMethod(
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type,
+            Type input)
         {
             var tryparse = type.GetMethod("TryParse", new Type[] { input, type });
             return tryparse != null && tryparse.IsStatic && tryparse.ReturnType == typeof(bool) && tryparse.GetParameters()[1].IsOut ? tryparse : null;
         }
 
-        public static bool TryParse<Result>(object input, [NotNullWhen(true)] out Result? result)
+        public static bool TryParse<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Result>(
+            object input,
+            [NotNullWhen(true)] out Result? result)
         {
             if (TryParse(typeof(Result), input, out var obj))
             {
@@ -49,9 +56,9 @@ namespace Lytec.Common.Converters
             }
         }
 
-        public static T? Parse<T>(this Type type, object input) => (T?)Parse(type, input);
+        public static T? Parse<T>([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type, object input) => (T?)Parse(type, input);
 
-        public static object? Parse(this Type type, object input)
+        public static object? Parse([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type, object input)
         {
             var inputType = input.GetType();
             var parse = type.GetTryParseMethod(inputType);
@@ -64,14 +71,14 @@ namespace Lytec.Common.Converters
             throw new CannotConvertException($"The {type.Name} type does not have a public static Parse({inputType.Name}) method that returns a {type.Name} or a public static TryParse({inputType.Name}, out {type.Name}) method that returns a bool");
         }
 
-        public static bool TryParse<T>(this Type type, object input, [NotNullWhen(true)] out T? result)
+        public static bool TryParse<T>([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type, object input, [NotNullWhen(true)] out T? result)
         {
             var ret = TryParse(type, input, out var obj);
             result = ret ? (T?)obj : default;
             return ret;
         }
 
-        public static bool TryParse(this Type type, object input, [NotNullWhen(true)] out object? result)
+        public static bool TryParse([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type, object input, [NotNullWhen(true)] out object? result)
         {
             try
             {
@@ -140,7 +147,7 @@ namespace Lytec.Common.Converters
         }
     }
 
-    public class StringTypeConverter<T> : TypeConverter
+    public class StringTypeConverter<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T> : TypeConverter
     {
         public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
         public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
@@ -152,23 +159,6 @@ namespace Lytec.Common.Converters
         {
             if (destinationType == typeof(string)) return value?.ToString() ?? "";
             throw new NotSupportedException();
-        }
-    }
-
-    public class StringJsonConverter : JsonConverter
-    {
-        public override bool CanConvert(Type objectType) => true;
-
-        [return: MaybeNull]
-        public override object ReadJson(JsonReader reader, Type objectType, [AllowNull] object existingValue, JsonSerializer serializer)
-        {
-            return reader.Value is string str ? objectType.Parse(str) : default;
-        }
-
-        public override void WriteJson(JsonWriter writer, [AllowNull] object value, JsonSerializer serializer)
-        {
-            if (value != null)
-                writer.WriteValue(value.ToString());
         }
     }
 

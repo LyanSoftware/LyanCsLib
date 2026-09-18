@@ -1,12 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <!-- 仅为兼容的框架（net8.0 及以上）启用 AOT/裁剪分析器 -->
-  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+
+  <!-- 仅为兼容的框架（net6.0 及以上）启用 AOT/裁剪分析器 -->
+  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">
     <EnableAotAnalyzer>true</EnableAotAnalyzer>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
+
+  <!-- 在分析器/测试项目中禁用AOT/裁剪/单文件发布相关的警告 -->
+  <PropertyGroup Condition="'$(IsRoslynComponent)' == 'true' or '$(IsTestProject)' == 'true'">
+    <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
+    <EnableAotAnalyzer>false</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <IsAotCompatible>false</IsAotCompatible>
+    <IsTrimmable>false</IsTrimmable>
+  </PropertyGroup>
+
+  <!-- 低版本框架的高版本语法、特性兼容 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netstandard2.1' or '$(TargetFramework)' == 'net6.0' or '$(TargetFramework)' == 'net7.0' or '$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="NetEvolve.Arguments" PrivateAssets="all" />
+    <PackageReference Include="PolySharp" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netstandard2.1' or '$(TargetFramework)' == 'net6.0'">
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="IsExternalInit" PrivateAssets="all" />
+    <PackageReference Include="RequiredMemberAttribute" PrivateAssets="all" />
+    <PackageReference Include="Shim.System.Text.Rune" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <PackageReference Include="IsExternalInit" PrivateAssets="all" />
+    <PackageReference Include="Nullable" PrivateAssets="all" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DocumentationFile>$(TargetDir)\$(AssemblyName).doc.xml</DocumentationFile>
   </PropertyGroup>

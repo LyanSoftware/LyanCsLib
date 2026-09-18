@@ -7,7 +7,7 @@ namespace Lytec.Protocol.LiaoNingHighSpeedLedGB;
 public class Playlist
 {
     public string fileName { get; set; } = "";
-    public ProgramItem[] programs { get; set; } = Array.Empty<ProgramItem>();
+    public ProgramItem[] programs { get; set; } = [];
 
     public IJsonData Serialize() => new JsonObj(this);
 
@@ -23,7 +23,7 @@ public class ProgramItem
 {
     public string id { get; set; } = "";
     public string name { get; set; } = "";
-    public Element[] elements { get; set; } = Array.Empty<Element>();
+    public Element[] elements { get; set; } = [];
 
     public static bool TryDeserialize(IJsonData jsonData, out ProgramItem Item)
     {
@@ -37,7 +37,7 @@ public class Element
 {
     public string type { get; set; } = "";
     public string? alias { get; set; }
-    public ElementData[] data { get; set; } = Array.Empty<ElementData>();
+    public ElementData[] data { get; set; } = [];
 }
 
 [Serializable]

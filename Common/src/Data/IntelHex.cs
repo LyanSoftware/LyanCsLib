@@ -206,7 +206,7 @@ public readonly struct Record : ISerializable
     public static bool TryParse(string data, out Record Record)
     {
         Record = default;
-        data = new string(data.SkipWhile(c => c != ':').ToArray());
+        data = new string([.. data.SkipWhile(c => c != ':')]);
         if (!RecordFormatValidRegex.IsMatch(data))
             return false;
         var count = Convert.ToInt32(data.Substring(1, 2), 16);
@@ -249,9 +249,9 @@ public readonly struct DataBlock
 
     public DataBlock(params byte[] data) : this(0, data) { }
 
-    public DataBlock(IEnumerable<byte> data) : this(data.ToArray()) { }
+    public DataBlock(IEnumerable<byte> data) : this([.. data]) { }
 
-    public DataBlock(int address, IEnumerable<byte> data) : this(address, data.ToArray()) { }
+    public DataBlock(int address, IEnumerable<byte> data) : this(address, [.. data]) { }
 }
 
 public class Records : ISerializable, IReadOnlyList<Record>
@@ -293,8 +293,8 @@ public class Records : ISerializable, IReadOnlyList<Record>
         {
             var blocks = Serialize();
             if (blocks == null || blocks.Count < 1)
-                return Array.Empty<byte>();
-            return blocks.Serialize(FillByte).Data ?? Array.Empty<byte>();
+                return [];
+            return blocks.Serialize(FillByte).Data ?? [];
         }
     }
 
@@ -314,7 +314,7 @@ public class Records : ISerializable, IReadOnlyList<Record>
 
     public List<DataBlock> Serialize() => _Records.Serialize();
 
-    public Records(IEnumerable<Record> records) => _Records = records.ToList();
+    public Records(IEnumerable<Record> records) => _Records = [.. records];
 
     public Records(IEnumerable<byte> data, IStartAddress? startAddress = null, bool addEOF = true, Format format = Format.I32HEX_HEX386, int addressOffset = 0)
         : this(Encode(data, startAddress, addEOF, format, addressOffset)) { }
@@ -536,7 +536,7 @@ public static class Utils
             return (Array.Empty<byte>(), 0);
         if (blocks.Count == 1)
             return (blocks[0].Data, blocks[0].Address);
-        blocks = blocks.OrderBy(b => b.Address).ToList();
+        blocks = [.. blocks.OrderBy(b => b.Address)];
         var data = new List<byte>();
         var addr = blocks[0].Address;
         foreach (var b in blocks)
@@ -575,7 +575,7 @@ public static class Utils
                     break;
             }
         }
-        return data.ToArray();
+        return [.. data];
     }
 
     public static IEnumerable<byte> GetDataSequence(this IEnumerable<DataBlock> src, int address, int length)
@@ -643,7 +643,7 @@ public static class Utils
             if (notFound)
                 blocks.AddLast(block);
         }
-        return blocks.ToList();
+        return [.. blocks];
     }
 
     public static Records ToMerged(this IEnumerable<Record> records)
@@ -692,9 +692,9 @@ public static class Utils
         if (Records.Take(4).Count() > 3) // 不止3个
         {
             if (addr.Length < 1)
-                addr = Records.Take(2).GetStartAddressRecords().ToArray(); // 取头2个
+                addr = [.. Records.Take(2).GetStartAddressRecords()]; // 取头2个
             if (addr.Length < 1)
-                addr = Records.Reverse().Skip(3).GetStartAddressRecords().Take(1).ToArray(); // 都没有，老实遍历
+                addr = [.. Records.Reverse().Skip(3).GetStartAddressRecords().Take(1)]; // 都没有，老实遍历
         }
          return addr.Length > 0 ? addr[0] : default;
     }
@@ -763,7 +763,7 @@ public static class Utils
                         blocks.RemoveAt(blocks.Count - 1);
                     }
                 }
-                blocks.Add(new DataBlock(start, rdata.ToArray()));
+                blocks.Add(new DataBlock(start, [.. rdata]));
                 data.Clear();
             }
             foreach (var r in datas.OrderBy(r => r.Address))

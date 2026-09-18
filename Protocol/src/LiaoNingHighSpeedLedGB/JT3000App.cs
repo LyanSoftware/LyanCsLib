@@ -104,12 +104,12 @@ namespace Lytec.Protocol.LiaoNingHighSpeedLedGB
             public ReceiveCardConfig ReceiveCard { get; set; } = new();
 
             [JsonProperty("boardConfig")]
-            public CheckPortConfig[][] AllCheckPortConfigs { get; set; } = Array.Empty<CheckPortConfig[]>();
+            public CheckPortConfig[][] AllCheckPortConfigs { get; set; } = [];
 
             [JsonIgnore]
             public CheckPortConfig[] CheckPortConfigs
             {
-                get => AllCheckPortConfigs != null && AllCheckPortConfigs.Length > 0 ? AllCheckPortConfigs[0] : Array.Empty<CheckPortConfig>();
+                get => AllCheckPortConfigs != null && AllCheckPortConfigs.Length > 0 ? AllCheckPortConfigs[0] : [];
                 set
                 {
                     if (AllCheckPortConfigs == null || AllCheckPortConfigs.Length == 0)
@@ -188,7 +188,7 @@ namespace Lytec.Protocol.LiaoNingHighSpeedLedGB
             public float TemperatureValue => Temperature.Value;
 
             [JsonProperty("vcc")]
-            public VccPortStatus[] _Vcc = Array.Empty<VccPortStatus>();
+            public VccPortStatus[] _Vcc = [];
             public VccPortStatus? Vcc => _Vcc.Length > 0 ? _Vcc[0] : null;
 
             [JsonIgnore]

@@ -4,6 +4,7 @@
     <!-- Enable central package management, https://learn.microsoft.com/en-us/nuget/consume-packages/Central-Package-Management -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
+
   <ItemGroup>
     <!-- Unit Test -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="[17.14.1,18.0)" />
@@ -11,6 +12,7 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="[3.1.5,4.0)" />
     <PackageVersion Include="coverlet.collector" Version="[3.1.2,)" />
   </ItemGroup>
+
   <ItemGroup>
     <!-- 低版本框架的高版本语法、特性兼容 -->
     <PackageVersion Include="Nullable" Version="[1.3.1,)" />
@@ -18,7 +20,13 @@
     <PackageVersion Include="RequiredMemberAttribute" Version="[1.0.0,)" />
     <!-- Microsoft.Bcl.Memory实际包含了IndexRange -->
     <PackageVersion Include="Microsoft.Bcl.Memory" Version="[9.0.14,)" />
+    <PackageVersion Include="Hafner.Compatibility.MetaPackage" Version="[1.9.0,)" />
+    <PackageVersion Include="PolySharp" Version="[1.16.0,)" />
+    <PackageVersion Include="PolyShim" Version="[2.13.0,)" />
+    <PackageVersion Include="NetEvolve.Arguments" Version="[3.4.37,)" />
+    <PackageVersion Include="Meziantou.Polyfill" Version="[1.0.165,)" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="[6.0.0,)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="[6.0.0,9.0)" />
@@ -45,17 +53,18 @@
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="[8.0.0, 9.0)" />
     <PackageVersion Include="newbeeui" Version="[9.0.0.1, 12.0)" />
     <PackageVersion Include="Costura.Fody" Version="[6.0.0,)" />
-    <PackageVersion Include="PolySharp" Version="[1.15.0,)" />
     <PackageVersion Include="FluentBuilder" Version="[0.15.0,0.16)" />
     <PackageVersion Include="BuilderGenerator" Version="[3.1.0,4.0)" />
     <PackageVersion Include="SmartFormat" Version="[3.6.1,4.0)" />
     <PackageVersion Include="System.Collections.Immutable" Version="[7.0.0,11.0)" />
   </ItemGroup>
+
   <ItemGroup>
     <!-- Shiny lib -->
     <PackageVersion Include="Shiny.BluetoothLE" Version="$(ShinyVersion)" />
     <PackageVersion Include="Shiny.BluetoothLE.Hosting" Version="$(ShinyVersion)" />
   </ItemGroup>
+
   <ItemGroup>
     <!-- AvaloniaUI -->
     <PackageVersion Include="Avalonia" Version="$(AvaloniaVersion)" />
@@ -75,4 +84,5 @@
     <!-- Avalonia的主题 -->
     <PackageVersion Include="SukiUI" Version="[7.0.1,8.0)" />
   </ItemGroup>
+
 </Project>

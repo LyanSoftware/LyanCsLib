@@ -209,7 +209,7 @@ public static partial class Win32Utils
         return TryGetFullPathByProbingExtensions(command);
     }
 
-    private static string[] LoadExecutableExtensions() => Environment.GetEnvironmentVariable("PATHEXT")?.Split(';') ?? Array.Empty<string>();
+    private static string[] LoadExecutableExtensions() => Environment.GetEnvironmentVariable("PATHEXT")?.Split(';') ?? [];
 
     private static Dictionary<string, string> LoadAppPaths()
     {

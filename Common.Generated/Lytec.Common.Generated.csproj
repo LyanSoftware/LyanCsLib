@@ -9,9 +9,4 @@
     <ProjectReference Include="..\Common.Generators\Lytec.Common.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Nullable" />
-    <PackageReference Include="IsExternalInit" />
-  </ItemGroup>
-
 </Project>

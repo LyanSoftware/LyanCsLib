@@ -34,7 +34,7 @@ public static partial class GDIUtils
 
     public static readonly FontFamily[] InstalledFontFamilies = InstalledFontCollection.Families;
 
-    public static readonly string[] InstalledFontNames = (from ff in InstalledFontFamilies select ff.Name).ToArray();
+    public static readonly string[] InstalledFontNames = [.. (from ff in InstalledFontFamilies select ff.Name)];
 
     /// <summary>
     /// 将CellHeight转换为EmSize

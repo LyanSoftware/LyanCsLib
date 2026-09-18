@@ -72,7 +72,7 @@ public class ImageData : IReadOnlyList<Color>
             buf.Add(px.G);
             buf.Add(px.B);
         }
-        return buf.ToArray();
+        return [.. buf];
     }
 
     public static ImageData? Deserialize(byte[] bytes, int offset = 0)

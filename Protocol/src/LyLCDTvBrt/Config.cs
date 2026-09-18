@@ -18,9 +18,9 @@ public class Config
                 buf.Add(b);
             else break;
         }
-        return Encoding.GetString(buf.ToArray());
+        return Encoding.GetString([.. buf]);
     }
 
     public static byte[] GenConfigData(string config)
-    => Encoding.GetBytes(config).Take(ConfigSize - 1).Append<byte>(0).ToArray();
+    => [.. Encoding.GetBytes(config).Take(ConfigSize - 1).Append<byte>(0)];
 }

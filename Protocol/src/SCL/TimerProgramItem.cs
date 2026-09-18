@@ -259,7 +259,7 @@ namespace Lytec.Protocol
                 [field: FieldOffset(0)]
                 public TimedProgressBarItem TimedProgressBar { get; set; }
 
-                public byte[] Serialize() => Data.ToArray();
+                public byte[] Serialize() => [.. Data];
             }
 
             [Serializable]
@@ -315,25 +315,27 @@ namespace Lytec.Protocol
             public IList<IDictionary<string, ADSCL.Xmp>> Fonts { get; set; } = new List<IDictionary<string, ADSCL.Xmp>>();
             public ADSCL.Xmp? BgImage { get; set; }
 
-            public static string[] FontChars_Normal { get; } = Enumerable.Range(0, 10).Select(i => '0' + i)
+            public static string[] FontChars_Normal { get; } = [.. Enumerable.Range(0, 10).Select(i => '0' + i)
                 .Append('+')
                 .Append('-')
                 .Append(' ')
                 .Append('.')
                 .Append(':')
                 .Concat(Enumerable.Range(0, 26).Select(i => 'A' + i))
-                .Select(c => ((char)c).ToString())
-                .ToArray();
+                .Select(c => ((char)c).ToString())];
             
-            public static string[] FontChars_Digit { get; } = Enumerable.Range(0, 10).Select(i => '0' + i)
-                .Append('+')
-                .Append('-')
-                .Append(' ')
-                .Append('.')
-                .Append(':')
-                .Select(c => ((char)c).ToString())
-                .Concat(Enumerable.Range(0, 10).Select(i => $".{i}"))
-                .ToArray();
+            public static string[] FontChars_Digit { get; } =
+            [
+                .. Enumerable.Range(0, 10).Select(i => '0' + i)
+                                .Append('+')
+                                .Append('-')
+                                .Append(' ')
+                                .Append('.')
+                                .Append(':')
+                                .Select(c => ((char)c).ToString())
+,
+                .. Enumerable.Range(0, 10).Select(i => $".{i}"),
+            ];
 
             public byte[] Serialize()
             {
@@ -413,7 +415,7 @@ namespace Lytec.Protocol
                 var bg = BgImage ?? new ADSCL.Xmp(bgType, Width, Height);
                 buf.AddRange(bg.Serialize(bgType));
 
-                return buf.ToArray();
+                return [.. buf];
             }
         }
     }

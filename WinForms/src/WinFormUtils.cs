@@ -66,16 +66,16 @@ public static partial class WinFormUtils
         cbx.DropDown += (sender, e) => cbx.DropDownWidth = cbx.Width;
     }
 
-    public static void SetDataSourceWithEnumDataAndDescription<T>(this ComboBox cbx, Func<T, bool>? condition = null, Func<Utils.EnumDataWithDescription<T>, string>? descriptionPostProcessor = null) where T : Enum
+    public static void SetDataSourceWithEnumDataAndDescription<T>(this ComboBox cbx, Func<T, bool>? condition = null, Func<EnumUtils.EnumDataWithDescription<T>, string>? descriptionPostProcessor = null) where T : struct, Enum
     {
-        var data = Utils.GetEnumDatasWithDescription<T>();
+        var data = EnumUtils.GetEnumDatasWithDescription<T>();
         if (condition != null)
             data = data.Where(d => condition(d.Value));
         if (descriptionPostProcessor == null)
         {
             cbx.DataSource = data.ToList();
-            cbx.DisplayMember = nameof(Utils.EnumDataWithDescription.Description);
-            cbx.ValueMember = nameof(Utils.EnumDataWithDescription.Value);
+            cbx.DisplayMember = nameof(EnumUtils.EnumDataWithDescription.Description);
+            cbx.ValueMember = nameof(EnumUtils.EnumDataWithDescription.Value);
         }
         else
         {
@@ -85,17 +85,17 @@ public static partial class WinFormUtils
         }
     }
 
-    public static void SetDataSourceWithEnumDataAndDescriptionAndAdjustDropDownWidth<T>(this ComboBox cbx, Func<T, bool>? condition = null, Func<Utils.EnumDataWithDescription<T>, string>? descriptionPostProcessor = null, int extendWidth = 0) where T : Enum
+    public static void SetDataSourceWithEnumDataAndDescriptionAndAdjustDropDownWidth<T>(this ComboBox cbx, Func<T, bool>? condition = null, Func<EnumUtils.EnumDataWithDescription<T>, string>? descriptionPostProcessor = null, int extendWidth = 0) where T : struct, Enum
     {
-        var data = Utils.GetEnumDatasWithDescription<T>();
+        var data = EnumUtils.GetEnumDatasWithDescription<T>();
         if (condition != null)
             data = data.Where(d => condition(d.Value));
         if (descriptionPostProcessor == null)
         {
             var src = data.ToList();
             cbx.DataSource = src;
-            cbx.DisplayMember = nameof(Utils.EnumDataWithDescription.Description);
-            cbx.ValueMember = nameof(Utils.EnumDataWithDescription.Value);
+            cbx.DisplayMember = nameof(EnumUtils.EnumDataWithDescription.Description);
+            cbx.ValueMember = nameof(EnumUtils.EnumDataWithDescription.Value);
             cbx.AdjustComboBoxDropDownWidth(src, x => x.Description, extendWidth);
         }
         else

@@ -58,7 +58,7 @@ namespace Lytec.Common.Data
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
         /// <returns></returns>
         [return: NotNull]
-        public static byte[] ToBytes(this object t, Type type, Endian? defaultEndian = null)
+        public static unsafe byte[] ToBytes(this object t, Type type, Endian? defaultEndian = null)
         {
             int TryWriteSimpleBytes(Span<byte> buf, object v)
             {
@@ -74,27 +74,51 @@ namespace Lytec.Common.Data
                         len = 1;
                         break;
                     case ushort u16:
-                        MemoryMarshal.Write(buf, ref u16);
+                        fixed (byte* p = buf)
+                        {
+                            ushort* d = (ushort*)p;
+                            *d = u16;
+                        }
                         len = 2;
                         break;
                     case short i16:
-                        MemoryMarshal.Write(buf, ref i16);
+                        fixed (byte* p = buf)
+                        {
+                            short* d = (short*)p;
+                            *d = i16;
+                        }
                         len = 2;
                         break;
                     case uint u32:
-                        MemoryMarshal.Write(buf, ref u32);
+                        fixed (byte* p = buf)
+                        {
+                            uint* d = (uint*)p;
+                            *d = u32;
+                        }
                         len = 4;
                         break;
                     case int i32:
-                        MemoryMarshal.Write(buf, ref i32);
+                        fixed (byte* p = buf)
+                        {
+                            int* d = (int*)p;
+                            *d = i32;
+                        }
                         len = 4;
                         break;
                     case ulong u64:
-                        MemoryMarshal.Write(buf, ref u64);
+                        fixed (byte* p = buf)
+                        {
+                            ulong* d = (ulong*)p;
+                            *d = u64;
+                        }
                         len = 8;
                         break;
                     case long i64:
-                        MemoryMarshal.Write(buf, ref i64);
+                        fixed (byte* p = buf)
+                        {
+                            long* d = (long*)p;
+                            *d = i64;
+                        }
                         len = 8;
                         break;
                 }
@@ -124,9 +148,9 @@ namespace Lytec.Common.Data
                         return buf2;
                     }
                 case IEnumerable objs:
-                    return (from object o in objs
-                            from b in o.ToBytes(o.GetType())
-                            select b).ToArray();
+                    return [.. from object o in objs
+                               from b in o.ToBytes(o.GetType())
+                               select b];
             }
             if (type.IsEnum)
             {
@@ -348,7 +372,11 @@ namespace Lytec.Common.Data
             if (!typeof(T).IsPrimitiveOrEnum())
                 throw new NotSupportedException();
             var buf = new byte[data.GetStructSize()];
+#if NET8_0_OR_GREATER
+            MemoryMarshal.Write(buf, in data);
+#else
             MemoryMarshal.Write(buf, ref data);
+#endif
             if (buf.Length > 1 && (endian ?? EndianUtils.LocalEndian) != EndianUtils.LocalEndian)
                 Array.Reverse(buf);
             return buf;
@@ -376,7 +404,16 @@ namespace Lytec.Common.Data
             var buf = new byte[elsize * data.Length];
             var span = new Span<byte>(buf);
             for (var i = 0; i < data.Length; i++)
-                MemoryMarshal.Write(span[(i * elsize)..], ref data[i]);
+            {
+                MemoryMarshal.Write(
+                    span[(i * elsize)..],
+#if NET8_0_OR_GREATER
+                    in data[i]
+#else
+                    ref data[i]
+#endif
+                    );
+            }
             if (elsize > 1 && (endian ?? EndianUtils.LocalEndian) != EndianUtils.LocalEndian)
                 for (var offset = 0; offset < data.Length; offset += elsize)
                     span.Slice(offset, elsize).Reverse();
@@ -398,7 +435,7 @@ namespace Lytec.Common.Data
                     buf[i] = needfix ? data[buf.Length - 1 - i + offset] : data[offset + i];
                 list.Add(MemoryMarshal.Read<T>(data.Slice(offset, elsize)));
             }
-            return list.ToArray();
+            return [.. list];
         }
 
         public static int SizeAlignTo(this int size, int align) => (size + align - 1) / align * align;
@@ -409,13 +446,13 @@ namespace Lytec.Common.Data
         public static T[] LengthAlignTo<T>(this T[] src, int align, T fill)
         {
             var flen = src.Length.SizeAlignTo(align) - src.Length;
-            return flen > 0 ? src.Concat(Enumerable.Repeat(fill, flen)).ToArray() : src;
+            return flen > 0 ? [.. src.Concat(Enumerable.Repeat(fill, flen))] : src;
         }
 
         public static T[] LengthAlignTo<T>(this T[] src, int align, Func<T> fill)
         {
             var flen = src.Length.SizeAlignTo(align) - src.Length;
-            return flen > 0 ? src.Concat(Enumerable.Repeat(0, flen).Select(_ => fill())).ToArray() : src;
+            return flen > 0 ? [.. src.Concat(Enumerable.Repeat(0, flen).Select(_ => fill()))] : src;
         }
 
         public static IEnumerable<T> LengthAlignTo<T>(this IReadOnlyCollection<T> src, int align, T fill)

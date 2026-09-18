@@ -3,6 +3,8 @@ using System.Globalization;
 
 namespace Lytec.Common.Localization;
 
+using System;
+
 /// <summary>
 /// Formats localized text from an atomically replaceable, ordered set of JSON
 /// language-pack layers. Loading and validation are handled by
@@ -10,18 +12,23 @@ namespace Lytec.Common.Localization;
 /// </summary>
 public sealed class JsonLocalizer : Localizer
 {
+#if NET8_0_OR_GREATER
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0301:简化集合初始化", Justification = "<挂起>")]
+#endif
     private Snapshot snapshot = new(
         CultureInfo.InvariantCulture,
         ImmutableArray<ImmutableDictionary<string, string>>.Empty);
 
     public override CultureInfo CurrentCulture => snapshot.Culture;
 
+#if NET8_0_OR_GREATER
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0301:简化集合初始化", Justification = "<挂起>")]
+#endif
     internal void Apply(
         CultureInfo culture,
         ImmutableArray<ImmutableDictionary<string, string>> layers)
     {
-        if (culture is null)
-            throw new ArgumentNullException(nameof(culture));
+        ArgumentNullException.ThrowIfNull(culture);
 
         snapshot = new Snapshot(
             culture,

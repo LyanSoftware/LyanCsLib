@@ -75,7 +75,7 @@ public static partial class SCL
 
     public record CommandPack(CommandCode Command, int Arg1, int Arg2, byte[] Arg3)
     {
-        public CommandPack(CommandCode cmd, int arg1, int arg2) : this(cmd, arg1, arg2, Array.Empty<byte>()) { }
+        public CommandPack(CommandCode cmd, int arg1, int arg2) : this(cmd, arg1, arg2, []) { }
     }
 
     public static bool Exec(ISendAndGetAnswerConfig conf, bool isSerialPort, [NotNullWhen(true)] out Pack? Answer, CommandPack command, string? password = null, Func<Pack, bool>? CheckIsSuccess = default, int extTimeout = 0)
@@ -334,7 +334,7 @@ public static partial class SCL
         {
             psz = Math.Min(data.Length - offset, MaxDataLength);
             var offaddr = addr + offset;
-            if (!Exec(config, isSerialPort, out _, new(CommandCode.SendData, offaddr, data.Length, data.Skip(offset).Take(psz).ToArray()), password, r => r.Arg1 == offaddr && r.Arg2 == psz))
+            if (!Exec(config, isSerialPort, out _, new(CommandCode.SendData, offaddr, data.Length, [.. data.Skip(offset).Take(psz)]), password, r => r.Arg1 == offaddr && r.Arg2 == psz))
                 return false;
         }
         return true;
@@ -363,7 +363,7 @@ public static partial class SCL
                 return false;
             buf.AddRange(answer.Arg3);
         }
-        Data = buf.ToArray();
+        Data = [.. buf];
         return true;
     }
 
@@ -388,7 +388,7 @@ public static partial class SCL
         var buf = new byte[32];
         Array.Copy(filenameBytes, 0, buf, 0, Math.Min(filenameBytes.Length, MaxFilePathLength));
         exdata.AddRange(buf);
-        return Exec(config, isSerialPort, out _, new(CommandCode.SaveToFile, (int)drv, length, exdata.ToArray()), password, r => r.Arg2 == length, length / FlashWriteBytesPerSecond * 1000 + 3000);
+        return Exec(config, isSerialPort, out _, new(CommandCode.SaveToFile, (int)drv, length, [.. exdata]), password, r => r.Arg2 == length, length / FlashWriteBytesPerSecond * 1000 + 3000);
     }
 
     /// <summary>
@@ -502,7 +502,7 @@ public static partial class SCL
         const int maxlen = MaxDataLength - 12 - 1; // 12: CMD+PA1+PA2, 1: 结尾的0字节
         if (bytes.Length > maxlen)
             throw new ArgumentException($"String too long (current: {bytes.Length} bytes, max: {maxlen} bytes)");
-        bytes = bytes.Concat(new byte[] { 0 }).ToArray();
+        bytes = [.. bytes, .. new byte[] { 0 }];
         return Exec(config, isSerialPort, out _, new(CommandCode.ShowString, left | (top << 16), width | (height << 16), bytes), password);
     }
 
@@ -554,7 +554,7 @@ public static partial class SCL
             i = 1 | ((int)replay.Value.Driver << 24) | (replay.Value.Index << 16);
         exdata.AddRange(i.ToBytes(DefaultEndian));
         exdata.AddRange(filedata);
-        return Exec(config, isSerialPort, out _, new(CommandCode.SendSmallFile, (int)drv, filedata.Length, exdata.ToArray()), password, r => r.Arg2 == filedata.Length);
+        return Exec(config, isSerialPort, out _, new(CommandCode.SendSmallFile, (int)drv, filedata.Length, [.. exdata]), password, r => r.Arg2 == filedata.Length);
     }
 
     [Serializable]
@@ -665,7 +665,7 @@ public static partial class SCL
     => DirectDraw(config, isSerialPort, DirectDrawType.DrawLine, color, new Point[] { p1, p2 }, regionIndex, password);
 
     public static bool DirectDraw_DrawPoints(ISendAndGetAnswerConfig config, bool isSerialPort, Color color, IEnumerable<Point> points, int regionIndex = 0, string? password = null)
-    => DirectDraw(config, isSerialPort, DirectDrawType.DrawPoints, color, points.ToArray(), regionIndex, password);
+    => DirectDraw(config, isSerialPort, DirectDrawType.DrawPoints, color, [.. points], regionIndex, password);
 
     public class HeartbeatArgs
     {
@@ -796,7 +796,7 @@ public static partial class SCL
             Array.Copy(routeBytes!, 0, route, 1024, routeBytes!.Length);
         }
         var rinfo = new RouteInfo(ledcfg, RouteData.Deserialize(route));
-        byte[] faultDotsBytes = Array.Empty<byte>();
+        byte[] faultDotsBytes = [];
         var faultDots = new List<FaultDotInfo>();
         if (parts.HasFlag(PowerDotCheckInfoParts.FaultDots))
         {
@@ -806,7 +806,7 @@ public static partial class SCL
             for (var i = 0; i < info.FaultDotsCount; i++)
                 faultDots.Add(new FaultDotInfo(FaultDotData.Deserialize(faultDotsBytes, i * FaultDotData.SizeConst), rinfo, ledcfg));
         }
-        Info = new PowerDotCheckInfo(info, ledcfg, netcfg, rinfo, faultDots.ToArray());
+        Info = new PowerDotCheckInfo(info, ledcfg, netcfg, rinfo, [.. faultDots]);
         return true;
     }
 
@@ -872,14 +872,14 @@ public static partial class SCL
         {
             var sz = (pdata.Length + programAlign - 1) / programAlign;
             if (sz > pdata.Length)
-                pdata = pdata.Concat(InitFlashDataBlock(sz)).ToArray();
+                pdata = [.. pdata, .. InitFlashDataBlock(sz)];
         }
         uint programSize = (uint)pdata.Length;
         if (sendAlign > 0)
         {
             var sz = (pdata.Length + sendAlign - 1) / sendAlign;
             if (sz > pdata.Length)
-                pdata = pdata.Concat(InitFlashDataBlock(sz)).ToArray();
+                pdata = [.. pdata, .. InitFlashDataBlock(sz)];
         }
         if (pdata.Length + headerSize > maxsize)
             return false;
@@ -892,7 +892,7 @@ public static partial class SCL
                     crc = cc.Compute(pdata[offset + i]);
         }
         var data = programSize.ToBytes(Endian.Little).Concat(crc.ToBytes(Endian.Little)).ToArray();
-        data = data.Concat(InitFlashDataBlock(headerSize - data.Length)).Concat(pdata).ToArray();
+        data = [.. data, .. InitFlashDataBlock(headerSize - data.Length), .. pdata];
         if (!SendData(config, isSerialPort, 0, data, SuPw))
             return false;
         if (!SaveTo(config, isSerialPort, paddr, data.Length, SuPw, data.Length / FlashWriteBytesPerSecond * 1000 + 3000 + extTimeout))

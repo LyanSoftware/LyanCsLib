@@ -11,7 +11,7 @@ public static class DragDropExtensions
 {
     public static bool TryGetFileNames(this DragEventArgs args, out string[] FileNames)
     {
-        FileNames = Array.Empty<string>();
+        FileNames = [];
         if (args.Data.GetDataPresent(DataFormats.FileDrop)
             && args.Data.GetData(DataFormats.FileDrop) is string[] fs)
         {

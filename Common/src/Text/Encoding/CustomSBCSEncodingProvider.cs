@@ -9,10 +9,10 @@ namespace Lytec.Common.Text.Encoding
     {
         protected abstract class CustomSBCSEncoding<TImpl> : CustomEncoding where TImpl : CustomSBCSEncoding<TImpl>
         {
-            public static readonly char[] SpecialCodePoints = new int[]
+            public static readonly char[] SpecialCodePoints = [.. new int[]
             {
                 0x00, 0x0A, 0x0D, 0x1B, 0x3F, 0x60
-            }.Select(c => (char)c).ToArray();
+            }.Select(c => (char)c)];
 
             static CustomSBCSEncoding()
             {

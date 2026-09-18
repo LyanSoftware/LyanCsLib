@@ -27,5 +27,5 @@ public class SM3 : HashAlgorithm
         return buf;
     }
 
-    public static byte[] Compute(IEnumerable<byte> data) => Compute(data.ToArray());
+    public static byte[] Compute(IEnumerable<byte> data) => Compute([.. data]);
 }
