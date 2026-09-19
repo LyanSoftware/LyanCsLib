@@ -5,6 +5,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <MSDIVersion Condition="'$(TargetFramework)' != 'net7.0' and '$(TargetFramework)' != 'net6.0'">[10.0.7,)</MSDIVersion>
     <MSDIVersion Condition="'$(TargetFramework)' == 'net7.0' or  '$(TargetFramework)' == 'net6.0'">[6.0,9.0)</MSDIVersion>
+    <ReactiveVersion Condition="'$(TargetFramework)' != 'net7.0' and '$(TargetFramework)' != 'net6.0'">[7.0,)</ReactiveVersion>
+    <ReactiveVersion Condition="'$(TargetFramework)' == 'net7.0' or  '$(TargetFramework)' == 'net6.0'">[6.0,7.0)</ReactiveVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +35,7 @@
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="[6.0.0,)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MSDIVersion)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(MSDIVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MSDIVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="[6.0.0,)" />
     <PackageVersion Include="Newtonsoft.Json" Version="[13.0.1,)" />
     <PackageVersion Include="System.IO.Ports" Version="[6.0.0,9.0)" />
@@ -59,7 +62,7 @@
     <PackageVersion Include="BuilderGenerator" Version="[3.1.0,4.0)" />
     <PackageVersion Include="SmartFormat" Version="[3.6.1,4.0)" />
     <PackageVersion Include="System.Collections.Immutable" Version="[7.0.0,11.0)" />
-    <PackageVersion Include="System.Reactive" Version="[6.1.0,7.0)" />
+    <PackageVersion Include="System.Reactive" Version="$(ReactiveVersion)" />
   </ItemGroup>
 
   <ItemGroup>

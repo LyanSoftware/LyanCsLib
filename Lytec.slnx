@@ -12,6 +12,7 @@
   <Project Path="AvaloniaUI.Generators.Tests/Lytec.AvaloniaUI.Generators.Tests.csproj" />
   <Project Path="AvaloniaUI.Generators/Lytec.AvaloniaUI.Generators.csproj" />
   <Project Path="AvaloniaUI/Lytec.AvaloniaUI.csproj" />
+  <Project Path="BluetoothLE.Shiny/Lytec.BluetoothLE.Shiny.csproj" />
   <Project Path="BluetoothLE/Lytec.BluetoothLE.csproj" />
   <Project Path="Common.Generated/Lytec.Common.Generated.csproj" />
   <Project Path="Common.Generators/Lytec.Common.Generators.csproj" />

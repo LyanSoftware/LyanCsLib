@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Lytec.Common.csproj" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <ProjectReference Include="..\Common.Generators\Lytec.Common.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
