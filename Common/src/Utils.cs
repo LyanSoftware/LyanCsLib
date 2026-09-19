@@ -419,8 +419,10 @@ namespace Lytec.Common
             return true;
         }
 
+#if !NET10_0_OR_GREATER
         public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this IEnumerable<(TKey Key, TValue Value)> origin) where TKey : notnull
         => origin.ToDictionary(kv => kv.Key, kv => kv.Value);
+#endif
 
         public static (TKey Key, TValue Value)[] ToArray<TKey, TValue>(this IDictionary<TKey, TValue> dic)
         => [.. dic.Select(kv => (kv.Key, kv.Value))];

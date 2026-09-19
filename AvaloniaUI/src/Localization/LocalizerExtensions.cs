@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Data;
+using Lytec.Common;
 using Lytec.Common.Localization;
 using Lytec.Common.Localization.Extensions;
 
@@ -15,28 +16,28 @@ public static class LocalizerExtensions
     public static BindingBase Localize(
         this ILocalizer localizer,
         string Key,
-        string? DefaultMessage = null)
-        => localizer.Observe(Key, DefaultMessage).ToBinding();
-
+        string? DefaultMessage,
+        IReadOnlyDictionary<string, object?>? Arguments = null)
+        => localizer.Observe(Key, DefaultMessage, Arguments).ToBinding();
     public static BindingBase Localize(
         this ILocalizer localizer,
         string Key,
-        object arguments,
-        string? DefaultMessage = null)
-        => localizer.Observe(Key, arguments, DefaultMessage).ToBinding();
+        string? DefaultMessage,
+        params (string Key, object? Value)[] Arguments)
+        => localizer.Observe(Key, DefaultMessage, Arguments).ToBinding();
 
     public static BindingBase Localize(
         this ILocalizer localizer,
-        string scope,
+        string Scope,
         string Key,
-        string? DefaultMessage = null)
-        => localizer.Observe(scope, Key, DefaultMessage).ToBinding();
-
+        string? DefaultMessage,
+        IReadOnlyDictionary<string, object?>? Arguments = null)
+        => localizer.Observe(Scope, Key, DefaultMessage, Arguments).ToBinding();
     public static BindingBase Localize(
         this ILocalizer localizer,
-        string scope,
+        string Scope,
         string Key,
-        object arguments,
-        string? DefaultMessage = null)
-        => localizer.Observe(scope, Key, arguments, DefaultMessage).ToBinding();
+        string? DefaultMessage,
+        params (string Key, object? Value)[] Arguments)
+        => localizer.Observe(Scope, Key, DefaultMessage, Arguments).ToBinding();
 }

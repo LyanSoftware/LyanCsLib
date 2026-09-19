@@ -39,8 +39,10 @@ public record JsonLanguagePackService(
     private const string JsonSuffix = ".json";
     private const string OverrideSuffix = ".override.json";
     private const string LocalizeScope = "Lytec.Common.Localization.JsonLanguagePackService";
-    private static LocalizeString Localize(string Key, object? Arguments = null, string? DefaultMessage = null)
-    => new(LocalizeScope, Key, Arguments, DefaultMessage);
+    private static LocalizeString Localize(string Key, string? DefaultMessage, IReadOnlyDictionary<string, object?>? Arguments = null)
+    => new(LocalizeScope, Key, DefaultMessage, Arguments);
+    private static LocalizeString Localize(string Key, string? DefaultMessage, params (string Key, object? Value)[] Arguments)
+    => new(LocalizeScope, Key, DefaultMessage, Arguments);
 
     private readonly JsonLocalizer localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
     private readonly ILanguagePreferenceStore preferenceStore = preferenceStore ?? new NullLanguagePreferenceStore();
@@ -50,7 +52,7 @@ public record JsonLanguagePackService(
 
     private ImmutableDictionary<string, LanguagePack> packs =
         ImmutableDictionary.Create<string, LanguagePack>(StringComparer.OrdinalIgnoreCase);
-    private IReadOnlyList<LanguagePackInfo> availableLanguages = Array.Empty<LanguagePackInfo>();
+    private IReadOnlyList<LanguagePackInfo> availableLanguages = [];
     private long changeVersion;
 
     public event EventHandler? CurrentLanguageChanged;
@@ -117,12 +119,12 @@ public record JsonLanguagePackService(
                 LocalizationLogLevel.Error,
                 Localize(
                     "DirectoryScanFailed",
-                    new { Directory = LanguagePackSource.Description },
-                    "读取语言包来源“{Directory}”失败，将继续使用程序内嵌文本。"),
-                ex);
+                    "读取语言包来源“{Directory}”失败，将继续使用程序内嵌文本。",
+                    ("Directory", LanguagePackSource.Description)
+                ), ex);
             result = new DiscoveryResult(
                 ImmutableDictionary.Create<string, LanguagePack>(StringComparer.OrdinalIgnoreCase),
-                Array.Empty<LanguagePackInfo>());
+                []);
         }
 
         packs = result.Packs;
@@ -142,8 +144,9 @@ public record JsonLanguagePackService(
                 LocalizationLogLevel.Warning,
                 Localize(
                     "LanguageNotAvailable",
-                    new { LanguageId = languageId },
-                    "语言“{LanguageId}”不可用，将保持当前语言。"));
+                    "语言“{LanguageId}”不可用，将保持当前语言。",
+                    ("LanguageId", languageId)
+                ));
             return Task.FromResult(false);
         }
 
@@ -194,8 +197,9 @@ public record JsonLanguagePackService(
                 LocalizationLogLevel.Warning,
                 Localize(
                     "FallbackPackMissing",
-                    new { Culture = culture.Name },
-                    "回退链中的语言包“{Culture}”不存在，将继续使用下一层。"));
+                    "回退链中的语言包“{Culture}”不存在，将继续使用下一层。",
+                    ("Culture", culture.Name)
+                ));
         }
 
         return layers.ToImmutable();
@@ -243,9 +247,9 @@ public record JsonLanguagePackService(
                     LocalizationLogLevel.Warning,
                     Localize(
                         "PreferenceSaveFailed",
-                        new { LanguageId = languageId },
-                        "保存语言偏好“{LanguageId}”失败。"),
-                    ex);
+                        "保存语言偏好“{LanguageId}”失败。",
+                        ("LanguageId", languageId)
+                    ), ex);
             }
         }
         finally
@@ -301,9 +305,9 @@ public record JsonLanguagePackService(
                         LocalizationLogLevel.Warning,
                         Localize(
                             "InvalidFileName",
-                            new { FileName = r.FileName },
-                            "语言包文件名“{FileName}”不是有效的 CultureInfo 名称，已跳过。"),
-                        ex);
+                            "语言包文件名“{FileName}”不是有效的 CultureInfo 名称，已跳过。",
+                            ("FileName", r.FileName)
+                        ), ex);
                     continue;
                 }
 
@@ -330,9 +334,9 @@ public record JsonLanguagePackService(
                         LocalizationLogLevel.Warning,
                         Localize(
                             "InvalidContent",
-                            new { FileName = r.FileName },
-                            "语言包“{FileName}”无法读取或内容无效，已跳过。"),
-                        ex);
+                            "语言包“{FileName}”无法读取或内容无效，已跳过。",
+                            ("FileName", r.FileName)
+                        ), ex);
                 }
             }
         }

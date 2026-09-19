@@ -1,5 +1,6 @@
+using System;
 using System.Globalization;
-using SmartFormat;
+using Fluid;
 
 namespace Lytec.Common.Localization;
 
@@ -36,30 +37,32 @@ public abstract class Localizer : ILocalizer
 
     public virtual string Format(ILocalizeString str)
     {
-        if (str is null)
-            throw new ArgumentNullException(nameof(str));
+        ArgumentNullException.ThrowIfNull(str);
 
         var hasTranslation = TryQuery(str.Key, out var format);
         format = hasTranslation ? format : str.DefaultMessage ?? str.Key;
 
+        string render(string format)
+        {
+            if (str.Arguments == null)
+                return format;
+            if (new FluidParser().TryParse(format, out var template, out var error))
+                return template.Render(new TemplateContext(str.Arguments));
+            throw new FormatException($"Localization Format Failed: {error}");
+        }
         try
         {
-            return str.Arguments is null
-                ? format
-                : Smart.Format(CurrentCulture, format, str.Arguments);
+            return render(format);
         }
         catch when (hasTranslation && str.DefaultMessage is not null)
         {
-            return str.Arguments is null
-                ? str.DefaultMessage
-                : Smart.Format(CurrentCulture, str.DefaultMessage, str.Arguments);
+            return render(str.DefaultMessage);
         }
     }
 
     public IObservable<string> Observe(ILocalizeString str)
     {
-        if (str is null)
-            throw new ArgumentNullException(nameof(str));
+        ArgumentNullException.ThrowIfNull(str);
         return new LocalizedTextObservable(this, str);
     }
 
@@ -84,8 +87,7 @@ public abstract class Localizer : ILocalizer
     {
         public IDisposable Subscribe(IObserver<string> observer)
         {
-            if (observer is null)
-                throw new ArgumentNullException(nameof(observer));
+            ArgumentNullException.ThrowIfNull(observer);
 
             EventHandler handler = (_, _) => observer.OnNext(Localizer.Format(Value));
             Localizer.Changed += handler;

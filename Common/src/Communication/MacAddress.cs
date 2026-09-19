@@ -181,8 +181,8 @@ public class MacAddressJsonConverter : JsonConverter
             .Localize(
                 LocalizeScope,
                 "ParseFailedError",
-                new { Type = reader.Value?.GetType() },
-                "无法从 {Type} 解析 MacAddress"
+                "无法将类型 '{Type}' 解析为 MacAddress",
+                ("Type", reader.Value?.GetType())
                 );
     }
 

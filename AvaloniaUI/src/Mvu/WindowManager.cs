@@ -17,10 +17,14 @@ internal interface IDesktopShutdownCoordinator
 internal sealed class WindowViewManager : IViewManager, IDesktopShutdownCoordinator
 {
     private const string LocalizeScope = "Lytec.AvaloniaUI.Mvu.WindowManager";
-    private static LocalizeString Localize(string Key, object? Arguments = null, string? DefaultMessage = null)
-    => new(LocalizeScope, Key, Arguments, DefaultMessage);
-    private string i18n(string Key, object? Arguments = null, string? DefaultMessage = null)
-    => localizer.Format(LocalizeScope, Key, Arguments, DefaultMessage);
+    private static LocalizeString Localize(string Key, string? DefaultMessage, IReadOnlyDictionary<string, object?>? Arguments = null)
+    => new(LocalizeScope, Key, DefaultMessage, Arguments);
+    private static LocalizeString Localize(string Key, string? DefaultMessage, params (string Key, object? Value)[] Arguments)
+    => new(LocalizeScope, Key, DefaultMessage, Arguments);
+    private string i18n(string Key, string? DefaultMessage, IReadOnlyDictionary<string, object?>? Arguments = null)
+    => localizer.Format(LocalizeScope, Key, DefaultMessage, Arguments);
+    private string i18n(string Key, string? DefaultMessage, params (string Key, object? Value)[] Arguments)
+    => localizer.Format(LocalizeScope, Key, DefaultMessage, Arguments);
 
     private readonly Dictionary<Window, ManagedWindow> managedWindows = [];
     private readonly IClassicDesktopStyleApplicationLifetime desktop;

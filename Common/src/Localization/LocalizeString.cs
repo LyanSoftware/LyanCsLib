@@ -1,21 +1,25 @@
+using Lytec.Common;
 namespace Lytec.Common.Localization;
 
 public interface ILocalizeString
 {
     string Key { get; }
-    object? Arguments { get; }
+    IReadOnlyDictionary<string, object?>? Arguments { get; }
     string? DefaultMessage { get; }
 }
 
-public record LocalizeString(string Key, object? Arguments, string? DefaultMessage) : ILocalizeString
+public record LocalizeString(string Key, string? DefaultMessage, IReadOnlyDictionary<string, object?>? Arguments = null) : ILocalizeString
 {
-    public LocalizeString(string Key, object? Arguments) : this(Key, Arguments, DefaultMessage: null) { }
+    public LocalizeString(string Key, string? DefaultMessage, params (string Key, object? Value)[] Arguments)
+        : this(Key, DefaultMessage, Arguments.ToDictionary()) { }
+
+    public LocalizeString(string Key, IReadOnlyDictionary<string, object?>? Arguments = null) : this(Key, null, Arguments) { }
+    public LocalizeString(string Key, params (string Key, object? Value)[] Arguments)
+        : this(Key, Arguments.ToDictionary()) { }
     
-    public LocalizeString(string Key, string? DefaultMessage) : this(Key, Arguments: null, DefaultMessage) { }
+    public LocalizeString(string Scope, string Key, string? DefaultMessage, IReadOnlyDictionary<string, object?>? Arguments = null)
+        : this(Localizer.CombineScopeAndKey(Scope, Key), DefaultMessage, Arguments) { }
+    public LocalizeString(string Scope, string Key, string? DefaultMessage, params (string Key, object? Value)[] Arguments)
+        : this(Scope, Key, DefaultMessage, Arguments.ToDictionary()) { }
 
-    public LocalizeString(string Scope, string Key, object? Arguments, string? DefaultMessage)
-        : this(Localizer.CombineScopeAndKey(Scope, Key), Arguments, DefaultMessage)
-    { }
-
-    public LocalizeString(string Scope, string Key, string? DefaultMessage) : this(Scope, Key, null, DefaultMessage) { }
 }
