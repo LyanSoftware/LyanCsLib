@@ -9,9 +9,9 @@ namespace Lytec.Protocol
 {
     public partial class ADSCL
     {
-        public abstract class Pack<TImpl, TData> : IPackage, ISerializable<TImpl>
+        public abstract class Pack<TImpl, TData> : IPackage, ILegacySerializable<TImpl>
             where TImpl : Pack<TImpl, TData>, new()
-            where TData : ISerializable<TData>, ICloneable<TData>, new()
+            where TData : ILegacySerializable<TData>, ICloneable<TData>, new()
         {
             public static byte[] SendIdentifier
             {
@@ -103,7 +103,7 @@ namespace Lytec.Protocol
                 return [.. buf];
             }
 
-            public class Deserializer : ISequenceVLDeserializer<TImpl>
+            public class Deserializer : ILegacySequenceVariableLengthDeserializer<TImpl>
             {
                 public static readonly Deserializer Default = new Deserializer();
 
@@ -242,7 +242,7 @@ namespace Lytec.Protocol
                             p.Password = span[offset..].ToStruct<int>(DefaultEndian);
                             offset += sizeof(int);
                             offset += sizeof(ushort); // DataLen
-                            p.Data = DataLen > 0 ? ((IFactory<IDeserializer<TData>>)new TData()).Create().Deserialize(span.Slice(offset, DataLen)) : default;
+                            p.Data = DataLen > 0 ? ((IFactory<ILegacyDeserializer<TData>>)new TData()).Create().Deserialize(span.Slice(offset, DataLen)) : default;
                             offset += DataLen;
                             p.CheckSum = span[offset..].ToStruct<ushort>(Endian.Big);
                             Reset();
@@ -315,9 +315,9 @@ namespace Lytec.Protocol
             public static TImpl? Deserialize(byte d) => Deserializer.Default.Deserialize(d);
             public static TImpl? Deserialize(IEnumerable<byte> d, out int DeserializedLength) => CreateDeserializer().Deserialize(d, out DeserializedLength);
 
-            IDeserializer<TImpl> IFactory<IDeserializer<TImpl>>.Create() => CreateDeserializer();
+            ILegacyDeserializer<TImpl> IFactory<ILegacyDeserializer<TImpl>>.Create() => CreateDeserializer();
 #if NET7_0_OR_GREATER
-            static IDeserializer<TImpl> IFactory<IDeserializer<TImpl>>.CreateInstance() => CreateDeserializer();
+            static ILegacyDeserializer<TImpl> IFactory<ILegacyDeserializer<TImpl>>.CreateInstance() => CreateDeserializer();
 #endif
         }
 
@@ -331,7 +331,7 @@ namespace Lytec.Protocol
             }
         }
 
-        public class CommandPack : IPackage, ISerializable<CommandPack>, ICloneable<CommandPack>
+        public class CommandPack : IPackage, ILegacySerializable<CommandPack>, ICloneable<CommandPack>
         {
             public const int MinDataLength = 12;
 
@@ -353,7 +353,7 @@ namespace Lytec.Protocol
             => [.. Command.ToBytes(Endian.Little)
 , .. Arg1.ToBytes(Endian.Little), .. Arg2.ToBytes(Endian.Little), .. Arg3];
 
-            class Deserializer : IDeserializer<CommandPack>
+            class Deserializer : ILegacyDeserializer<CommandPack>
             {
                 public CommandPack? Deserialize(IEnumerable<byte> b)
                 {
@@ -391,11 +391,11 @@ namespace Lytec.Protocol
                 }
             }
             static readonly Deserializer _Deserializer = new Deserializer();
-            IDeserializer<CommandPack> IFactory<IDeserializer<CommandPack>>.Create() => CreateDeserializer();
+            ILegacyDeserializer<CommandPack> IFactory<ILegacyDeserializer<CommandPack>>.Create() => CreateDeserializer();
 #if NET7_0_OR_GREATER
-            static IDeserializer<CommandPack> IFactory<IDeserializer<CommandPack>>.CreateInstance() => new Deserializer();
+            static ILegacyDeserializer<CommandPack> IFactory<ILegacyDeserializer<CommandPack>>.CreateInstance() => new Deserializer();
 #endif
-            public virtual IDeserializer<CommandPack> CreateDeserializer() => _Deserializer;
+            public virtual ILegacyDeserializer<CommandPack> CreateDeserializer() => _Deserializer;
 
             public CommandPack? Deserialize(byte[] bytes) => CreateDeserializer().Deserialize(bytes.AsReadOnlySpan());
 

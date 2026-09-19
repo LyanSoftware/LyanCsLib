@@ -4,23 +4,23 @@ using System.Text;
 
 namespace Lytec.Common.Serialization
 {
-    public interface IDeserializer<out T>
+    public interface ILegacyDeserializer<out T>
     {
         T? Deserialize(IEnumerable<byte> data);
         T? Deserialize(ReadOnlySpan<byte> data);
     }
 
-    public interface IVariableLengthDeserializer<out T> : IDeserializer<T>
+    public interface ILegacyVariableLengthDeserializer<out T> : ILegacyDeserializer<T>
     {
         T? Deserialize(IEnumerable<byte> data, out int DeserializedLength);
         T? Deserialize(ReadOnlySpan<byte> data, out int DeserializedLength);
     }
 
-    public interface ISequenceDeserializer<out T> : IDeserializer<T>
+    public interface ILegacySequenceDeserializer<out T> : ILegacyDeserializer<T>
     {
         T? Deserialize(byte data);
         void Reset();
     }
 
-    public interface ISequenceVLDeserializer<out T> : ISequenceDeserializer<T>, IVariableLengthDeserializer<T> { }
+    public interface ILegacySequenceVariableLengthDeserializer<out T> : ILegacySequenceDeserializer<T>, ILegacyVariableLengthDeserializer<T> { }
 }

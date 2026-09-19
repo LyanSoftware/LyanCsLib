@@ -71,7 +71,7 @@ public enum StartAddressType
     Linear
 }
 
-public interface IStartAddress : ISerializable
+public interface IStartAddress : ILegacySerializable
 {
     Record Encode();
 }
@@ -133,7 +133,7 @@ public readonly struct StartSegmentAddress : IStartAddress
 }
 
 [DebuggerDisplay("{" + nameof(DebugView) + ",nq}")]
-public readonly struct Record : ISerializable
+public readonly struct Record : ILegacySerializable
 {
     public const string NewLine = StaticData.NewLine;
     public const string EndOfFile = StaticData.EndOfFile;
@@ -254,7 +254,7 @@ public readonly struct DataBlock
     public DataBlock(int address, IEnumerable<byte> data) : this(address, [.. data]) { }
 }
 
-public class Records : ISerializable, IReadOnlyList<Record>
+public class Records : ILegacySerializable, IReadOnlyList<Record>
 {
     public const string NewLine = StaticData.NewLine;
     public const string EndOfFile = StaticData.EndOfFile;
@@ -310,7 +310,7 @@ public class Records : ISerializable, IReadOnlyList<Record>
 
     public virtual List<DataBlock> DataBlocks => Serialize();
 
-    byte[] ISerializable.Serialize() => Data;
+    byte[] ILegacySerializable.Serialize() => Data;
 
     public List<DataBlock> Serialize() => _Records.Serialize();
 
