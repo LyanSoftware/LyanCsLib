@@ -31,5 +31,10 @@ public enum BleAccessState
     /// <summary>
     /// 尚未请求权限，或状态无法确定。调用方可以选择重新请求。
     /// </summary>
-    Unknown
+    Unknown,
+
+    /// <summary>
+    /// 未在项目配置中启用相关权限
+    /// </summary>
+    NotSetup
 }

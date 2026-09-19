@@ -64,7 +64,7 @@ internal class BleService(IBleManager BleManager) : IBleService
             AccessState.Disabled => BleAccessState.Disabled,
             AccessState.NotSupported => BleAccessState.NotSupported,
             AccessState.Restricted => BleAccessState.Denied,
-            AccessState.NotSetup => BleAccessState.Unknown,
+            AccessState.NotSetup => BleAccessState.NotSetup,
             _ => BleAccessState.Unknown
         };
     }
