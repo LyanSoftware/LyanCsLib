@@ -106,7 +106,7 @@ public static partial class Win32Utils
     /// 设置阻止系统关闭时的提示信息
     /// </summary>
     /// <param name="hWnd"></param>
-    /// <param name="pwszReason"></param>
+    /// <param name="reason">提示消息</param>
     /// <returns></returns>
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool ShutdownBlockReasonCreate(IntPtr hWnd, [MarshalAs(UnmanagedType.LPWStr)] string reason);
@@ -141,44 +141,38 @@ public static partial class Win32Utils
     /// <param name="name">防火墙例外规则名称</param>
     /// <param name="timeout">超时时间</param>
     /// <returns></returns>
-    public static bool AddFirewallException(string path, string? name = null, int timeout = 30000, Encoding? encoding = default)
+    public static bool AddFirewallException(string path, string? name = null, int timeout = 30000)
     {
         if (name == null)
             name = Path.GetFileNameWithoutExtension(path);
-        var bat = Path.GetTempPath() + Guid.NewGuid() + ".bat";
-        try
+
+        string PS(string s) => $"'\"{s.Replace("'", "''")}\"'";
+        var ps1 =
+            $"netsh advfirewall firewall delete rule name=all program={PS(path)};" +
+            $"netsh advfirewall firewall add rule name={PS(name)} dir=in action=allow profile=any program={PS(path)} enable=yes";
+
+        var info = new System.Diagnostics.ProcessStartInfo()
         {
-            File.WriteAllText(bat, $"netsh advfirewall firewall delete rule name=all program=\"{path}\""
-                + "\r\n"
-                + $"netsh advfirewall firewall add rule name=\"{name}\" dir=in action=allow profile=any program=\"{path}\" enable=yes"
-                , encoding ?? Encoding.Default);
-            var info = new System.Diagnostics.ProcessStartInfo()
-            {
-                FileName = "cmd.exe",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
-                Arguments = $"/c {bat}"
-            };
-            if (!IsRunningAsAdministrator())
-            {
-                info.Verb = "runas";
-                info.UseShellExecute = true;
-            }
-            var process = (System.Diagnostics.Process?)System.Diagnostics.Process.Start(info);
-            if (process == null)
-                return false;
-            if (!process.WaitForExit(timeout))
-            {
-                process.Kill();
-                return false;
-            }
-            return process.ExitCode == 0;
-        }
-        finally
+            FileName = "powershell.exe",
+            Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{ps1.Replace("\"", "\\\"")}\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+        };
+        if (!IsRunningAsAdministrator())
         {
-            File.Delete(bat);
+            info.Verb = "runas";
+            info.UseShellExecute = true;
         }
+        var process = (System.Diagnostics.Process?)System.Diagnostics.Process.Start(info);
+        if (process == null)
+            return false;
+        if (!process.WaitForExit(timeout))
+        {
+            process.Kill();
+            return false;
+        }
+        return process.ExitCode == 0;
     }
 
     /// <summary>
