@@ -1,0 +1,32 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="Analyzer.References.props" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="Directory.Packages.props" />
+    <File Path="nuget.config" />
+  </Folder>
+  <Project Path="AnalyzerUtils/Lytec.AnalyzerUtils.csproj" />
+  <Project Path="AvaloniaUI.Generators.Tests/Lytec.AvaloniaUI.Generators.Tests.csproj" />
+  <Project Path="AvaloniaUI.Generators/Lytec.AvaloniaUI.Generators.csproj" />
+  <Project Path="AvaloniaUI/Lytec.AvaloniaUI.csproj" />
+  <Project Path="BluetoothLE/Lytec.BluetoothLE.csproj" />
+  <Project Path="Common.Generated/Lytec.Common.Generated.csproj" />
+  <Project Path="Common.Generators/Lytec.Common.Generators.csproj" />
+  <Project Path="Common/Lytec.Common.csproj" />
+  <Project Path="Image.GDIPlus/Lytec.Image.GDIPlus.csproj" />
+  <Project Path="Image/Lytec.Image.csproj" />
+  <Project Path="Localization.Tests/Lytec.Localization.Tests.csproj" />
+  <Project Path="NetStandard20Compatibility/Lytec.NetStandard20Compatibility.csproj" />
+  <Project Path="NetStandard21Compatibility/Lytec.NetStandard21Compatibility.csproj" />
+  <Project Path="Protocol.Images/Lytec.Protocol.Images.csproj" />
+  <Project Path="Protocol/Lytec.Protocol.csproj" />
+  <Project Path="SerialPort/Lytec.SerialPort.csproj" />
+  <Project Path="Test/Test.csproj" />
+  <Project Path="Win32/Lytec.Win32.csproj" />
+  <Project Path="WinForms/Lytec.WinForms.csproj" />
+  <Project Path="WinFormsTest/WinFormsTest.csproj" />
+  <Project Path="Wpf/Lytec.Wpf.csproj" />
+</Solution>
