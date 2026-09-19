@@ -15,7 +15,6 @@ using Lytec.Common.Crypto;
 using Lytec.Common.Data;
 using Lytec.Common.Localization;
 using Lytec.Common.Localization.Extensions;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
