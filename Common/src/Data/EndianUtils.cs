@@ -24,7 +24,7 @@ namespace Lytec.Common.Data
         /// <summary>
         /// 修正字节序
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <param name="type">目标类型</param>
         /// <param name="data"></param>
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
         /// <returns></returns>
@@ -129,9 +129,10 @@ namespace Lytec.Common.Data
         /// <summary>
         /// 修正字节序
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <param name="type">目标类型</param>
         /// <param name="data"></param>
         /// <param name="defaultEndian">未指定目标字节序时的默认字节序</param>
+        /// <param name="offset"></param>
         /// <returns></returns>
         public static byte[] FixEndian(this byte[] data, Type type, Endian? defaultEndian = null, int offset = 0)
         {

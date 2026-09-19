@@ -142,7 +142,7 @@ public static class SymbolUtils
     /// <summary>
     /// 判断类型是否具有可访问的无参构造函数。
     /// </summary>
-    /// <param name="type">要检查的类型符号</param>
+    /// <param name="t">要检查的类型符号</param>
     /// <param name="minAccessibility">最低允许的访问级别，默认为 Public。
     /// 如果为 NotApplicable，表示不限制访问性，只要存在无参构造即可。</param>
     /// <returns>存在满足条件的无参构造返回 true，否则 false。</returns>

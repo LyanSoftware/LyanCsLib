@@ -464,6 +464,7 @@ namespace Lytec.Common
         /// 转换为IPAddress
         /// </summary>
         /// <param name="str"></param>
+        /// <param name="ip"></param>
         /// <returns></returns>
         public static bool ToIPAddress(this string str, out IPAddress? ip)
         {
@@ -541,7 +542,7 @@ namespace Lytec.Common
         /// <summary>
         /// 翻转数组
         /// </summary>
-        /// <param name="i"></param>
+        /// <param name="data"></param>
         public static T[] Reversed<T>(this T[] data)
         {
             T[] ts = new T[data.Length];
@@ -556,7 +557,7 @@ namespace Lytec.Common
         /// <typeparam name="T"></typeparam>
         /// <param name="list">数据源</param>
         /// <param name="target">搜索目标</param>
-        /// <param name="comparison">比较器，为null时使用Comparer<see cref="{T}" />.Default.Compare</param>
+        /// <param name="comparison">比较器，为null时使用<see cref="Comparer{T}" />的默认比较器</param>
         /// <returns></returns>
         public static int FuzzyBinarySearch<T>(this IList<T> list, T target, Comparison<T>? comparison = null)
         {
@@ -607,6 +608,7 @@ namespace Lytec.Common
         /// <param name="funcs"></param>
         /// <param name="arg1"></param>
         /// <param name="arg2"></param>
+        /// <param name="stopAtNull">是否在任意委托返回null时停止</param>
         /// <returns></returns>
         public static T? SequentialExecute<T>(this Func<T, T, T> funcs, T arg1, T arg2, bool stopAtNull = false)
         {

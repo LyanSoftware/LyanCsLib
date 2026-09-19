@@ -16,6 +16,7 @@ public static partial class Win32Utils
     /// <summary>
     /// 读dword
     /// </summary>
+    /// <param name="Reg"></param>
     /// <param name="name"></param>
     /// <returns></returns>
     public static int? GetDWord(this RegistryKey Reg, string name)
@@ -32,6 +33,7 @@ public static partial class Win32Utils
     /// <summary>
     /// 读string
     /// </summary>
+    /// <param name="Reg"></param>
     /// <param name="name"></param>
     /// <returns></returns>
     public static string? GetString(this RegistryKey Reg, string name)
@@ -48,6 +50,7 @@ public static partial class Win32Utils
     /// <summary>
     /// 写dword
     /// </summary>
+    /// <param name="Reg"></param>
     /// <param name="name"></param>
     /// <param name="value"></param>
     public static void SetDWord(this RegistryKey Reg, string name, int value)
@@ -66,6 +69,7 @@ public static partial class Win32Utils
     /// <summary>
     /// 写string
     /// </summary>
+    /// <param name="Reg"></param>
     /// <param name="name"></param>
     /// <param name="value"></param>
     public static void SetString(this RegistryKey Reg, string name, string value)
