@@ -273,7 +273,7 @@ public sealed class JsonLanguagePackServiceTest
 
         var value = localizer.Format(new LocalizeString(
             Localizer.CombineScopeAndKey(Scope, "Number"),
-            new { Value = 1234.5 }));
+            ("Value", 1234.5)));
 
         Assert.EndsWith(",50", value);
     }
