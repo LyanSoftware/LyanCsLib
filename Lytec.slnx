@@ -15,6 +15,7 @@
   <Project Path="BluetoothLE.Shiny/Lytec.BluetoothLE.Shiny.csproj" />
   <Project Path="BluetoothLE/Lytec.BluetoothLE.csproj" />
   <Project Path="Common.Generated/Lytec.Common.Generated.csproj" />
+  <Project Path="Common.Generators.Tests/Lytec.Common.Generators.Tests.csproj" />
   <Project Path="Common.Generators/Lytec.Common.Generators.csproj" />
   <Project Path="Common/Lytec.Common.csproj" />
   <Project Path="Image.GDIPlus/Lytec.Image.GDIPlus.csproj" />

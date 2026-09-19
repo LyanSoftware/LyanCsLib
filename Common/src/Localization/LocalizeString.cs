@@ -8,6 +8,7 @@ public interface ILocalizeString
     string? DefaultMessage { get; }
 }
 
+[Serializable]
 public record LocalizeString(string Key, string? DefaultMessage, IReadOnlyDictionary<string, object?>? Arguments = null) : ILocalizeString
 {
     public LocalizeString(string Key, string? DefaultMessage, params (string Key, object? Value)[] Arguments)

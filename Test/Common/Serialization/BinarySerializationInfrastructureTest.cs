@@ -14,9 +14,9 @@ public class BinarySerializationInfrastructureTest
 
         Assert.Equal(new byte[] { 4, 1, 2, 3 }, codec.Serialize(value));
 
-        var writer = new ArrayBufferWriter<byte>();
+        var writer = new TestBufferWriter();
         codec.Serialize(value, writer);
-        Assert.Equal(new byte[] { 4, 1, 2, 3 }, writer.WrittenSpan.ToArray());
+        Assert.Equal(new byte[] { 4, 1, 2, 3 }, writer.ToArray());
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class BinarySerializationInfrastructureTest
         var localizedMessage = exception.GetLocalizedMessage();
         Assert.NotNull(localizedMessage);
         Assert.Equal(
-            "Lytec.Common.Serialization.BinaryDecodeResult.NegativeConsumed",
+            "Lytec.Common.Serialization.BinaryDecodeResult:NegativeConsumed",
             localizedMessage.Key);
     }
 
@@ -271,5 +271,34 @@ public class BinarySerializationInfrastructureTest
 
         public IBinaryStreamDecoder<byte[]> CreateStreamDecoder()
             => new BufferedBinaryStreamDecoder<byte[]>(this, ResynchronizationMode);
+    }
+
+    private sealed class TestBufferWriter : IBufferWriter<byte>
+    {
+        private byte[] _buffer = new byte[16];
+        private int _written;
+
+        public void Advance(int count) => _written += count;
+
+        public Memory<byte> GetMemory(int sizeHint = 0)
+        {
+            EnsureCapacity(sizeHint);
+            return _buffer.AsMemory(_written);
+        }
+
+        public Span<byte> GetSpan(int sizeHint = 0)
+        {
+            EnsureCapacity(sizeHint);
+            return _buffer.AsSpan(_written);
+        }
+
+        public byte[] ToArray() => _buffer.AsSpan(0, _written).ToArray();
+
+        private void EnsureCapacity(int sizeHint)
+        {
+            var required = _written + Math.Max(1, sizeHint);
+            if (required > _buffer.Length)
+                Array.Resize(ref _buffer, required);
+        }
     }
 }

@@ -7,7 +7,7 @@
 - 编译期可以确定线路大小的固定长度对象，由源代码生成器生成编解码代码。
 - 帧大小或帧类型需要在运行期决定的协议，由协议实现者编写无状态编解码器，并复用通用流解码基础设施。
 
-公共运行时以 `netstandard2.0` 为最低目标框架，可以由 C# 14 项目使用。运行时抽象和通用流解码器已经可用；固定长度源生成器属于后续实现阶段。本说明同时记录生成器最终必须遵守的完整公开约定，以免生成器实现与运行时设计分离。
+公共运行时和 `Common.Generators` 均以 `netstandard2.0` 为最低目标框架，可以由 C# 14 项目使用。固定长度源生成器、运行时抽象和通用流解码器均已实现。
 
 核心命名空间为 `Lytec.Common.Serialization`。字节序类型和标记位于 `Lytec.Common.Data`。
 
@@ -22,7 +22,7 @@
 - `DestinationTooSmall`：序列化目标缓冲区不足。
 - `InvalidData`：输入帧或待序列化值不符合协议。
 
-畸形线路数据属于正常解析结果，不抛异常。空参数、非法配置、接口实现违反约定、错误的生命周期调用等编程错误才抛异常。库主动创建的异常都使用 `Exception.Localize(...)` 附加本地化键、默认中文消息和格式化参数；调用方可通过 `GetLocalizedMessage()` 取得附加信息。
+畸形线路数据属于正常解析结果，不抛异常。空参数、非法配置、接口实现违反约定、错误的生命周期调用等编程错误才抛异常。除 `ArgumentNullException.ThrowIfNull`、`ArgumentOutOfRangeException.ThrowIf…` 一类简单参数检查外，库和生成代码主动创建的契约异常使用 `Exception.Localize(...)` 附加本地化键、默认中文消息和格式化参数；调用方可通过 `GetLocalizedMessage()` 取得附加信息。
 
 ### 2.2 有限长度边界
 
@@ -48,6 +48,14 @@ public interface IBinaryFormat
 ## 3. 固定长度对象
 
 ### 3.1 类型声明
+
+使用项目必须把 `Common.Generators` 作为 Analyzer 引用。例如仓库内项目可写为：
+
+```xml
+<ProjectReference Include="..\Common.Generators\Lytec.Common.Generators.csproj"
+                  OutputItemType="Analyzer"
+                  ReferenceOutputAssembly="false" />
+```
 
 参与生成的类型必须：
 
@@ -192,7 +200,23 @@ public byte[] Data { get; }
 
 ### 3.9 生成 API
 
-生成器应为每个有效类型提供一个类型化的 `IFixedBinaryCodec<T>` 单例入口，以及以下便捷能力：
+生成器为每个可构造的有效类型提供以下公开入口：
+
+```csharp
+public static IFixedBinaryCodec<T> BinaryCodec { get; }
+
+public static IFixedBinaryCodec<T> GetBinaryCodec(
+    Endian? endian = null);
+
+public static OperationStatus TryDeserialize(
+    ReadOnlySpan<byte> source,
+    out T value,
+    Endian? endian = null);
+```
+
+`BinaryCodec` 是使用 Attribute 和本机默认端序的不可变单例。`GetBinaryCodec` 为 `null`、小端和大端分别复用不可变实例，适合被可变长度协议组合。
+
+此外还生成以下实例便捷能力：
 
 - `SerializedSize`：当前声明类型的固定线路大小。
 - `Serialize(Endian? endian = null)`：返回精确长度的新 `byte[]`。
@@ -202,7 +226,11 @@ public byte[] Data { get; }
 
 `TrySerialize` 在失败时必须令 `written == 0`，并保持目标缓冲区完全不变。`TryDeserialize` 对畸形数据返回 `InvalidData`；目标不足或输入不足按调用场景返回相应状态。类型化 codec 用于需要返回 `T` 的统一调用点，避免旧式反序列化工厂。
 
+直接 `TryDeserialize` 要求 `source.Length == SerializedSize`，多一个或少一个字节都返回 `InvalidData`。从较大帧前缀读取固定对象时使用 `BinaryCodec.Parse`，并通过 `BinaryParseResult.Consumed` 取得明确的消费长度。
+
 若通过基类声明的固定 codec 序列化派生实例，它按声明类型固定大小进行运行期检查并拒绝不同大小的实例。由实例自身提供的便捷方法可以虚分派到实际派生类型的生成实现。
+
+抽象类型只生成实例序列化、固定大小和供派生类串联的受保护解码构造路径；不生成 `BinaryCodec`、`GetBinaryCodec` 或 `TryDeserialize`。抽象类型不能作为内联成员或定长数组的声明元素类型。
 
 ### 3.10 固定长度增量解码和临时预览
 
@@ -222,6 +250,8 @@ bool TryDiscardOldest(int count);
 - `BufferedLength` 是已经接收并保留的有效字节数，`RemainingLength` 是完成固定对象仍需的字节数。
 - `TryGetTemporary` 不改变解码器状态。它复制已接收前缀，并调用 `fillMissing(offset, destination)` 填充所有尚未接收的槽位，再尝试产生临时对象。委托返回 `false` 时预览失败。该能力可用于接收部分头部后提前验证候选帧。
 - `TryDiscardOldest(count)` 只能丢弃当前缓冲区最旧的 `count` 个字节；不能删除中间或尾部区域。参数越界时返回 `false`，成功时保留剩余顺序。
+- 缓冲区收满但内容无效时，解码器保留整帧、返回 `InvalidData` 并进入 `Faulted`。此时可以调用 `TryDiscardOldest` 手动删除前缀；成功后按剩余长度恢复为 `Receiving` 或 `Ready`。
+- `fillMissing` 返回 `false` 时 `TryGetTemporary` 返回 `NeedMoreData`；填充成功但临时内容无效时返回 `InvalidData`。
 - 正常完成后产生的结果不借用内部缓冲区。
 
 ## 4. 可变长度协议
@@ -402,6 +432,15 @@ BinaryDecodeResult many = decoder.Append(buffer, out packet);
 显式设置 `CharSet` 只报告 Warning，因为它可以安全忽略且不会改变二进制结果。该 Warning 必须使用稳定的诊断 ID，允许调用方按普通 Roslyn 方式显式屏蔽。
 
 对无法明确判断支持与否的形式，生成器必须优先报告诊断，不得静默采用平台相关行为。
+
+当前诊断编号：
+
+- `LYBIN001`：类型本身不受支持，例如非 partial、泛型、ref-like、无效基类或抽象内联类型。
+- `LYBIN002`：成员表示不受支持，例如可空、动态数组、不匹配的 `MarshalAs` 或非自动属性。
+- `LYBIN003`：布局无效，例如 `Auto`、非法 `Pack`、跨 partial 的顺序成员、缺少 `FieldOffset` 或有歧义的重叠。
+- `LYBIN004`：同一成员的包含和排除标记冲突。
+- `LYBIN005`：用户成员占用了生成 API 的保留名称。
+- `LYBIN101`：显式 `CharSet` 不影响二进制行为；这是可以按诊断 ID 屏蔽的 Warning。
 
 ## 6. 非目标
 
