@@ -44,11 +44,13 @@ public static class FixedBinaryPrimitives
     public static void WriteSingle(Span<byte> destination, float value, Endian endian)
     {
         Span<byte> bytes = stackalloc byte[sizeof(float)];
-#pragma warning disable CS9191
+#if NET8_0_OR_GREATER
+        MemoryMarshal.Write(bytes, in value);
+#else
         MemoryMarshal.Write(bytes, ref value);
-#pragma warning restore CS9191
+#endif
         if ((endian == Endian.Little) != BitConverter.IsLittleEndian)
-            Reverse(bytes);
+            bytes.Reverse();
         bytes.CopyTo(destination);
     }
     public static float ReadSingle(ReadOnlySpan<byte> source, Endian endian)
@@ -56,7 +58,7 @@ public static class FixedBinaryPrimitives
         Span<byte> bytes = stackalloc byte[sizeof(float)];
         source.Slice(0, bytes.Length).CopyTo(bytes);
         if ((endian == Endian.Little) != BitConverter.IsLittleEndian)
-            Reverse(bytes);
+            bytes.Reverse();
         return MemoryMarshal.Read<float>(bytes);
     }
     public static void WriteDouble(Span<byte> destination, double value, Endian endian)
@@ -64,12 +66,4 @@ public static class FixedBinaryPrimitives
     public static double ReadDouble(ReadOnlySpan<byte> source, Endian endian)
         => BitConverter.Int64BitsToDouble(ReadInt64(source, endian));
 
-    private static void Reverse(Span<byte> bytes)
-    {
-        for (var left = 0; left < bytes.Length / 2; left++)
-        {
-            var right = bytes.Length - left - 1;
-            (bytes[left], bytes[right]) = (bytes[right], bytes[left]);
-        }
-    }
 }
