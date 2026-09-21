@@ -80,7 +80,7 @@ public sealed class FixedBinarySerializationGenerator : IIncrementalGenerator
     }
 
     private enum LayoutKindValue { Sequential, Explicit }
-    private enum WireKind { I1, U1, I2, U2, I4, U4, I8, U8, R4, R8, Bool4, VariantBool, Nested, Array }
+    private enum WireKind { I1, U1, I2, U2, I4, U4, I8, U8, R4, R8, Bool4, Nested, Array }
 
     private sealed record TypePlan(
         INamedTypeSymbol Type,
@@ -335,7 +335,7 @@ public sealed class FixedBinarySerializationGenerator : IIncrementalGenerator
                     3 => (WireKind.I1, 1), 4 => (WireKind.U1, 1),
                     5 => (WireKind.I2, 2), 6 => (WireKind.U2, 2),
                     7 => (WireKind.I4, 4), 8 => (WireKind.U4, 4),
-                    2 => (WireKind.Bool4, 4), 37 => (WireKind.VariantBool, 2),
+                    2 => (WireKind.Bool4, 4),
                     _ => (default, 0)
                 };
                 alignment = size;
@@ -660,7 +660,6 @@ public sealed class FixedBinarySerializationGenerator : IIncrementalGenerator
                 case WireKind.U8: Call("WriteUInt64"); break;
                 case WireKind.R4: Call("WriteSingle"); break;
                 case WireKind.R8: Call("WriteDouble"); break;
-                case WireKind.VariantBool: Call("WriteInt16"); break;
             }
             void Call(string method) => sb.Append(Serialization).Append("FixedBinaryPrimitives.").Append(method).Append("(destination.Slice(").Append(offset).Append(", ").Append(size).Append("), ").Append(converted).Append(", ").Append(endian).AppendLine(");");
         }
@@ -694,7 +693,7 @@ public sealed class FixedBinarySerializationGenerator : IIncrementalGenerator
                 WireKind.I4 or WireKind.Bool4 => Read("ReadInt32"), WireKind.U4 => Read("ReadUInt32"),
                 WireKind.I8 => Read("ReadInt64"), WireKind.U8 => Read("ReadUInt64"),
                 WireKind.R4 => Read("ReadSingle"), WireKind.R8 => Read("ReadDouble"),
-                WireKind.VariantBool => Read("ReadInt16"), _ => "default"
+                _ => "default"
             };
             var expression = ConvertRead(type, kind, read);
             sb.Append(target).Append(" = ").Append(expression).AppendLine(";");
@@ -704,8 +703,8 @@ public sealed class FixedBinarySerializationGenerator : IIncrementalGenerator
         private static string ConvertWrite(ITypeSymbol type, WireKind kind, string value)
         {
             if (type.SpecialType == SpecialType.System_Boolean)
-                return kind == WireKind.VariantBool ? $"(short)({value} ? -1 : 0)" : kind == WireKind.Bool4 ? $"({value} ? 1 : 0)" : $"({value} ? 1 : 0)";
-            var cast = kind switch { WireKind.I1 => "sbyte", WireKind.U1 => "byte", WireKind.I2 or WireKind.VariantBool => "short", WireKind.U2 => "ushort", WireKind.I4 or WireKind.Bool4 => "int", WireKind.U4 => "uint", WireKind.I8 => "long", WireKind.U8 => "ulong", WireKind.R4 => "float", WireKind.R8 => "double", _ => "int" };
+                return kind == WireKind.Bool4 ? $"({value} ? 1 : 0)" : $"({value} ? 1 : 0)";
+            var cast = kind switch { WireKind.I1 => "sbyte", WireKind.U1 => "byte", WireKind.I2 => "short", WireKind.U2 => "ushort", WireKind.I4 or WireKind.Bool4 => "int", WireKind.U4 => "uint", WireKind.I8 => "long", WireKind.U8 => "ulong", WireKind.R4 => "float", WireKind.R8 => "double", _ => "int" };
             return $"unchecked(({cast})({value}))";
         }
 

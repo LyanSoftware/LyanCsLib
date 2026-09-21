@@ -254,6 +254,40 @@ bool TryDiscardOldest(int count);
 - `fillMissing` 返回 `false` 时 `TryGetTemporary` 返回 `NeedMoreData`；填充成功但临时内容无效时返回 `InvalidData`。
 - 正常完成后产生的结果不借用内部缓冲区。
 
+### 3.11 基元类型便捷 API
+
+`PrimitiveBinarySerializationExtensions` 为生成器支持的固定宽度基元类型提供不依赖对象声明的便捷方法。支持 `sbyte`、`byte`、`short`、`ushort`、`int`、`uint`、`long`、`ulong`、`float`、`double` 和具有显式线路表示的 `bool`。
+
+序列化使用按 CLR 类型重载的 `SerializeToBytes`，每次返回一个新分配的精确长度数组：
+
+```csharp
+byte[] command = ((ushort)0x1234).SerializeToBytes(Endian.Big);
+byte[] enabled = true.SerializeToBytes(UnmanagedType.U1, Endian.Big);
+```
+
+这组便捷扩展不提供写入 `Span<byte>` 的无分配重载；需要复用目标缓冲区时，应使用固定对象 codec 或 `FixedBinaryPrimitives`。
+
+反序列化方法按结果类型命名，避免泛型调用掩盖实际线路宽度：
+
+```csharp
+OperationStatus status = source.TryDeserializeToUInt16(
+    out ushort command,
+    Endian.Big);
+
+OperationStatus boolStatus = boolSource.TryDeserializeToBoolean(
+    UnmanagedType.Bool,
+    out bool enabled,
+    Endian.Big);
+```
+
+可用名称为 `TryDeserializeToSByte`、`TryDeserializeToByte`、`TryDeserializeToInt16`、`TryDeserializeToUInt16`、`TryDeserializeToInt32`、`TryDeserializeToUInt32`、`TryDeserializeToInt64`、`TryDeserializeToUInt64`、`TryDeserializeToSingle`、`TryDeserializeToDouble` 和 `TryDeserializeToBoolean`。接收方可以是 `ReadOnlySpan<byte>` 或非空 `byte[]`。
+
+这些方法只解析一个完整、独立的基元值，要求输入长度与目标线路宽度完全相等。成功返回 `Done`；长度过短或过长均返回 `InvalidData`，不会返回 `NeedMoreData`，也不会自动消费较大输入的前缀。需要读取帧中的字段时，应先按协议明确切片。
+
+`Endian?` 省略或传入 `null` 时使用本机字节序。端序参数在单字节类型上不会改变结果，但仍会验证枚举值是否合法。
+
+`bool` 没有默认表示，序列化和反序列化都必须显式传入 `UnmanagedType`。支持 `I1`、`U1`、`I2`、`U2`、`I4`、`U4`、`Bool`；其他值抛出 `ArgumentOutOfRangeException`。序列化遵循相应表示的标准规范值：普通整数和 `Bool` 的 `true` 写为 `1`。反序列化遵循零为 `false`、任意非零为 `true`，因此使用四字节 `Bool` 或 `I4` 时也兼容 Pascal 的 `false = 0`、`true = 0xffffffff` 表示。
+
 ## 4. 可变长度协议
 
 ### 4.1 编解码器接口
