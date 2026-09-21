@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -71,7 +72,7 @@ public enum StartAddressType
     Linear
 }
 
-public interface IStartAddress : ILegacySerializable
+public interface IStartAddress : IBinarySerializable
 {
     Record Encode();
 }
@@ -82,19 +83,33 @@ public interface IStartAddress : ILegacySerializable
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct StartLinearAddress : IStartAddress
 {
+    public const int SizeConst = 4;
+
     public uint Value { get; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     public string DebugView => $"0x{Value:X8}";
+
+    public int SerializedSize => SizeConst;
 
     public StartLinearAddress(uint value) => Value = value;
     public StartLinearAddress(int value) => Value = (uint)value;
 
     public Record Encode() => Records.EncodeStartAddress(Value);
 
-    public byte[] Serialize() => this.ToBytes();
-
     public override string ToString() => Value.ToString("X8");
+
+    public byte[] Serialize(Endian? endian = null) => Value.SerializeToBytes(endian ?? DefaultEndian);
+
+    public System.Buffers.OperationStatus TrySerialize(Span<byte> destination, out int written, Endian? endian = null)
+    {
+        written = 0;
+        if (destination.Length < SizeConst)
+            return System.Buffers.OperationStatus.DestinationTooSmall;
+        FixedBinaryPrimitives.WriteUInt32(destination, Value, FixedBinaryPrimitives.ResolveEndian(endian ?? DefaultEndian));
+        written = SizeConst;
+        return System.Buffers.OperationStatus.Done;
+    }
 
     public static implicit operator StartLinearAddress(int value) => new StartLinearAddress(value);
     public static implicit operator int(StartLinearAddress value) => (int)value.Value;
@@ -108,12 +123,16 @@ public readonly struct StartLinearAddress : IStartAddress
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct StartSegmentAddress : IStartAddress
 {
+    public const int SizeConst = 4;
+
     public ushort CodeSegment { get; }
 
     public ushort InstructionPointer { get; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     public string DebugView => $"Code Segment: 0x{CodeSegment:X4}, Instruction Pointer : 0x{InstructionPointer:X4}";
+
+    public int SerializedSize => SizeConst;
 
     public StartSegmentAddress(ushort codeSegment, ushort instructionPointer)
     {
@@ -129,11 +148,29 @@ public readonly struct StartSegmentAddress : IStartAddress
 
     public Record Encode() => Records.EncodeStartAddress(this);
 
-    public byte[] Serialize() => this.ToBytes();
+    public byte[] Serialize(Endian? endian = null)
+    {
+        var buf = new byte[SizeConst];
+        TrySerialize(buf, out _, endian); // 这里不应该失败
+        return buf;
+    }
+
+    public System.Buffers.OperationStatus TrySerialize(Span<byte> destination, out int written, Endian? endian = null)
+    {
+        written = 0;
+        if (destination.Length < SizeConst)
+            return System.Buffers.OperationStatus.DestinationTooSmall;
+        var en = FixedBinaryPrimitives.ResolveEndian(endian ?? DefaultEndian);
+        FixedBinaryPrimitives.WriteUInt16(destination[..2], CodeSegment, en);
+        FixedBinaryPrimitives.WriteUInt16(destination[2..], InstructionPointer, en);
+        written = SizeConst;
+        return System.Buffers.OperationStatus.Done;
+    }
+
 }
 
 [DebuggerDisplay("{" + nameof(DebugView) + ",nq}")]
-public readonly struct Record : ILegacySerializable
+public readonly struct Record
 {
     public const string NewLine = StaticData.NewLine;
     public const string EndOfFile = StaticData.EndOfFile;
@@ -254,7 +291,7 @@ public readonly struct DataBlock
     public DataBlock(int address, IEnumerable<byte> data) : this(address, [.. data]) { }
 }
 
-public class Records : ILegacySerializable, IReadOnlyList<Record>
+public class Records : IReadOnlyList<Record>
 {
     public const string NewLine = StaticData.NewLine;
     public const string EndOfFile = StaticData.EndOfFile;
@@ -309,8 +346,6 @@ public class Records : ILegacySerializable, IReadOnlyList<Record>
     }
 
     public virtual List<DataBlock> DataBlocks => Serialize();
-
-    byte[] ILegacySerializable.Serialize() => Data;
 
     public List<DataBlock> Serialize() => _Records.Serialize();
 
