@@ -29,7 +29,7 @@ public interface IBinarySerializer<in T> : IBinaryFormat
 }
 
 /// <summary>
-/// 从偏移零开始解析一个候选帧。解析器无状态；其实现不可变时可以并发复用。
+/// 从偏移零开始解析一个候选帧。解析器无状态，且实现不可变时可以并发复用。
 /// </summary>
 public interface IBinaryFrameParser<T> : IBinaryFormat
 {
