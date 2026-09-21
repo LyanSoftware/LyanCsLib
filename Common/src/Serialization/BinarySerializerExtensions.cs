@@ -129,7 +129,7 @@ public static class BinarySerializerExtensions
                     .Localize(
                         SerializerExceptionLocalizeScope,
                         "InvalidLengthStatus",
-                        "TryGetSerializedLength 返回了不允许的状态 {Status}。",
+                        "TryGetSerializedLength 返回了不允许的状态 {{Status}}。",
                         ("Status", status));
         }
     }
@@ -141,7 +141,7 @@ public static class BinarySerializerExtensions
             .Localize(
                 SerializerExceptionLocalizeScope,
                 "SerializationContractViolation",
-                "TrySerialize 违反了预先测量的序列化约定。状态 = {Status}，预期长度 = {Expected}，实际写入 = {Written}。",
+                "TrySerialize 违反了预先测量的序列化约定。状态 = {{Status}}，预期长度 = {{Expected}}，实际写入 = {{Written}}。",
                 ("Status", status),
                 ("Expected", expected),
                 ("Written", written));

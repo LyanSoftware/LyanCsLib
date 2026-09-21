@@ -34,7 +34,7 @@ public sealed class BufferedBinaryStreamDecoder<T> : IBinaryStreamDecoder<T>
                 .Localize(
                     LocalizeScope,
                     "InvalidResynchronizationMode",
-                    "重新同步模式 {Mode} 无效。",
+                    "重新同步模式 {{Mode}} 无效。",
                     ("Mode", resynchronizationMode));
 
         _resynchronizationMode = resynchronizationMode;
@@ -147,7 +147,7 @@ public sealed class BufferedBinaryStreamDecoder<T> : IBinaryStreamDecoder<T>
                         .Localize(
                             LocalizeScope,
                             "InvalidParserStatus",
-                            "解析器返回了不允许的状态 {Status}。",
+                            "解析器返回了不允许的状态 {{Status}}。",
                             ("Status", parsed.Status));
             }
         }

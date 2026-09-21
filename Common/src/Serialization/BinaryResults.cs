@@ -67,7 +67,7 @@ public readonly struct BinaryParseResult : IEquatable<BinaryParseResult>
                 .Localize(
                     LocalizeScope,
                     "InvalidStatus",
-                    "状态 {Status} 不能用于二进制解析结果。",
+                    "状态 {{Status}} 不能用于二进制解析结果。",
                     ("Status", status));
         if (consumed < 0)
             throw new ArgumentOutOfRangeException(nameof(consumed))
@@ -152,7 +152,7 @@ public readonly struct BinaryDecodeResult : IEquatable<BinaryDecodeResult>
                 .Localize(
                     LocalizeScope,
                     "InvalidStatus",
-                    "状态 {Status} 不能用于二进制解码结果。",
+                    "状态 {{Status}} 不能用于二进制解码结果。",
                     ("Status", status));
         if (consumed < 0)
             throw new ArgumentOutOfRangeException(nameof(consumed))
