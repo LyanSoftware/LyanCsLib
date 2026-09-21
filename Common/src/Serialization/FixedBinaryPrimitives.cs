@@ -5,7 +5,7 @@ using Lytec.Common.Data;
 
 namespace Lytec.Common.Serialization;
 
-/// <summary>供生成代码使用的固定宽度基元读写方法。</summary>
+/// <summary>固定宽度基元读写方法。</summary>
 public static class FixedBinaryPrimitives
 {
     public static Endian ResolveEndian(Endian? endian)
@@ -16,6 +16,14 @@ public static class FixedBinaryPrimitives
         return resolved;
     }
 
+    public static void WriteInt8(Span<byte> destination, sbyte value, Endian _)
+        => destination[0] = (byte)value;
+    public static sbyte ReadInt8(ReadOnlySpan<byte> source, Endian _)
+        => (sbyte)source[0];
+    public static void WriteUInt8(Span<byte> destination, byte value, Endian _)
+        => destination[0] = value;
+    public static byte ReadUInt8(ReadOnlySpan<byte> source, Endian _)
+        => source[0];
     public static void WriteInt16(Span<byte> destination, short value, Endian endian)
     { if (endian == Endian.Little) BinaryPrimitives.WriteInt16LittleEndian(destination, value); else BinaryPrimitives.WriteInt16BigEndian(destination, value); }
     public static short ReadInt16(ReadOnlySpan<byte> source, Endian endian)
@@ -40,6 +48,23 @@ public static class FixedBinaryPrimitives
     { if (endian == Endian.Little) BinaryPrimitives.WriteUInt64LittleEndian(destination, value); else BinaryPrimitives.WriteUInt64BigEndian(destination, value); }
     public static ulong ReadUInt64(ReadOnlySpan<byte> source, Endian endian)
         => endian == Endian.Little ? BinaryPrimitives.ReadUInt64LittleEndian(source) : BinaryPrimitives.ReadUInt64BigEndian(source);
+
+    public static void Write(Span<byte> destination, sbyte value, Endian _)
+        => destination[0] = (byte)value;
+    public static void Write(Span<byte> destination, byte value, Endian _)
+        => destination[0] = value;
+    public static void Write(Span<byte> destination, short value, Endian endian)
+    { if (endian == Endian.Little) BinaryPrimitives.WriteInt16LittleEndian(destination, value); else BinaryPrimitives.WriteInt16BigEndian(destination, value); }
+    public static void Write(Span<byte> destination, ushort value, Endian endian)
+    { if (endian == Endian.Little) BinaryPrimitives.WriteUInt16LittleEndian(destination, value); else BinaryPrimitives.WriteUInt16BigEndian(destination, value); }
+    public static void Write(Span<byte> destination, int value, Endian endian)
+    { if (endian == Endian.Little) BinaryPrimitives.WriteInt32LittleEndian(destination, value); else BinaryPrimitives.WriteInt32BigEndian(destination, value); }
+    public static void Write(Span<byte> destination, uint value, Endian endian)
+    { if (endian == Endian.Little) BinaryPrimitives.WriteUInt32LittleEndian(destination, value); else BinaryPrimitives.WriteUInt32BigEndian(destination, value); }
+    public static void Write(Span<byte> destination, long value, Endian endian)
+    { if (endian == Endian.Little) BinaryPrimitives.WriteInt64LittleEndian(destination, value); else BinaryPrimitives.WriteInt64BigEndian(destination, value); }
+    public static void Write(Span<byte> destination, ulong value, Endian endian)
+    { if (endian == Endian.Little) BinaryPrimitives.WriteUInt64LittleEndian(destination, value); else BinaryPrimitives.WriteUInt64BigEndian(destination, value); }
 
     public static void WriteSingle(Span<byte> destination, float value, Endian endian)
     {
