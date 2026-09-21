@@ -72,8 +72,9 @@ public enum StartAddressType
     Linear
 }
 
-public interface IStartAddress : IBinarySerializable
+public interface IStartAddress
 {
+    byte[] Serialize();
     Record Encode();
 }
 
@@ -90,8 +91,6 @@ public readonly struct StartLinearAddress : IStartAddress
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     public string DebugView => $"0x{Value:X8}";
 
-    public int SerializedSize => SizeConst;
-
     public StartLinearAddress(uint value) => Value = value;
     public StartLinearAddress(int value) => Value = (uint)value;
 
@@ -99,7 +98,7 @@ public readonly struct StartLinearAddress : IStartAddress
 
     public override string ToString() => Value.ToString("X8");
 
-    public byte[] Serialize(Endian? endian = null) => Value.SerializeToBytes(endian ?? DefaultEndian);
+    public byte[] Serialize() => Value.SerializeToBytes(DefaultEndian);
 
     public System.Buffers.OperationStatus TrySerialize(Span<byte> destination, out int written, Endian? endian = null)
     {
@@ -132,8 +131,6 @@ public readonly struct StartSegmentAddress : IStartAddress
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     public string DebugView => $"Code Segment: 0x{CodeSegment:X4}, Instruction Pointer : 0x{InstructionPointer:X4}";
 
-    public int SerializedSize => SizeConst;
-
     public StartSegmentAddress(ushort codeSegment, ushort instructionPointer)
     {
         CodeSegment = codeSegment;
@@ -148,19 +145,19 @@ public readonly struct StartSegmentAddress : IStartAddress
 
     public Record Encode() => Records.EncodeStartAddress(this);
 
-    public byte[] Serialize(Endian? endian = null)
+    public byte[] Serialize()
     {
         var buf = new byte[SizeConst];
-        TrySerialize(buf, out _, endian); // 这里不应该失败
+        TrySerialize(buf, out _); // 这里不应该失败
         return buf;
     }
 
-    public System.Buffers.OperationStatus TrySerialize(Span<byte> destination, out int written, Endian? endian = null)
+    public System.Buffers.OperationStatus TrySerialize(Span<byte> destination, out int written)
     {
         written = 0;
         if (destination.Length < SizeConst)
             return System.Buffers.OperationStatus.DestinationTooSmall;
-        var en = FixedBinaryPrimitives.ResolveEndian(endian ?? DefaultEndian);
+        var en = FixedBinaryPrimitives.ResolveEndian(DefaultEndian);
         FixedBinaryPrimitives.WriteUInt16(destination[..2], CodeSegment, en);
         FixedBinaryPrimitives.WriteUInt16(destination[2..], InstructionPointer, en);
         written = SizeConst;
@@ -497,13 +494,13 @@ public static class Utils
 {
     public static void Save(this DataBlock src, string filename, int startAddress)
     => new DataBlock[] { src }.Save(filename, startAddress);
-    
+
     public static void Save(this DataBlock src, Stream stream, int startAddress)
     => new DataBlock[] { src }.Save(stream, startAddress);
-    
+
     public static void Save(this DataBlock src, string filename, IStartAddress? startAddress = null)
     => new DataBlock[] { src }.Save(filename, startAddress);
-    
+
     public static void Save(this DataBlock src, Stream stream, IStartAddress? startAddress = null)
     => new DataBlock[] { src }.Save(stream, startAddress);
 
