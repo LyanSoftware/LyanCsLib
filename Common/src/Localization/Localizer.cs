@@ -47,7 +47,7 @@ public abstract class Localizer : ILocalizer
             if (str.Arguments == null)
                 return format;
             if (new FluidParser().TryParse(format, out var template, out var error))
-                return template.Render(new TemplateContext(str.Arguments));
+                return template.Render(new TemplateContext(str.Arguments) { CultureInfo = CurrentCulture });
             throw new FormatException($"Localization Format Failed: {error}");
         }
         try

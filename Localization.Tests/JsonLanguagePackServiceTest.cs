@@ -266,7 +266,7 @@ public sealed class JsonLanguagePackServiceTest
     {
         using var directory = new TemporaryDirectory();
         directory.Write("fr-FR.json", "{}");
-        directory.Write("en.json", "{ \"Test.Scope\": { \"Number\": \"{Value:N2}\" } }");
+        directory.Write("en.json", "{ \"Test.Scope\": { \"Number\": \"{{ Value | format_number: \\\"N2\\\" }}\" } }");
 
         var (localizer, service, _) = CreateService(directory.Path, "fr-FR");
         await service.InitializeAsync(TestContext.Current.CancellationToken);
