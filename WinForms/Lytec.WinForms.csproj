@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
+    <PolySharpExcludeGeneratedTypes>System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute</PolySharpExcludeGeneratedTypes>
   </PropertyGroup>
 
   <ItemGroup>
