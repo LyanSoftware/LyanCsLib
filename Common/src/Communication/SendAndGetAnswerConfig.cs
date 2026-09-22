@@ -88,6 +88,8 @@ namespace Lytec.Common.Communication
 
         public void Dispose() => DisposeFunc?.Invoke();
 
+        public static ISendAndGetAnswerConfig DoNothingConfig { get; } = new SendAndGetAnswerConfig();
+
     }
 
     public static class SendAndGetAnswerConfigUtils
