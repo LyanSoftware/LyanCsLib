@@ -87,7 +87,7 @@ namespace Lytec.Common
                 return t;
             throw new ArgumentException($"Type {typeof(T).Name} is not marked as Flags (System.FlagsAttribute)")
                 .Localize(
-                    "Lytec.Common.Utils.SetFlag_safe.NotFlagEnumError",
+                    "Lytec.Common.Utils.SetFlag_safe", "NotFlagEnumError",
                     "Type {{Type}} is not marked as Flags (System.FlagsAttribute)",
                     ("Type", typeof(T).Name)
                     );

@@ -490,7 +490,7 @@ namespace Lytec.Common
             if (addr.AddressFamily == AddressFamily.InterNetwork)
                 return BitConverter.ToUInt32(addr.GetAddressBytes(), 0);
             throw new ArgumentException("Not IPv4 Address", nameof(addr))
-                .Localize("Lytec.Common.Utils.GetIPv4AddressValue.NotIPv4AddrError", "Not a vaild IPv4 address");
+                .Localize("Lytec.Common.Utils.GetIPv4AddressValue", "NotIPv4AddrError", "Not a vaild IPv4 address");
         }
 
         public static IPAddress GetBroadcastAddress(this UnicastIPAddressInformation unicastAddress)
