@@ -71,7 +71,7 @@ namespace Lytec.Protocol
                     throw new ArgumentException("toDeviceId and fromDeviceId must differ", nameof(toDeviceId))
                         .Localize(
                             LocalizeScope,
-                            "IdentifierLengthMismatch",
+                            "SameIdentifierError",
                             "toDeviceId 与 fromDeviceId 不可相同！"
                         );
                 _ToDeviceIdentifier = [.. toDeviceId];
