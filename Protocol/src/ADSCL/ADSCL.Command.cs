@@ -4,7 +4,8 @@ using Lytec.Common.Data;
 using Lytec.Common.Communication;
 using System.Diagnostics.CodeAnalysis;
 using Lytec.Common;
-using Microsoft.Extensions.Logging.Abstractions;
+using Lytec.Common.Serialization;
+using System.Buffers;
 
 namespace Lytec.Protocol
 {
@@ -64,20 +65,36 @@ namespace Lytec.Protocol
             GetRuntimeInfo = ReadAny,
         }
 
-        public static bool Exec(ISendAndGetAnswerConfig conf, [NotNullWhen(true)] out Pack? Answer, CommandPack command, string? password = null, Func<Pack, bool>? CheckIsSuccess = default, int extTimeout = 0)
+        static DeviceContext GetSharedContext(ISendAndGetAnswerConfig conf, string? password = null)
         {
-            var cmd = new Pack()
-            {
-                AddrCode = (byte)(conf.AddrCode ?? 0),
-                Data = command.Clone(),
-                Identifier = [.. Pack.SendIdentifier],
-            };
-            if (!password.IsNullOrEmpty())
-                cmd.Password = Pack.PasswordConverter.Convert(password);
-            cmd.UpdatePackIndex();
-            cmd.UpdateCheckSum();
-            var sbuf = cmd.Serialize();
-            var deserializer = Pack.CreateDeserializer();
+            var context = Pack.MakeContext(conf);
+            if (password != null)
+                context.SetPassword(password);
+            else context.UnsetPassword();
+            return context;
+        }
+
+        public static bool Exec(
+            ISendAndGetAnswerConfig conf,
+            [NotNullWhen(true)] out Pack? Answer,
+            CommandPack command,
+            Func<Pack, bool>? CheckIsSuccess = default,
+            int extTimeout = 0,
+            string? password = null
+            )
+        => Exec(GetSharedContext(conf, password), out Answer, command, CheckIsSuccess, extTimeout);
+        public static bool Exec(
+            DeviceContext context,
+            [NotNullWhen(true)] out Pack? Answer,
+            CommandPack command,
+            Func<Pack, bool>? CheckIsSuccess = default,
+            int extTimeout = 0
+            )
+        {
+            var conf = context.CommConfig;
+            var cmd = context.CreateRequest(command);
+            var sbuf = context.Codec.Serialize(cmd);
+            var deserializer = context.Codec.CreateStreamDecoder();
             Answer = null;
             for (var tryCount = -1; tryCount < conf.Retries; tryCount++)
             {
@@ -87,29 +104,38 @@ namespace Lytec.Protocol
                     if (conf.Send(sbuf))
                     {
                         var timeout = DateTime.Now.AddMilliseconds(conf.Timeout + extTimeout);
+                        var rcvTime = DateTime.Now;
                         while (timeout > DateTime.Now)
                         {
                             Thread.Sleep(20);
                             if (conf.TryGetAnswer(out var r, extTimeout))
                             {
-                                foreach (var b in r)
+                                rcvTime = DateTime.Now;
+                                Pack? answer = null;
+                                if (conf.IsStream)
                                 {
-                                    var answer = deserializer.Deserialize(b);
-                                    if (answer == null)
-                                        continue;
-                                    if (!cmd.IsMyAnswer(answer))
+                                    foreach (var b in r)
                                     {
-                                        deserializer.Reset();
-                                        continue;
+                                        if (deserializer.Append(b, out answer).Status != OperationStatus.Done
+                                            || answer == null)
+                                            continue;
+                                        if (!cmd.IsMyAnswer(answer))
+                                        {
+                                            deserializer.Reset();
+                                            continue;
+                                        }
                                     }
-                                    if (!answer.IsPasswordAccepted)
-                                        return false;
-                                    if (CheckIsSuccess == null)
-                                        CheckIsSuccess = p => p.Data != null && p.Data.Arg2 != FalseValue;
-                                    Answer = answer;
-                                    return CheckIsSuccess(answer);
                                 }
+                                else context.Codec.ParseDatagram(r, out answer);
+                                if (answer == null || !context.IsPasswordAccepted(answer))
+                                    return false;
+                                if (CheckIsSuccess == null)
+                                    CheckIsSuccess = p => p.Data != null && p.Data.Arg2 != FalseValue;
+                                Answer = answer;
+                                return CheckIsSuccess(answer);
                             }
+                            else if ((DateTime.Now - rcvTime).TotalMilliseconds > 500)
+                                deserializer.Reset();
                         }
                     }
                     else continue;
@@ -123,13 +149,14 @@ namespace Lytec.Protocol
         }
 
         public static bool LoadFrom(ISendAndGetAnswerConfig config, int addr, int length, out byte[]? Data, Func<Pack, bool>? CheckIsValidData = null, string? password = null)
+        => LoadFrom(GetSharedContext(config, password), addr, length, out Data, CheckIsValidData);
+        public static bool LoadFrom(DeviceContext context, int addr, int length, out byte[]? Data, Func<Pack, bool>? CheckIsValidData = null)
         {
             Data = null;
             if (!Exec(
-                    config,
+                    context,
                     out var ans,
                     new CommandPack((int)CommandCode.LoadFrom, addr, length),
-                    password,
                     r => r.Data != null && r.Data.Arg2 != FalseValue && (CheckIsValidData == null || CheckIsValidData(r))
                     ))
                 return false;
@@ -138,24 +165,29 @@ namespace Lytec.Protocol
         }
 
         public static bool LoadFrom(ISendAndGetAnswerConfig config, int addr, int length, [NotNullWhen(true)] out byte[]? Data, int minDataLen, string? password = null)
-        => LoadFrom(config, addr, length, out Data, r => r.Data != null && r.Data.Arg2 >= minDataLen && r.Data.Arg3?.Length >= minDataLen, password);
+        => LoadFrom(GetSharedContext(config, password), addr, length, out Data, minDataLen);
+        public static bool LoadFrom(DeviceContext context, int addr, int length, [NotNullWhen(true)] out byte[]? Data, int minDataLen)
+        => LoadFrom(context, addr, length, out Data, r => r.Data != null && r.Data.Arg2 >= minDataLen && r.Data.Arg3?.Length >= minDataLen);
 
         public static bool GetSpStructInternal(ISendAndGetAnswerConfig config, SpStructIndex index, [NotNullWhen(true)] out byte[]? Data, int minDataLen, string? password = null)
-        => LoadFrom(config, (int)StructAddress.LoadFromSpStructs, (int)index, out Data, minDataLen, password);
-
-        //public static bool GetVersionCode(ISendAndGetAnswerConfig config, out SCL.VersionCode Version, string password = null)
-        //=> GetSpStruct(config, SCL.SpStructIndex.FullVersionCode, out Version, SCL.VersionCode.SizeConst, password);
+        => GetSpStructInternal(GetSharedContext(config, password), index, out Data, minDataLen);
+        public static bool GetSpStructInternal(DeviceContext context, SpStructIndex index, [NotNullWhen(true)] out byte[]? Data, int minDataLen)
+        => LoadFrom(context, (int)StructAddress.LoadFromSpStructs, (int)index, out Data, minDataLen);
 
         public static bool GetSpStruct<T>(ISendAndGetAnswerConfig config, SpStructIndex index, [NotNullWhen(true)] out T? data, int minDataLen, string? password = null)
+        => GetSpStruct<T>(GetSharedContext(config, password), index, out data, minDataLen);
+        public static bool GetSpStruct<T>(DeviceContext context, SpStructIndex index, [NotNullWhen(true)] out T? data, int minDataLen)
         {
-            var ret = GetSpStructInternal(config, index, out var bytes, minDataLen, password);
+            var ret = GetSpStructInternal(context, index, out var bytes, minDataLen);
             data = ret ? bytes!.ToStruct<T>(0, DefaultEndian) : default;
             return ret;
         }
 
         public static bool GetAllConfigs(ISendAndGetAnswerConfig config, [NotNullWhen(true)] out AllConfigs? Configs, string? password = null)
+        => GetAllConfigs(GetSharedContext(config, password), out Configs);
+        public static bool GetAllConfigs(DeviceContext context, [NotNullWhen(true)] out AllConfigs? Configs)
         {
-            var ret = GetSpStructInternal(config, SpStructIndex.AllConfigs, out var bytes, AllConfigs.SizeConst, password);
+            var ret = GetSpStructInternal(context, SpStructIndex.AllConfigs, out var bytes, AllConfigs.SizeConst);
             Configs = null;
             if (!ret)
                 return false;
@@ -167,8 +199,10 @@ namespace Lytec.Protocol
         }
 
         public static bool GetNetConfig(ISendAndGetAnswerConfig config, [NotNullWhen(true)] out NetConfig? Config, string? password = null)
+        => GetNetConfig(GetSharedContext(config, password), out Config);
+        public static bool GetNetConfig(DeviceContext context, [NotNullWhen(true)] out NetConfig? Config)
         {
-            if (GetAllConfigs(config, out var cfgs, password))
+            if (GetAllConfigs(context, out var cfgs))
             {
                 Config = cfgs.Net;
                 return true;
@@ -178,8 +212,10 @@ namespace Lytec.Protocol
         }
 
         public static bool GetLedConfig(ISendAndGetAnswerConfig config, [NotNullWhen(true)] out LEDConfig? Config, string? password = null)
+        => GetLedConfig(GetSharedContext(config, password), out Config);
+        public static bool GetLedConfig(DeviceContext context, [NotNullWhen(true)] out LEDConfig? Config)
         {
-            if (GetAllConfigs(config, out var cfgs, password))
+            if (GetAllConfigs(context, out var cfgs))
             {
                 Config = cfgs.Led;
                 return true;
@@ -189,28 +225,33 @@ namespace Lytec.Protocol
         }
 
         public static bool SendData(ISendAndGetAnswerConfig config, int addr, IEnumerable<byte> data, string? password = null, int extTimeout = 0)
+        => SendData(GetSharedContext(config, password), addr, data, extTimeout);
+        public static bool SendData(DeviceContext context, int addr, IEnumerable<byte> data, int extTimeout = 0)
         {
             while (data.Any())
             {
                 var buf = data.Take(MaxDataLength).ToArray();
                 data = data.Skip(MaxDataLength);
-                if (!Exec(config, out _, new CommandPack((int)CommandCode.SendData, addr, buf.Length, buf), password, r => r.Data != null && r.Data.Arg2 == buf.Length, extTimeout))
+                if (!Exec(context, out _, new CommandPack((int)CommandCode.SendData, addr, buf.Length, buf), r => r.Data != null && r.Data.Arg2 == buf.Length, extTimeout))
                     return false;
             }
             return true;
         }
 
         public static bool SaveTo(ISendAndGetAnswerConfig config, int addr, int length, string? password = null, int extTimeout = 0)
-        => Exec(config, out _, new CommandPack((int)CommandCode.SaveTo, addr, length), password, r => r.Data != null && r.Data.Arg2 == length, extTimeout);
+        => SaveTo(GetSharedContext(config, password), addr, length, extTimeout);
+        public static bool SaveTo(DeviceContext context, int addr, int length, int extTimeout = 0)
+        => Exec(context, out _, new CommandPack((int)CommandCode.SaveTo, addr, length), r => r.Data != null && r.Data.Arg2 == length, extTimeout);
 
         public static bool GetFileSize(ISendAndGetAnswerConfig config, DiskDriver disk, string filepath, out int FileSize, string? password = null, int extTimeout = 0)
+        => GetFileSize(GetSharedContext(config, password), disk, filepath, out FileSize, extTimeout);
+        public static bool GetFileSize(DeviceContext context, DiskDriver disk, string filepath, out int FileSize, int extTimeout = 0)
         {
             FileSize = -1;
             if (Exec(
-                config,
+                context,
                 out var p,
                 new CommandPack((int)CommandCode.LoadFileToBuff, (int)disk | (3 << 2), 0, new byte[4].Concat(ToFixedLengthString(filepath, 32)).ToArray()),
-                password,
                 r => r.Data != null && r.Data.Arg2 != 0 && r.Data.Arg2 != FalseValue,
                 extTimeout))
             {
@@ -221,18 +262,19 @@ namespace Lytec.Protocol
         }
 
         public static bool GetFileMD5(ISendAndGetAnswerConfig config, DiskDriver disk, string filepath, [NotNullWhen(true)] out string? md5, int fileSize = -1, string? password = null, int extTimeout = 0)
+        => GetFileMD5(GetSharedContext(config, password), disk, filepath, out md5, fileSize, extTimeout);
+        public static bool GetFileMD5(DeviceContext context, DiskDriver disk, string filepath, [NotNullWhen(true)] out string? md5, int fileSize = -1, int extTimeout = 0)
         {
             md5 = null;
             if (fileSize <= 0)
             {
-                if (!GetFileSize(config, disk, filepath, out fileSize, password, extTimeout))
+                if (!GetFileSize(context, disk, filepath, out fileSize, extTimeout))
                     return false;
             }
             if (Exec(
-                config,
+                context,
                 out var p,
                 new CommandPack((int)CommandCode.LoadFileToBuff, (int)disk | (2 << 2), 0, new byte[4].Concat(ToFixedLengthString(filepath, 32)).ToArray()),
-                password,
                 r => r.Data?.Arg2 == 16 && r.Data.Arg3.Length == 16,
                 extTimeout + (fileSize / CalcFileMd5SpeedPerSecond * 1000) + 1000))
             {
@@ -243,29 +285,35 @@ namespace Lytec.Protocol
         }
 
         public static bool SetLEDConfig(ISendAndGetAnswerConfig config, LEDConfig conf, string? password = null)
-        => SendData(config, 0, conf.ToBytes(), password)
-            && SaveTo(config, (int)StructAddress.LEDConfig, LEDConfig.SizeConst, password);
+        => SetLEDConfig(GetSharedContext(config, password), conf);
+        public static bool SetLEDConfig(DeviceContext context, LEDConfig conf)
+        => SendData(context, 0, conf.ToBytes())
+            && SaveTo(context, (int)StructAddress.LEDConfig, LEDConfig.SizeConst);
 
         /// <summary>
         /// 格式化磁盘，仅支持内置存储（A盘）和RAM内存盘（C盘）
         /// </summary>
         /// <param name="config">通信配置</param>
-        /// <param name="drv">目标磁盘</param>
+        /// <param name="disk">目标磁盘</param>
         /// <param name="password">网络通信密码</param>
         /// <returns></returns>
-        public static bool FormatDisk(ISendAndGetAnswerConfig config, DiskDriver drv, string? password = null)
-        => Exec(config, out _, new CommandPack((int)CommandCode.FormatDisk, (int)drv, 0), password);
+        public static bool FormatDisk(ISendAndGetAnswerConfig config, DiskDriver disk, string? password = null)
+        => FormatDisk(GetSharedContext(config, password), disk);
+        public static bool FormatDisk(DeviceContext context, DiskDriver disk)
+        => Exec(context, out _, new CommandPack((int)CommandCode.FormatDisk, (int)disk, 0));
 
         /// <summary>
         /// 重新播放节目表
         /// </summary>
         /// <param name="config"></param>
-        /// <param name="driver">节目表所在磁盘</param>
+        /// <param name="disk">节目表所在磁盘</param>
         /// <param name="index">节目表索引</param>
         /// <param name="password">网络通信密码</param>
         /// <returns></returns>
-        public static bool Replay(ISendAndGetAnswerConfig config, DiskDriver driver, int index, string? password = null)
-        => Exec(config, out _, new CommandPack((int)CommandCode.Reset, 0, ((index & 0xff) << 24) | ((int)driver << 16)), password);
+        public static bool Replay(ISendAndGetAnswerConfig config, DiskDriver disk, int index, string? password = null)
+        => Replay(GetSharedContext(config, password), disk, index);
+        public static bool Replay(DeviceContext context, DiskDriver disk, int index)
+        => Exec(context, out _, new CommandPack((int)CommandCode.Reset, 0, ((index & 0xff) << 24) | ((int)disk << 16)));
 
         /// <summary>
         /// 重启设备
@@ -274,7 +322,9 @@ namespace Lytec.Protocol
         /// <param name="password">网络通信密码</param>
         /// <returns></returns>
         public static bool Reboot(ISendAndGetAnswerConfig config, string? password = null)
-        => Exec(config, out _, new CommandPack((int)CommandCode.Reset, 1, 0), password);
+        => Reboot(GetSharedContext(config, password));
+        public static bool Reboot(DeviceContext context)
+        => Exec(context, out _, new CommandPack((int)CommandCode.Reset, 1, 0));
 
     }
 }
