@@ -546,9 +546,9 @@ public static class FontLibUtils
             {
                 Parallel.For(args.Byte2Start, byte2End + 1, new ParallelOptions() { MaxDegreeOfParallelism = maxThreads }, b2 =>
                 {
-                    var str = args.Encoding.GetString(new byte[] { (byte)b1, (byte)b2 });
+                    var str = args.Encoding.GetString([(byte)b1, (byte)b2]);
                     var chr = str.GetUtf32Char();
-                    if (chr != 0 && chr != Rune.ReplacementChar.Value)
+                    if (chr != 0 && chr != '\xFFFD')
                     {
                         using var bmp = font.GetCharImageWithString(str, b1 | (b2 << 8));
                         ExportToSCLFormat_FillCharBitmap(bmp, buff, offset + (b2 - args.Byte2Start) * chrsize);

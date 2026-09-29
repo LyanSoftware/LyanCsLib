@@ -1,10 +1,9 @@
-namespace System
+namespace Lytec.Common;
+
+public interface ICloneable<out T> : ICloneable
 {
-    public interface ICloneable<out T> : ICloneable
-    {
-        new T Clone();
+    new T Clone();
 #if NET || NETSTANDARD2_1_OR_GREATER
-        object ICloneable.Clone() => Clone()!;
+    object ICloneable.Clone() => Clone()!;
 #endif
-    }
 }

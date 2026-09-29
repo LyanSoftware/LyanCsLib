@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json;
 using System.Security.Cryptography;
+using Lytec.Common.Algorithm;
 using static Lytec.Protocol.SCL.Constants;
 
 namespace Lytec.Protocol;

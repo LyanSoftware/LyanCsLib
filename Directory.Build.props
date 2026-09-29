@@ -9,8 +9,6 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <!-- 保留生成的代码文件 -->
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-    <!-- 让PolySharp生成运行时支持 -->
-    <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
   </PropertyGroup>
   <PropertyGroup>
     <CommonTargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0;net10.0</CommonTargetFrameworks>

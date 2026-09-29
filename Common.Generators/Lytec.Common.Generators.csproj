@@ -13,13 +13,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Take a public dependency on Json.Net. Consumers of this generator will get a reference to this package -->
-    <ProjectReference Include="..\Common\Lytec.Common.csproj" GeneratePathProperty="true"
+    <ProjectReference Include="..\Common\Lytec.Common.csproj"
+                      GeneratePathProperty="true"
                       PrivateAssets="all"
-                      ReferenceOutputAssembly="false"
                       />
-    <ProjectReference Include="..\AnalyzerUtils\Lytec.AnalyzerUtils.csproj" GeneratePathProperty="true" />
+    <ProjectReference Include="..\AnalyzerUtils\Lytec.AnalyzerUtils.csproj"
+                      GeneratePathProperty="true"
+                      PrivateAssets="all"
+                      />
 
+    <!-- Take a public dependency on Json.Net. Consumers of this generator will get a reference to this package -->
     <!-- Package the Newtonsoft.Json dependency alongside the generator assembly -->
     <!--
     <None Include="$(PkgNewtonsoft_Json)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />

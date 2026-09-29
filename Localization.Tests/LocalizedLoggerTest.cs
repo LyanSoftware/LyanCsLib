@@ -141,7 +141,7 @@ public sealed class LocalizedLoggerTest
     {
         public List<Entry> Entries { get; } = [];
 
-        public IDisposable BeginScope<TState>(TState state)
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull
             => NoopScope.Instance;
 
         public bool IsEnabled(LogLevel logLevel) => true;

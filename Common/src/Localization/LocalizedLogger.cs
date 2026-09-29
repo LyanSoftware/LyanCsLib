@@ -31,7 +31,7 @@ public sealed class LocalizedLogger<TCategoryName>(
     private readonly ILocalizer localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
     private readonly ILogger<TCategoryName> logger = logger ?? NullLogger<TCategoryName>.Instance;
 
-    public IDisposable BeginScope<TState>(TState state)
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         => logger.BeginScope(state);
 
     public bool IsEnabled(LogLevel logLevel)

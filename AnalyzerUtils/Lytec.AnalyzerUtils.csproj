@@ -6,6 +6,5 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis" PrivateAssets="all" />
-    <ProjectReference Include="..\Common\Lytec.Common.csproj" />
   </ItemGroup>
 </Project>

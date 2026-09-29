@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Lytec.Common.Algorithm;
 
 namespace Lytec.Protocol
 {

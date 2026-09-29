@@ -3,8 +3,8 @@
   <PropertyGroup>
     <!-- Enable central package management, https://learn.microsoft.com/en-us/nuget/consume-packages/Central-Package-Management -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MSDIVersion Condition="'$(TargetFramework)' != 'net7.0' and '$(TargetFramework)' != 'net6.0'">[10.0.7,)</MSDIVersion>
-    <MSDIVersion Condition="'$(TargetFramework)' == 'net7.0' or  '$(TargetFramework)' == 'net6.0'">[6.0,9.0)</MSDIVersion>
+    <MsExtVersion Condition="'$(TargetFramework)' != 'net7.0' and '$(TargetFramework)' != 'net6.0'">[10.0.12,)</MsExtVersion>
+    <MsExtVersion Condition="'$(TargetFramework)' == 'net7.0' or  '$(TargetFramework)' == 'net6.0'">[6.0,)</MsExtVersion>
     <ReactiveVersion Condition="'$(TargetFramework)' != 'net7.0' and '$(TargetFramework)' != 'net6.0'">[7.0,)</ReactiveVersion>
     <ReactiveVersion Condition="'$(TargetFramework)' == 'net7.0' or  '$(TargetFramework)' == 'net6.0'">[6.0,7.0)</ReactiveVersion>
     <FluidCoreVersion Condition="'$(TargetFramework)' != 'net7.0' and '$(TargetFramework)' != 'net6.0'">[2.40.0,)</FluidCoreVersion>
@@ -20,25 +20,29 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 低版本框架的高版本类型实现 -->
+    <PackageVersion Include="Microsoft.Bcl.HashCode" Version="[6.0.0,)" />
+    <!-- Index/Range -->
+    <PackageVersion Include="Microsoft.Bcl.Memory" Version="[10.0.12,)" />
+    <!-- IAsyncXXX -->
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="[10.0.12,)" />
+    <!-- ValueTask -->
+    <PackageVersion Include="System.Threading.Tasks.Extensions" Version="[4.6.3,)" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- 低版本框架的高版本语法、特性兼容 -->
-    <PackageVersion Include="Nullable" Version="[1.3.1,)" />
-    <PackageVersion Include="IsExternalInit" Version="[1.0.3,)" />
-    <PackageVersion Include="RequiredMemberAttribute" Version="[1.0.0,)" />
-    <!-- Microsoft.Bcl.Memory实际包含了IndexRange -->
-    <PackageVersion Include="Microsoft.Bcl.Memory" Version="[9.0.14,)" />
-    <PackageVersion Include="Hafner.Compatibility.MetaPackage" Version="[1.9.0,)" />
-    <PackageVersion Include="PolySharp" Version="[1.16.0,)" />
-    <PackageVersion Include="PolyShim" Version="[2.13.0,)" />
-    <PackageVersion Include="NetEvolve.Arguments" Version="[3.4.37,)" />
     <PackageVersion Include="Meziantou.Polyfill" Version="[1.0.165,)" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageVersion Include="Microsoft.Bcl.HashCode" Version="[6.0.0,)" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MSDIVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(MSDIVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MSDIVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="[6.0.0,)" />
+    <!-- MS.Ext -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MsExtVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(MsExtVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MsExtVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="[7.0,)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageVersion Include="Newtonsoft.Json" Version="[13.0.4,)" />
     <PackageVersion Include="System.IO.Ports" Version="[6.0.0,9.0)" />
     <PackageVersion Include="System.Management" Version="[6.0.0,9.0)" />
@@ -56,7 +60,6 @@
     <PackageVersion Include="Microsoft.Win32.Registry" Version="[4.4.0,)" />
     <PackageVersion Include="System.Net.Http.WinHttpHandler" Version="[6.0.0,9.0)" />
     <PackageVersion Include="SharpCompress" Version="[0.29.0,0.30)" />
-    <PackageVersion Include="Shim.System.Text.Rune" Version="[6.0.0,)" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="[8.0.0, 9.0)" />
     <PackageVersion Include="newbeeui" Version="[9.0.0.1, 12.0)" />
     <PackageVersion Include="Costura.Fody" Version="[6.0.0,)" />
@@ -68,6 +71,7 @@
     <PackageVersion Include="System.Collections.Immutable" Version="[7.0.0,11.0)" />
     <PackageVersion Include="System.Reactive" Version="$(ReactiveVersion)" />
     <PackageVersion Include="LuaCSharp" Version="[0.5.6,0.6)" />
+    <PackageVersion Include="StandardSocketsHttpHandler" Version="[2.2.0.10,)" />
   </ItemGroup>
 
   <ItemGroup>

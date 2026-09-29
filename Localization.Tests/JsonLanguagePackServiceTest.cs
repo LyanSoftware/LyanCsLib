@@ -303,7 +303,7 @@ public sealed class JsonLanguagePackServiceTest
         public ConcurrentQueue<(LogLevel Level, ILocalizeString Message, Exception? Exception)>
             Entries { get; } = new();
 
-        public IDisposable BeginScope<TState>(TState state)
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull
             => NoopScope.Instance;
 
         public bool IsEnabled(LogLevel logLevel) => true;

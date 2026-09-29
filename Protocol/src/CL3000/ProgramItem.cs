@@ -217,7 +217,8 @@ public struct ProgramItem
                 min = 1;
             else if (Type == ProgramType.RamText)
                 max = 3;
-            ArgumentOutOfRangeException.ThrowIfOutOfRange(value, min, max);
+            if (value < min || value > max)
+                throw new ArgumentOutOfRangeException(nameof(value), value, $"值必须位于 [{min}, {max}] 范围内。");
             PicFIndex = (ushort)value;
         }
     }

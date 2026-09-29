@@ -79,8 +79,8 @@ namespace Lytec.Common.Text.Encoding
                 return ret;
             }
 
-            public static readonly byte[] ReplacementBytesBuf = new byte[] { (byte)'?' };
-            public static readonly char[] ReplacementCharsBuf = char.ConvertFromUtf32(Rune.ReplacementChar.Value).ToCharArray();
+            public static readonly byte[] ReplacementBytesBuf = [(byte)'?'];
+            public static readonly char[] ReplacementCharsBuf = [ '\xFFFD' ];
 
             public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
             {

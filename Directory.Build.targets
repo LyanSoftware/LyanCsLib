@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
 
+  <!-- 默认启用统一兼容层；兼容项目自身应关闭此开关以避免循环引用。 -->
+  <PropertyGroup>
+    <IncludeLytecPolyfills Condition="'$(IncludeLytecPolyfills)' == ''">true</IncludeLytecPolyfills>
+  </PropertyGroup>
+
   <!-- 仅为兼容的框架（net6.0 及以上）启用 AOT/裁剪分析器 -->
   <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">
     <EnableAotAnalyzer>true</EnableAotAnalyzer>
@@ -18,25 +23,40 @@
     <IsTrimmable>false</IsTrimmable>
   </PropertyGroup>
 
-  <!-- 低版本框架的高版本语法、特性兼容 -->
-  <ItemGroup>
-    <PackageReference Include="NetEvolve.Arguments" PrivateAssets="all" />
+  <!-- 统一使用一个源生成器，避免多个 Polyfill 包声明相同的编译器支持类型。 -->
+  <ItemGroup Condition="'$(IncludeLytecPolyfills)' == 'true'">
+    <PackageReference Include="Meziantou.Polyfill" PrivateAssets="all" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
-    <PackageReference Include="PolySharp" PrivateAssets="all" />
+  <PropertyGroup Condition="'$(IncludeLytecPolyfills)' == 'true' and '$(TargetFramework)' == 'net472'">
+    <!-- Microsoft.Windows.CsWin32 已为旧 Windows 项目提供此特性。 -->
+    <MeziantouPolyfill_ExcludedPolyfills>T:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute</MeziantouPolyfill_ExcludedPolyfills>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(IncludeLytecPolyfills)' == 'true' and '$(TargetFramework)' == 'net472' and '$(UseWPF)' == 'true'">
+    <!-- CommunityToolkit.Mvvm 会为旧版 WPF 项目生成这两个特性。 -->
+    <MeziantouPolyfill_ExcludedPolyfills>$(MeziantouPolyfill_ExcludedPolyfills)|T:System.Diagnostics.CodeAnalysis.NotNullAttribute|T:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute</MeziantouPolyfill_ExcludedPolyfills>
+  </PropertyGroup>
+
+  <!-- 会进入公共 API 的 BCL 类型必须作为传递依赖提供。 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472' or '$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="Microsoft.Bcl.Memory" />
+    <PackageReference Include="Microsoft.Bcl.HashCode" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netstandard2.1' or '$(TargetFramework)' == 'net6.0'">
+  <!-- 按目标框架自动接入无法由 NuGet/源生成器提供的兼容实现。 -->
+  <ItemGroup Condition="'$(IncludeLytecPolyfills)' == 'true' and '$(TargetFramework)' == 'net472'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)NetStandard20Compatibility\Lytec.NetStandard20Compatibility.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />
+    <Using Include="Lytec.Polyfills" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netstandard2.1'">
-    <PackageReference Include="IsExternalInit" PrivateAssets="all" />
-    <PackageReference Include="RequiredMemberAttribute" PrivateAssets="all" />
-    <PackageReference Include="Shim.System.Text.Rune" PrivateAssets="all" />
+  <ItemGroup Condition="'$(IncludeLytecPolyfills)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)NetStandard20Compatibility\Lytec.NetStandard20Compatibility.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />
+    <Using Include="Lytec.Polyfills" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
-    <PackageReference Include="IsExternalInit" PrivateAssets="all" />
-    <PackageReference Include="Nullable" PrivateAssets="all" />
+  <ItemGroup Condition="'$(IncludeLytecPolyfills)' == 'true' and '$(TargetFramework)' == 'netstandard2.1'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)NetStandard21Compatibility\Lytec.NetStandard21Compatibility.csproj" />
+    <Using Include="Lytec.Polyfills" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

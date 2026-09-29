@@ -5,7 +5,6 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
-using Lytec.Common;
 
 namespace Lytec.Analyzer;
 

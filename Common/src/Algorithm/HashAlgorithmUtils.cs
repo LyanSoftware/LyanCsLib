@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Text;
 using Lytec.Common;
 
-namespace System.Security.Cryptography;
+namespace Lytec.Common.Algorithm;
 
 public static class HashAlgorithmUtils
 {

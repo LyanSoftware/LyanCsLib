@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Lytec.Common.Algorithm;
 using Lytec.Common.Communication;
 using Lytec.Common.Data;
 using Lytec.Common.Serialization;

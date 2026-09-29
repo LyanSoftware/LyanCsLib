@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lytec.Common;
+using Lytec.Common.Communication;
 using Lytec.Common.Crypto;
 using Lytec.Common.Data;
 using Lytec.Common.Localization;
@@ -97,11 +98,29 @@ public partial class App
     {
         if (IsConnected)
             return true;
-        ServicePointManager.SetTcpKeepAlive(keepAlive, 30000, 30000);
-        HttpMessageHandler handler;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            handler = new WinHttpHandler();
-        else handler = new HttpClientHandler();
+        var handler = new StandardSocketsHttpHandler()
+        {
+            ConnectCallback = async (context, cancellationToken) =>
+            {
+                var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+
+                try
+                {
+                    socket.SetTcpKeepAlive(keepAlive, 30, 5);
+
+                    await socket.ConnectAsync(
+                        context.DnsEndPoint,
+                        cancellationToken);
+
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch
+                {
+                    socket.Dispose();
+                    throw;
+                }
+            }
+        };
         Client = new HttpClient(handler)
         {
             BaseAddress = new UriBuilder("http", addr, port).Uri,
