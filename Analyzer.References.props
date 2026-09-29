@@ -4,6 +4,7 @@
   <PropertyGroup>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild> <!-- Generates a package at build -->
     <IncludeBuildOutput>false</IncludeBuildOutput> <!-- Do not include the generator as a lib dependency -->
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <OutputItemType>Analyzer</OutputItemType>
     <IsPackable>true</IsPackable>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
@@ -22,11 +23,18 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-
-    <!-- 将项目生成的主DLL放入analyzers文件夹 -->
-    <None Include="$(OutputPath)\$(AssemblyName).dll"
-          Pack="true"
-          PackagePath="analyzers/dotnet/cs"
-          Visible="false" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackGeneratorAssembly</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <!-- 在目标框架上下文中添加生成器，避免多目标项目的输出路径不完整。 -->
+  <Target Name="PackGeneratorAssembly">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetPath)"
+                              PackagePath="analyzers/dotnet/cs"
+                              BuildAction="Analyzer" />
+    </ItemGroup>
+  </Target>
 </Project>

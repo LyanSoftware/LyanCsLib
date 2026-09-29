@@ -5,7 +5,6 @@
     <RootNamespace>Lytec.AvaloniaUI.Generators</RootNamespace>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <NoWarn>$(NoWarn);NU5128</NoWarn>
   </PropertyGroup>
 
   <Import Project="..\Analyzer.References.props" />
