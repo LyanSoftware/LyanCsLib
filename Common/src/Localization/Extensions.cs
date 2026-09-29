@@ -15,6 +15,7 @@ public static class Extensions
         collection.AddSingleton<T>();
         collection.AddSingleton<ILocalizer>(
             static services => services.GetRequiredService<T>());
+        collection.TryAddSingleton(typeof(ILocalizedLogger<>), typeof(LocalizedLogger<>));
         return collection;
     }
 
@@ -28,6 +29,7 @@ public static class Extensions
         collection.AddSingleton(localizer);
         collection.AddSingleton<ILocalizer>(
             static services => services.GetRequiredService<T>());
+        collection.TryAddSingleton(typeof(ILocalizedLogger<>), typeof(LocalizedLogger<>));
         return collection;
     }
 
@@ -46,15 +48,15 @@ public static class Extensions
         collection.TryAddSingleton<JsonLocalizer>();
         collection.TryAddSingleton<ILocalizer>(
             static services => services.GetRequiredService<JsonLocalizer>());
+        collection.TryAddSingleton(typeof(ILocalizedLogger<>), typeof(LocalizedLogger<>));
         collection.TryAddSingleton<ILanguagePreferenceStore, NullLanguagePreferenceStore>();
-        collection.TryAddSingleton<ILocalizationLogSink, DebugLocalizationLogSink>();
         collection.TryAddSingleton<ILanguagePackService>(static services =>
         {
             var configuredOptions = services.GetRequiredService<JsonLocalizationOptions>();
             return new JsonLanguagePackService(
                 services.GetRequiredService<JsonLocalizer>(),
                 services.GetRequiredService<ILanguagePreferenceStore>(),
-                services.GetRequiredService<ILocalizationLogSink>(),
+                services.GetRequiredService<ILocalizedLogger<JsonLanguagePackService>>(),
                 configuredOptions.LanguageDirectory,
                 configuredOptions.StartupCulture,
                 services.GetRequiredService<ILanguagePackSource>());

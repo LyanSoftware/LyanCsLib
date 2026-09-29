@@ -38,14 +38,12 @@ public sealed class LocalizationDependencyInjectionTest
     public void AddJsonLocalization_RegistersAValidatedGraphAndPreservesOverrides()
     {
         var preference = new TestLanguagePreferenceStore();
-        var log = new TestLocalizationLogSink();
         var languageDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var startupCulture = CultureInfo.GetCultureInfo("fr-CA");
         var languagePackSource = new EmptyLanguagePackSource();
         var services = new ServiceCollection();
 
         services.AddSingleton<ILanguagePreferenceStore>(preference);
-        services.AddSingleton<ILocalizationLogSink>(log);
         services.AddJsonLocalization(options =>
         {
             options.LanguageDirectory = languageDirectory;
@@ -60,7 +58,8 @@ public sealed class LocalizationDependencyInjectionTest
         Assert.Same(concreteLocalizer, provider.GetRequiredService<ILocalizer>());
         Assert.Same(languagePacks, provider.GetRequiredService<ILanguagePackService>());
         Assert.Same(preference, provider.GetRequiredService<ILanguagePreferenceStore>());
-        Assert.Same(log, provider.GetRequiredService<ILocalizationLogSink>());
+        Assert.IsType<LocalizedLogger<JsonLanguagePackService>>(
+            provider.GetRequiredService<ILocalizedLogger<JsonLanguagePackService>>());
         Assert.Same(languagePackSource, provider.GetRequiredService<ILanguagePackSource>());
         Assert.Same(languagePackSource, Assert.IsType<JsonLanguagePackService>(languagePacks).LanguagePackSource);
         Assert.Equal(Path.GetFullPath(languageDirectory), languagePacks.LanguageDirectory);
@@ -92,16 +91,6 @@ public sealed class LocalizationDependencyInjectionTest
 
         public Task SaveAsync(string languageId, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
-    }
-
-    private sealed class TestLocalizationLogSink : ILocalizationLogSink
-    {
-        public void Write(
-            LocalizationLogLevel level,
-            ILocalizeString message,
-            Exception? exception = null)
-        {
-        }
     }
 
     private sealed class EmptyLanguagePackSource : ILanguagePackSource

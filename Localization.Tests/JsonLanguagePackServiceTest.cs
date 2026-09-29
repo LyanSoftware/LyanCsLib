@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using Lytec.Common.Localization;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Test.Common.Localization;
@@ -196,7 +197,7 @@ public sealed class JsonLanguagePackServiceTest
         var service = new JsonLanguagePackService(
             localizer,
             new NullLanguagePreferenceStore(),
-            new RecordingLogSink(),
+            new RecordingLocalizedLogger(),
             startupCulture: CultureInfo.GetCultureInfo("en"),
             languagePackSource: new EmbeddedResourceLanguagePackSource(
                 typeof(JsonLanguagePackServiceTest).Assembly,
@@ -218,7 +219,7 @@ public sealed class JsonLanguagePackServiceTest
 
         var preference = new RecordingPreferenceStore();
         var localizer = new JsonLocalizer();
-        var log = new RecordingLogSink();
+        var log = new RecordingLocalizedLogger();
         var service = new JsonLanguagePackService(
             localizer,
             preference,
@@ -278,11 +279,11 @@ public sealed class JsonLanguagePackServiceTest
         Assert.EndsWith(",50", value);
     }
 
-    private static (JsonLocalizer Localizer, JsonLanguagePackService Service, RecordingLogSink Log)
+    private static (JsonLocalizer Localizer, JsonLanguagePackService Service, RecordingLocalizedLogger Log)
         CreateService(string directory, string startupCulture)
     {
         var localizer = new JsonLocalizer();
-        var log = new RecordingLogSink();
+        var log = new RecordingLocalizedLogger();
         var service = new JsonLanguagePackService(
             localizer,
             new NullLanguagePreferenceStore(),
@@ -297,16 +298,40 @@ public sealed class JsonLanguagePackServiceTest
             Localizer.CombineScopeAndKey(Scope, key),
             DefaultMessage: fallback));
 
-    private sealed class RecordingLogSink : ILocalizationLogSink
+    private sealed class RecordingLocalizedLogger : ILocalizedLogger<JsonLanguagePackService>
     {
-        public ConcurrentQueue<(LocalizationLogLevel Level, ILocalizeString Message, Exception? Exception)>
+        public ConcurrentQueue<(LogLevel Level, ILocalizeString Message, Exception? Exception)>
             Entries { get; } = new();
 
-        public void Write(
-            LocalizationLogLevel level,
+        public IDisposable BeginScope<TState>(TState state)
+            => NoopScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+        }
+
+        public void LogLocalized(
+            LogLevel logLevel,
+            EventId eventId,
             ILocalizeString message,
             Exception? exception = null)
-            => Entries.Enqueue((level, message, exception));
+            => Entries.Enqueue((logLevel, message, exception));
+
+        private sealed class NoopScope : IDisposable
+        {
+            public static NoopScope Instance { get; } = new();
+
+            public void Dispose()
+            {
+            }
+        }
     }
 
     private sealed class RecordingPreferenceStore : ILanguagePreferenceStore

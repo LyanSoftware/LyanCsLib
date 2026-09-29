@@ -31,7 +31,7 @@ public interface ILanguagePackService
 public record JsonLanguagePackService(
     JsonLocalizer localizer,
     ILanguagePreferenceStore? preferenceStore = null,
-    ILocalizationLogSink? log = null,
+    ILocalizedLogger<JsonLanguagePackService>? log = null,
     string? languageDirectory = null,
     CultureInfo? startupCulture = null,
     ILanguagePackSource? languagePackSource = null) : ILanguagePackService
@@ -46,7 +46,7 @@ public record JsonLanguagePackService(
 
     private readonly JsonLocalizer localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
     private readonly ILanguagePreferenceStore preferenceStore = preferenceStore ?? new NullLanguagePreferenceStore();
-    private readonly ILocalizationLogSink log = log ?? new DebugLocalizationLogSink(localizer);
+    private readonly ILocalizedLogger<JsonLanguagePackService>? log = log;
     private readonly SynchronizationContext? notificationContext = SynchronizationContext.Current;
     private readonly SemaphoreSlim saveGate = new(1, 1);
 
@@ -87,8 +87,7 @@ public record JsonLanguagePackService(
         }
         catch (Exception ex)
         {
-            log.Write(
-                LocalizationLogLevel.Warning,
+            log?.LogLocalizedWarning(
                 Localize("PreferenceLoadFailed", DefaultMessage: "读取语言偏好设置失败，将使用自动语言。"),
                 ex);
             requestedLanguage = LanguageId.Auto;
@@ -115,8 +114,7 @@ public record JsonLanguagePackService(
         }
         catch (Exception ex)
         {
-            log.Write(
-                LocalizationLogLevel.Error,
+            log?.LogLocalizedError(
                 Localize(
                     "DirectoryScanFailed",
                     "读取语言包来源“{{Directory}}”失败，将继续使用程序内嵌文本。",
@@ -140,8 +138,7 @@ public record JsonLanguagePackService(
         if (!string.Equals(normalized, languageId, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(languageId, LanguageId.Auto, StringComparison.OrdinalIgnoreCase))
         {
-            log.Write(
-                LocalizationLogLevel.Warning,
+            log?.LogLocalizedWarning(
                 Localize(
                     "LanguageNotAvailable",
                     "语言“{{LanguageId}}”不可用，将保持当前语言。",
@@ -193,8 +190,7 @@ public record JsonLanguagePackService(
                 continue;
             }
 
-            log.Write(
-                LocalizationLogLevel.Warning,
+            log?.LogLocalizedWarning(
                 Localize(
                     "FallbackPackMissing",
                     "回退链中的语言包“{{Culture}}”不存在，将继续使用下一层。",
@@ -243,8 +239,7 @@ public record JsonLanguagePackService(
             }
             catch (Exception ex)
             {
-                log.Write(
-                    LocalizationLogLevel.Warning,
+                log?.LogLocalizedWarning(
                     Localize(
                         "PreferenceSaveFailed",
                         "保存语言偏好“{{LanguageId}}”失败。",
@@ -301,8 +296,7 @@ public record JsonLanguagePackService(
                 }
                 catch (CultureNotFoundException ex)
                 {
-                    log.Write(
-                        LocalizationLogLevel.Warning,
+                    log?.LogLocalizedWarning(
                         Localize(
                             "InvalidFileName",
                             "语言包文件名“{{FileName}}”不是有效的 CultureInfo 名称，已跳过。",
@@ -330,8 +324,7 @@ public record JsonLanguagePackService(
                                            or JsonException
                                            or InvalidDataException)
                 {
-                    log.Write(
-                        LocalizationLogLevel.Warning,
+                    log?.LogLocalizedWarning(
                         Localize(
                             "InvalidContent",
                             "语言包“{{FileName}}”无法读取或内容无效，已跳过。",

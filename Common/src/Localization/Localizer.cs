@@ -39,8 +39,8 @@ public abstract class Localizer : ILocalizer
     {
         ArgumentNullException.ThrowIfNull(str);
 
-        var hasTranslation = TryQuery(str.Key, out var format);
-        format = hasTranslation ? format : str.DefaultMessage ?? str.Key;
+        var hasTranslation = TryQuery(str.LookupKey, out var format);
+        format = hasTranslation ? format : str.DefaultMessage ?? str.LookupKey;
 
         string render(string format)
         {

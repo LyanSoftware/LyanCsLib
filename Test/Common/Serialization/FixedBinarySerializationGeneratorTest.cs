@@ -95,7 +95,7 @@ public class FixedBinarySerializationGeneratorTest
         Assert.All(destination, item => Assert.Equal((byte)0xAA, item));
         Assert.Equal(
             "Lytec.Common.Serialization.FixedBinarySerialization:ArrayLongerThanSizeConst",
-            exception.GetLocalizedMessage()?.Key);
+            exception.GetLocalizedMessage()?.LookupKey);
     }
 }
 

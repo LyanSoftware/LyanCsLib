@@ -170,7 +170,7 @@ public class BinarySerializationInfrastructureTest
         Assert.NotNull(localizedMessage);
         Assert.Equal(
             "Lytec.Common.Serialization.BinaryDecodeResult:NegativeConsumed",
-            localizedMessage.Key);
+            localizedMessage.LookupKey);
     }
 
     private sealed class LengthPrefixedCodec : IBinaryCodec<byte[]>
