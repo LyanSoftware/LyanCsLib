@@ -15,13 +15,53 @@ public static class LocalizedLogPropertyNames
     public const string FormatException = "LocalizationFormatException";
 }
 
-public interface ILocalizedLogger<out TCategoryName> : ILogger<TCategoryName>
+public interface ILocalizedLogger : ILogger
 {
     void LogLocalized(
         LogLevel logLevel,
         EventId eventId,
         ILocalizeString message,
         Exception? exception = null);
+}
+
+public interface ILocalizedLogger<out TCategoryName>
+    : ILocalizedLogger, ILogger<TCategoryName>
+{
+}
+
+public sealed class LocalizedLogger(
+    ILocalizer localizer,
+    ILogger? logger = null) : ILocalizedLogger
+{
+    private readonly ILocalizer localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
+    private readonly ILogger logger = logger ?? NullLogger.Instance;
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+        => logger.BeginScope(state);
+
+    public bool IsEnabled(LogLevel logLevel)
+        => logger.IsEnabled(logLevel);
+
+    public void Log<TState>(
+        LogLevel logLevel,
+        EventId eventId,
+        TState state,
+        Exception? exception,
+        Func<TState, Exception?, string> formatter)
+        => logger.Log(logLevel, eventId, state, exception, formatter);
+
+    public void LogLocalized(
+        LogLevel logLevel,
+        EventId eventId,
+        ILocalizeString message,
+        Exception? exception = null)
+        => LocalizedLoggerCore.Log(
+            localizer,
+            logger,
+            logLevel,
+            eventId,
+            message,
+            exception);
 }
 
 public sealed class LocalizedLogger<TCategoryName>(
@@ -50,6 +90,24 @@ public sealed class LocalizedLogger<TCategoryName>(
         EventId eventId,
         ILocalizeString message,
         Exception? exception = null)
+        => LocalizedLoggerCore.Log(
+            localizer,
+            logger,
+            logLevel,
+            eventId,
+            message,
+            exception);
+}
+
+internal static class LocalizedLoggerCore
+{
+    public static void Log(
+        ILocalizer localizer,
+        ILogger logger,
+        LogLevel logLevel,
+        EventId eventId,
+        ILocalizeString message,
+        Exception? exception)
     {
         ArgumentNullException.ThrowIfNull(message);
 
@@ -146,6 +204,52 @@ public sealed class LocalizedLogger<TCategoryName>(
 
 public static class LocalizedLoggerExtensions
 {
+    public static void LogLocalized(
+        this ILocalizedLogger logger,
+        LogLevel logLevel,
+        ILocalizeString message,
+        Exception? exception = null)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        logger.LogLocalized(logLevel, default, message, exception);
+    }
+
+    public static void LogLocalizedTrace(
+        this ILocalizedLogger logger,
+        ILocalizeString message,
+        Exception? exception = null)
+        => logger.LogLocalized(LogLevel.Trace, message, exception);
+
+    public static void LogLocalizedDebug(
+        this ILocalizedLogger logger,
+        ILocalizeString message,
+        Exception? exception = null)
+        => logger.LogLocalized(LogLevel.Debug, message, exception);
+
+    public static void LogLocalizedInformation(
+        this ILocalizedLogger logger,
+        ILocalizeString message,
+        Exception? exception = null)
+        => logger.LogLocalized(LogLevel.Information, message, exception);
+
+    public static void LogLocalizedWarning(
+        this ILocalizedLogger logger,
+        ILocalizeString message,
+        Exception? exception = null)
+        => logger.LogLocalized(LogLevel.Warning, message, exception);
+
+    public static void LogLocalizedError(
+        this ILocalizedLogger logger,
+        ILocalizeString message,
+        Exception? exception = null)
+        => logger.LogLocalized(LogLevel.Error, message, exception);
+
+    public static void LogLocalizedCritical(
+        this ILocalizedLogger logger,
+        ILocalizeString message,
+        Exception? exception = null)
+        => logger.LogLocalized(LogLevel.Critical, message, exception);
+
     public static void LogLocalized<TCategoryName>(
         this ILocalizedLogger<TCategoryName> logger,
         LogLevel logLevel,

@@ -79,7 +79,7 @@ public sealed class LocalizedLoggerTest
     public void StandardLoggerMethods_AreForwardedToTheInnerLogger()
     {
         var sink = new RecordingLogger<Category>();
-        ILocalizedLogger<Category> logger = new LocalizedLogger<Category>(
+        ILocalizedLogger logger = new LocalizedLogger<Category>(
             new MutableLocalizer(),
             sink);
 
@@ -87,6 +87,30 @@ public sealed class LocalizedLoggerTest
 
         var entry = Assert.Single(sink.Entries);
         Assert.Equal("Plain message", entry.Message);
+    }
+
+    [Fact]
+    public void NonGenericLogger_UsesCurrentLanguageAndPreservesStructuredProperties()
+    {
+        var localizer = new MutableLocalizer();
+        var sink = new RecordingLogger<Category>();
+        ILocalizedLogger logger = new LocalizedLogger(localizer, sink);
+        var message = new LocalizeString(
+            Scope,
+            "FileRead",
+            "Read {{ FileName }}.",
+            ("FileName", "data.json"));
+
+        localizer.Apply(
+            CultureInfo.GetCultureInfo("zh-CN"),
+            (message.LookupKey, "已读取 {{ FileName }}。"));
+        logger.LogLocalizedInformation(message);
+
+        var entry = Assert.Single(sink.Entries);
+        Assert.Equal("已读取 data.json。", entry.Message);
+        Assert.Equal(LogLevel.Information, entry.Level);
+        Assert.Equal("zh-CN", entry.Properties[LocalizedLogPropertyNames.Culture]);
+        AssertStructuredProperties(entry.Properties);
     }
 
     private static void AssertStructuredProperties(

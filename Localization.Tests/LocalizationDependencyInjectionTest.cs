@@ -21,6 +21,7 @@ public sealed class LocalizationDependencyInjectionTest
         Assert.Same(
             provider.GetRequiredService<TestLocalizer>(),
             provider.GetRequiredService<ILocalizer>());
+        Assert.IsType<LocalizedLogger>(provider.GetRequiredService<ILocalizedLogger>());
     }
 
     [Fact]
@@ -37,6 +38,7 @@ public sealed class LocalizationDependencyInjectionTest
 
         Assert.Same(localizer, provider.GetRequiredService<TestLocalizer>());
         Assert.Same(localizer, provider.GetRequiredService<ILocalizer>());
+        Assert.IsType<LocalizedLogger>(provider.GetRequiredService<ILocalizedLogger>());
     }
 
     [Fact]
@@ -64,6 +66,7 @@ public sealed class LocalizationDependencyInjectionTest
         Assert.Same(concreteLocalizer, provider.GetRequiredService<ILocalizer>());
         Assert.Same(languagePacks, provider.GetRequiredService<ILanguagePackService>());
         Assert.Same(preference, provider.GetRequiredService<ILanguagePreferenceStore>());
+        Assert.IsType<LocalizedLogger>(provider.GetRequiredService<ILocalizedLogger>());
         Assert.IsType<LocalizedLogger<JsonLanguagePackService>>(
             provider.GetRequiredService<ILocalizedLogger<JsonLanguagePackService>>());
         Assert.Same(languagePackSource, provider.GetRequiredService<ILanguagePackSource>());
