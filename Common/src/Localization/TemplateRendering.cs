@@ -42,3 +42,11 @@ public static class LocalizationTemplateFormatter
         };
     }
 }
+
+public static class LocalizationTemplateRendererExtensions
+{
+    public static string Render(this ILocalizationTemplateRenderer rr, string template, CultureInfo culture, IReadOnlyDictionary<string, object?>? variables = null)
+    => rr.Render(template, variables, culture);
+    public static string Render(this ILocalizationTemplateRenderer rr, string template, CultureInfo culture, params (string Key, object? Value)[] variables)
+    => rr.Render(template, variables.ToDictionary(), culture);
+}
