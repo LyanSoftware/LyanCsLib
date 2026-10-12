@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using Lytec.Common.Localization;
+using Lytec.Common.Localization.Fluid;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -193,7 +194,7 @@ public sealed class JsonLanguagePackServiceTest
     [Fact]
     public async Task InitializeAsync_LoadsEmbeddedLanguagePackSource()
     {
-        var localizer = new JsonLocalizer();
+        var localizer = CreateLocalizer();
         var service = new JsonLanguagePackService(
             localizer,
             new NullLanguagePreferenceStore(),
@@ -218,7 +219,7 @@ public sealed class JsonLanguagePackServiceTest
         directory.Write("en.json", "{ \"Test.Scope\": { \"Key\": \"en\" } }");
 
         var preference = new RecordingPreferenceStore();
-        var localizer = new JsonLocalizer();
+        var localizer = CreateLocalizer();
         var log = new RecordingLocalizedLogger();
         var service = new JsonLanguagePackService(
             localizer,
@@ -267,7 +268,7 @@ public sealed class JsonLanguagePackServiceTest
     {
         using var directory = new TemporaryDirectory();
         directory.Write("fr-FR.json", "{}");
-        directory.Write("en.json", "{ \"Test.Scope\": { \"Number\": \"{{ Value | format_number: \\\"N2\\\" }}\" } }");
+        directory.Write("en.json", "{ \"Test.Scope\": { \"Number\": \"{{ Value | format: \\\"N2\\\" }}\" } }");
 
         var (localizer, service, _) = CreateService(directory.Path, "fr-FR");
         await service.InitializeAsync(TestContext.Current.CancellationToken);
@@ -282,7 +283,7 @@ public sealed class JsonLanguagePackServiceTest
     private static (JsonLocalizer Localizer, JsonLanguagePackService Service, RecordingLocalizedLogger Log)
         CreateService(string directory, string startupCulture)
     {
-        var localizer = new JsonLocalizer();
+        var localizer = CreateLocalizer();
         var log = new RecordingLocalizedLogger();
         var service = new JsonLanguagePackService(
             localizer,
@@ -297,6 +298,14 @@ public sealed class JsonLanguagePackServiceTest
         => localizer.Format(new LocalizeString(
             Localizer.CombineScopeAndKey(Scope, key),
             DefaultMessage: fallback));
+
+    private static JsonLocalizer CreateLocalizer(bool debugMode = false)
+    {
+        var options = new LocalizationTemplateOptions { DebugMode = debugMode };
+        return new JsonLocalizer(
+            new FluidLocalizationTemplateRenderer(options),
+            options);
+    }
 
     private sealed class RecordingLocalizedLogger : ILocalizedLogger<JsonLanguagePackService>
     {

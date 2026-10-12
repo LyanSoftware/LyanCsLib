@@ -1,6 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
-using Fluid;
+using Microsoft.Extensions.Logging;
 
 namespace Lytec.Common.Localization;
 
@@ -20,9 +21,18 @@ public abstract class Localizer : ILocalizer
     public const string ScopeConnector = ":";
 
     private readonly SynchronizationContext? notificationContext;
+    private readonly ILocalizationTemplateRenderer templateRenderer;
+    private readonly LocalizationTemplateOptions templateOptions;
+    private readonly ILogger<Localizer>? logger;
 
-    protected Localizer()
+    protected Localizer(
+        ILocalizationTemplateRenderer templateRenderer,
+        LocalizationTemplateOptions templateOptions,
+        IEnumerable<ILogger<Localizer>>? logger = null)
     {
+        this.templateRenderer = templateRenderer ?? throw new ArgumentNullException(nameof(templateRenderer));
+        this.templateOptions = templateOptions ?? throw new ArgumentNullException(nameof(templateOptions));
+        this.logger = logger?.LastOrDefault();
         notificationContext = SynchronizationContext.Current;
     }
 
@@ -42,21 +52,25 @@ public abstract class Localizer : ILocalizer
         var hasTranslation = TryQuery(str.LookupKey, out var format);
         format = hasTranslation ? format : str.DefaultMessage ?? str.LookupKey;
 
-        string render(string format)
-        {
-            if (str.Arguments == null)
-                return format;
-            if (new FluidParser().TryParse(format, out var template, out var error))
-                return template.Render(new TemplateContext(str.Arguments) { CultureInfo = CurrentCulture });
-            throw new FormatException($"Localization Format Failed: {error}");
-        }
         try
         {
-            return render(format);
+            return templateRenderer.Render(format, str.Arguments, CurrentCulture);
         }
-        catch when (hasTranslation && str.DefaultMessage is not null)
+        catch (Exception exception)
         {
-            return render(str.DefaultMessage);
+            LogTemplateFailure(str.LookupKey, "translation", exception);
+            if (templateOptions.DebugMode || !hasTranslation || str.DefaultMessage is null)
+                return format;
+        }
+
+        try
+        {
+            return templateRenderer.Render(str.DefaultMessage, str.Arguments, CurrentCulture);
+        }
+        catch (Exception exception)
+        {
+            LogTemplateFailure(str.LookupKey, "default message", exception);
+            return str.DefaultMessage;
         }
     }
 
@@ -80,6 +94,25 @@ public abstract class Localizer : ILocalizer
                 var args = ((Localizer Localizer, EventHandler Handler))state!;
                 args.Handler(args.Localizer, EventArgs.Empty);
             }, (this, handler));
+    }
+
+    private void LogTemplateFailure(string lookupKey, string templateSource, Exception exception)
+    {
+        var rendererType = templateRenderer.GetType().FullName ?? templateRenderer.GetType().Name;
+        if (logger is not null)
+        {
+            logger.LogWarning(
+                exception,
+                "Localization template rendering failed for resource {LookupKey} using {RendererType} ({TemplateSource}).",
+                lookupKey,
+                rendererType,
+                templateSource);
+            return;
+        }
+
+        Debug.WriteLine(
+            $"Localization template rendering failed for resource '{lookupKey}' " +
+            $"using '{rendererType}' ({templateSource}): {exception}");
     }
 
     private record LocalizedTextObservable(Localizer Localizer, ILocalizeString Value)

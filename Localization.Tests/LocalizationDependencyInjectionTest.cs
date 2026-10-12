@@ -1,6 +1,7 @@
 using System.Globalization;
 using Lytec.Common.Localization;
 using Lytec.Common.Localization.Extensions;
+using Lytec.Common.Localization.Fluid;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -12,6 +13,7 @@ public sealed class LocalizationDependencyInjectionTest
     public void AddLocalization_MapsConcreteAndInterfaceToTheSameSingleton()
     {
         var services = new ServiceCollection();
+        services.AddFluidLocalizationTemplateRenderer();
         services.AddLocalization<TestLocalizer>();
 
         using var provider = BuildProvider(services);
@@ -24,7 +26,10 @@ public sealed class LocalizationDependencyInjectionTest
     [Fact]
     public void AddLocalizationInstance_MapsConcreteAndInterfaceToTheGivenInstance()
     {
-        var localizer = new TestLocalizer();
+        var options = new LocalizationTemplateOptions();
+        var localizer = new TestLocalizer(
+            new FluidLocalizationTemplateRenderer(options),
+            options);
         var services = new ServiceCollection();
         services.AddLocalization(localizer);
 
@@ -44,6 +49,7 @@ public sealed class LocalizationDependencyInjectionTest
         var services = new ServiceCollection();
 
         services.AddSingleton<ILanguagePreferenceStore>(preference);
+        services.AddFluidLocalizationTemplateRenderer();
         services.AddJsonLocalization(options =>
         {
             options.LanguageDirectory = languageDirectory;
@@ -66,6 +72,18 @@ public sealed class LocalizationDependencyInjectionTest
         Assert.Equal(startupCulture, languagePacks.StartupCulture);
     }
 
+    [Fact]
+    public void AddJsonLocalization_WithoutTemplateRendererFailsValidation()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(new LocalizationTemplateOptions());
+        services.AddJsonLocalization();
+
+        var exception = Assert.Throws<AggregateException>(() => BuildProvider(services));
+
+        Assert.Contains(nameof(ILocalizationTemplateRenderer), exception.ToString());
+    }
+
     private static ServiceProvider BuildProvider(IServiceCollection services)
         => services.BuildServiceProvider(new ServiceProviderOptions
         {
@@ -73,7 +91,10 @@ public sealed class LocalizationDependencyInjectionTest
             ValidateScopes = true,
         });
 
-    private sealed class TestLocalizer : Localizer
+    private sealed class TestLocalizer(
+        ILocalizationTemplateRenderer templateRenderer,
+        LocalizationTemplateOptions templateOptions)
+        : Localizer(templateRenderer, templateOptions)
     {
         public override CultureInfo CurrentCulture => CultureInfo.InvariantCulture;
 

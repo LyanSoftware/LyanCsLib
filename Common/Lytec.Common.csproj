@@ -10,7 +10,6 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Portable.BouncyCastle" />
     <PackageReference Include="System.Net.Http.WinHttpHandler" />
-    <PackageReference Include="Fluid.Core" />
     <PackageReference Include="System.Collections.Immutable" />
   </ItemGroup>
 

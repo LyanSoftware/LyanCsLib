@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
 
 namespace Lytec.Common.Localization;
 
@@ -18,6 +19,14 @@ public sealed class JsonLocalizer : Localizer
     private Snapshot snapshot = new(
         CultureInfo.InvariantCulture,
         ImmutableArray<ImmutableDictionary<string, string>>.Empty);
+
+    public JsonLocalizer(
+        ILocalizationTemplateRenderer templateRenderer,
+        LocalizationTemplateOptions templateOptions,
+        IEnumerable<ILogger<Localizer>>? logger = null)
+        : base(templateRenderer, templateOptions, logger)
+    {
+    }
 
     public override CultureInfo CurrentCulture => snapshot.Culture;
 

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Lytec.Common.Localization;
+using Lytec.Common.Localization.Fluid;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -8,6 +9,9 @@ namespace Test.Common.Localization;
 public sealed class LocalizedLoggerTest
 {
     private const string Scope = "Test.Scope";
+    private static readonly LocalizationTemplateOptions TemplateOptions = new();
+    private static readonly ILocalizationTemplateRenderer TemplateRenderer =
+        new FluidLocalizationTemplateRenderer(TemplateOptions);
 
     [Fact]
     public void LogLocalized_UsesCurrentLanguageAndPreservesStructuredProperties()
@@ -100,7 +104,8 @@ public sealed class LocalizedLoggerTest
 
     private sealed class Category;
 
-    private sealed class MutableLocalizer : Localizer
+    private sealed class MutableLocalizer()
+        : Localizer(TemplateRenderer, TemplateOptions)
     {
         private CultureInfo culture = CultureInfo.InvariantCulture;
         private IReadOnlyDictionary<string, string> values =
@@ -123,7 +128,8 @@ public sealed class LocalizedLoggerTest
             => values.TryGetValue(key, out value!);
     }
 
-    private sealed class ThrowingLocalizer : Localizer
+    private sealed class ThrowingLocalizer()
+        : Localizer(TemplateRenderer, TemplateOptions)
     {
         public override CultureInfo CurrentCulture => CultureInfo.GetCultureInfo("en");
 
