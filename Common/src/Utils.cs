@@ -419,7 +419,7 @@ namespace Lytec.Common
             return true;
         }
 
-#if !NET10_0_OR_GREATER
+#if !NET8_0_OR_GREATER
         public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this IEnumerable<(TKey Key, TValue Value)> origin) where TKey : notnull
         => origin.ToDictionary(kv => kv.Key, kv => kv.Value);
 #endif
