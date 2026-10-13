@@ -100,14 +100,6 @@ namespace Lytec.Common
             return bytes.ToStruct<int>(bytes.Length - 4, endian);
         }
 
-        public static void TriggerEvent(this object obj, string name, EventArgs? e = null)
-        {
-            if (obj.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) is FieldInfo field
-                && field.GetValue(obj) is MulticastDelegate func)
-                foreach (Delegate dlg in func.GetInvocationList())
-                    dlg.Method.Invoke(dlg.Target, [obj, e ?? EventArgs.Empty]);
-        }
-
         public static Type[] GetGenericArguments(this Type t, Type baseType)
         => t.IsGenericType && t.GetGenericTypeDefinition() == baseType ? t.GetGenericArguments() : [];
 
@@ -750,9 +742,9 @@ namespace Lytec.Common
 
         public static bool IsSubtypeOf<T>([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this Type t) => t.IsSubtypeOf(typeof(T));
 
-        public static bool IsSubtypeObjectOf<T>(this T t, Type baseType) => t!.GetType().IsSubtypeOf(baseType);
+        public static bool IsSubtypeObjectOf<T>(this T t, Type baseType) => baseType.IsInstanceOfType(t);
 
-        public static bool IsSubtypeObjectOf<T, TBase>(this T t) => t.IsSubtypeObjectOf(typeof(T));
+        public static bool IsSubtypeObjectOf<T, TBase>(this T t) => t is TBase;
 
         public static int LimitToRange(this int value, int min, int max) => Math.Max(Math.Min(value, max), min);
         public static uint LimitToRange(this uint value, uint min, uint max) => Math.Max(Math.Min(value, max), min);

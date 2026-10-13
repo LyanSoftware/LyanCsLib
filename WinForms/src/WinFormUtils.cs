@@ -12,6 +12,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Dwm;
 using RichTextBox_TextMode = Windows.Win32.UI.Controls.RichEdit.TEXTMODE;
+using System.Reflection;
 
 namespace Lytec.WinForms;
 
@@ -30,11 +31,19 @@ public static partial class WinFormUtils
         Height = size.Height;
     }
 
+    static void TriggerEvent(object obj, string name, EventArgs? e = null)
+    {
+        if (obj.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) is FieldInfo field
+            && field.GetValue(obj) is MulticastDelegate func)
+            foreach (Delegate dlg in func.GetInvocationList())
+                dlg.Method.Invoke(dlg.Target, [obj, e ?? EventArgs.Empty]);
+    }
+
     public static void Restart(this Timer timer, bool triggerNow = false)
     {
         timer.Stop();
         if (triggerNow)
-            timer.TriggerEvent("onTimer");
+            TriggerEvent(timer, "onTimer");
         timer.Start();
     }
 

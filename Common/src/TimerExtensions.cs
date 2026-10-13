@@ -6,11 +6,9 @@ namespace Lytec.Common;
 
 public static class TimerExtensions
 {
-    public static void Restart(this System.Timers.Timer timer, bool triggerEventNow = false)
+    public static void Restart(this System.Timers.Timer timer)
     {
         timer.Stop();
-        if (triggerEventNow)
-            timer.TriggerEvent(nameof(timer.Elapsed));
         timer.Start();
     }
 }

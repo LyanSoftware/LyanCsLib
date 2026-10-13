@@ -14,8 +14,8 @@
     <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
 
-  <!-- 在分析器/测试项目中禁用AOT/裁剪/单文件发布相关的警告 -->
-  <PropertyGroup Condition="'$(IsRoslynComponent)' == 'true' or '$(IsTestProject)' == 'true'">
+  <!-- 在分析器/测试项目/netfx472中禁用AOT/裁剪/单文件发布相关的警告 -->
+  <PropertyGroup Condition="'$(IsRoslynComponent)' == 'true' or '$(IsTestProject)' == 'true' or '$(TargetFramework)' == 'net472'">
     <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
     <EnableAotAnalyzer>false</EnableAotAnalyzer>
     <EnableTrimAnalyzer>false</EnableTrimAnalyzer>

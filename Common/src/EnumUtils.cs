@@ -90,7 +90,7 @@ namespace Lytec.Common
         public class EnumDataWithDescription<T> where T : Enum
         {
             public string Name { get; } = "";
-            public T Value { get; } = (T)Activator.CreateInstance(typeof(T))!;
+            public T Value { get; } = default!;
             public string Description { get; } = "";
 
             protected EnumDataWithDescription() { }
