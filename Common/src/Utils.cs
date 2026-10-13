@@ -150,9 +150,9 @@ namespace Lytec.Common
         [RequiresUnreferencedCode("调用此方法需要确保 T 的静态构造函数不会被裁剪。")]
         public static void ForceLoadClass(this Type t) => System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(t.TypeHandle);
 
-        [RequiresUnreferencedCode("调用此方法需要确保 T 的静态构造函数不会被裁剪。")]
+        [RequiresUnreferencedCode("调用此方法需要确保 T 的基类的静态构造函数不会被裁剪。")]
         public static void ForceLoadBaseClass<T>() => typeof(T).BaseType?.ForceLoadClass();
-        [RequiresUnreferencedCode("调用此方法需要确保 T 的静态构造函数不会被裁剪。")]
+        [RequiresUnreferencedCode("调用此方法需要确保 T 的基类的静态构造函数不会被裁剪。")]
         public static void ForceLoadBaseClass(this Type t) => t.BaseType?.ForceLoadClass();
 
         public static IDictionary<Type, string> NestedClassNames { get; set; } = new ConcurrentDictionary<Type, string>();

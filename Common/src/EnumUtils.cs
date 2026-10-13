@@ -11,12 +11,6 @@ namespace Lytec.Common
 {
     public static class EnumUtils
     {
-#if !NET6_0_OR_GREATER
-        [RequiresDynamicCode("直接调用Enum.GetValues(typeof(T))")]
-        public static IEnumerable<T> GetValues<T>() where T : struct, Enum
-        => Enum.GetValues(typeof(T)).Cast<T>();
-#endif
-
         /// <summary>
         /// 将Flags转换为Flag[]
         /// </summary>
