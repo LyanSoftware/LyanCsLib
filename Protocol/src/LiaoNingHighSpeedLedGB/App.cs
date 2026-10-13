@@ -44,10 +44,36 @@ public class Result<T> : JsonResult
 #pragma warning disable IDE1006 // 命名样式
 public partial class App
 {
-    public ILogger? Logger { get; set; }
+    private const string LocalizeScope = "Lytec.Protocol.LiaoNingHighSpeedLedGB.App";
+    public ILocalizedLogger? Logger { get; set; }
     public ILocalizer? Localizer { get; set; }
-    public string i18n(string key) => Localizer?.Format(key, key) ?? key;
-    public void LogAction([CallerMemberName] string action = "") => Logger?.LogInformation($"[{action}]");
+    public ILocalizationTemplateRenderer? LocalizationTemplateRenderer { get; set; }
+    public string i18n(string key, string defaultMsg, IReadOnlyDictionary<string, object?>? Arguments = null)
+    {
+        if (Localizer != null)
+            return Localizer.Format(LocalizeScope, key, defaultMsg, Arguments) ?? defaultMsg;
+        string render(string format)
+        {
+            var rr = LocalizationTemplateRenderer;
+            if (Arguments == null || rr == null)
+                return format;
+            return rr.Render(format, Thread.CurrentThread.CurrentUICulture, Arguments);
+        }
+        return render(defaultMsg);
+    }
+    public string i18n(string key, string defaultMsg, params (string Key, object? Value)[] Arguments)
+    => i18n(key, defaultMsg, Arguments.ToDictionary());
+
+    public App(
+        IEnumerable<ILocalizedLogger<App>>? logger = null,
+        IEnumerable<ILocalizationTemplateRenderer>? templateRenderer = null
+        )
+    {
+        Logger = logger?.LastOrDefault();
+        LocalizationTemplateRenderer = templateRenderer?.LastOrDefault();
+    }
+
+    public void LogAction([CallerMemberName] string action = "") => Logger?.LogInformation("[{action}]", action);
 
     public static partial class ApiPath { }
 
@@ -85,12 +111,12 @@ public partial class App
         return false;
     }
 
-    public JsonResult OkResult => new JsonResult(200, i18n("OK"), new JsonObj());
-    public JsonResult ArgumentError => new JsonResult(10004, i18n("参数不正确"), new JsonObj());
-    public JsonResult NotConnectedError => new JsonResult(10004, i18n("未连接到设备"), new JsonObj());
-    public JsonResult UnauthorizedError => new JsonResult(10004, i18n("未登录"), new JsonObj());
-    public JsonResult RequestError => new JsonResult(10004, i18n("请求出错"), new JsonObj());
-    public JsonResult RequestTimeoutError => new JsonResult(10004, i18n("请求超时"), new JsonObj());
+    public JsonResult OkResult => new JsonResult(200, i18n("OK", "OK"), new JsonObj());
+    public JsonResult ArgumentError => new JsonResult(10004, i18n("ArgumentError", "参数不正确"), new JsonObj());
+    public JsonResult NotConnectedError => new JsonResult(10004, i18n("NotConnectedError", "未连接到设备"), new JsonObj());
+    public JsonResult UnauthorizedError => new JsonResult(10004, i18n("UnauthorizedError", "未登录"), new JsonObj());
+    public JsonResult RequestError => new JsonResult(10004, i18n("RequestError", "请求出错"), new JsonObj());
+    public JsonResult RequestTimeoutError => new JsonResult(10004, i18n("RequestTimeoutError", "请求超时"), new JsonObj());
 
     public HttpClient? Client { get; protected set; }
     public bool IsConnected => Client != null;
@@ -130,10 +156,19 @@ public partial class App
         var r = await queryNonce();
         if (!r.Ok)
         {
-            Logger?.LogError($"{i18n("获取随机数失败")}\r\n{i18n("响应数据：{Data}").Replace("{Data}", r.Data.ToString())}");
+            Logger?.LogLocalizedError(new LocalizeString(
+                LocalizeScope,
+                "RequestFailed_QueryNonce_WithResponseData",
+                "获取随机数失败\r\n响应数据: {{Data}}",
+                ("Data", r.Data.ToString())
+            ));
             await Disconnect();
         }
-        else Logger?.LogDebug($"{i18n("连接成功")}");
+        else Logger?.LogLocalizedDebug(new LocalizeString(
+                LocalizeScope,
+                "Connected",
+                "连接成功"
+            ));
         return r.Ok;
     }
     public async Task<JsonResult> Request(string url, bool usePost, IJsonData? parameters = null)
@@ -142,12 +177,12 @@ public partial class App
         {
             if (url.IsNullOrEmpty())
             {
-                Logger?.LogError(i18n("Url不能为空"));
+                Logger?.LogLocalizedError(new LocalizeString(LocalizeScope, "UrlCannotBeEmpty", "Url不能为空"));
                 return ArgumentError;
             }
             if (!IsConnected || Client == null)
             {
-                Logger?.LogError(i18n("未连接到设备"));
+                Logger?.LogLocalizedError(new LocalizeString(LocalizeScope, "NotConnectedError", "未连接到设备"));
                 return NotConnectedError;
             }
             return await RequestStream(url, usePost, parameters, async s =>
@@ -159,10 +194,16 @@ public partial class App
                 if (json.Query("code", JsonValueType.Int) is int code)
                 {
                     var msg = json.Query("msg", JsonValueType.String) is string msg1 ? msg1 : null;
-                    Logger?.LogDebug($"{i18n("响应数据：{Data}").Replace("{Data}", jsonStr)}\r\n{i18n("解析结果：\r\n{Data}").Replace("{Data}", json.ToString(Formatting.Indented))}");
+                    Logger?.LogLocalizedDebug(new LocalizeString(
+                        LocalizeScope,
+                        "FullResponseDataTrace",
+                        "响应数据：{ResponseData}\r\n解析结果：\r\n{ParsedData}",
+                        ("ResponseData", jsonStr),
+                        ("ParsedData", json.ToString(Formatting.Indented))
+                        ));
                     return new JsonResult(code, msg, json) { RequestContent = parameters };
                 }
-                Logger?.LogError($"{i18n("响应数据格式错误")}\r\n{i18n("响应数据：{Data}").Replace("{Data}", jsonStr)}");
+                Logger?.LogLocalizedError(new LocalizeString(LocalizeScope, "ResponseDataFormatError_WithResponseData", "响应数据格式错误\r\n响应数据：{Data}", ("Data", jsonStr)));
                 return new JsonResult(RequestError) { RequestContent = parameters };
             });
         }
@@ -171,19 +212,21 @@ public partial class App
             if (Logger != null)
             {
                 if (err is TaskCanceledException)
-                    err = new TimeoutException();
-                var msg = $"{i18n("发送请求出错：{Message}").Replace("{Message}", err.Message)}";
-                if (err.InnerException != null && !err.InnerException.Message.IsNullOrEmpty())
-                    msg += $"\r\n{err.InnerException.Message}";
                 {
-                    var ie = err.GetInnerMessage();
-                    if (!ie.IsNullOrEmpty() && ie != err.Message && ie != err.InnerException?.Message)
-                        msg += $"\r\n{ie}";
-                }
-                msg += $"\r\n{err}";
-                Logger.LogError(err, msg);
-                if (err is TimeoutException)
+                    Logger?.LogLocalizedError(new LocalizeString(
+                        LocalizeScope,
+                        "FailedToSendRequest_Timeout",
+                        "发送请求出错：超时无应答"
+                    ), new TimeoutException(new TimeoutException().Message, err));
                     return RequestTimeoutError;
+                }
+                else Logger?.LogLocalizedError(new LocalizeString(
+                    LocalizeScope,
+                    "FailedToSendRequestErrorMessage",
+                    "发送请求出错：{Message} {InnerMessage}",
+                    ("Message", Localizer != null && err.GetLocalizedMessage() is {} lstr ? Localizer.Format(lstr) : err.Message),
+                    ("InnerMessage", err.InnerException?.Message ?? "")
+                ), err);
             }
             return RequestError;
         }
@@ -199,12 +242,12 @@ public partial class App
     {
         if (url.IsNullOrEmpty())
         {
-            Logger?.LogError(i18n("Url不能为空"));
+            Logger?.LogLocalizedError(new LocalizeString(LocalizeScope, "UrlCannotBeEmpty", "Url不能为空"));
             throw new ArgumentException(null, nameof(url));
         }
         if (!IsConnected || Client == null)
         {
-            Logger?.LogError(i18n("未连接到设备"));
+            Logger?.LogLocalizedError(new LocalizeString(LocalizeScope, "NotConnectedError", "未连接到设备"));
             throw new InvalidOperationException();
         }
         var pa = parameters?.ToString() ?? "";
@@ -219,22 +262,38 @@ public partial class App
         };
         if (Logger != null)
         {
-            var headers = content.Headers.SelectMany(kv => kv.Value.Select(v => $"{kv.Key}: {v}")).JoinToString("\r\n");
-            var log1 = $"{i18n("发送{Method}请求至：\"{Url}\"").Replace("{Method}", req.Method.ToString()).Replace("{Url}", url)}\r\n[Header]\r\n{headers}";
-            if (!pa.IsNullOrEmpty())
-                log1 += $"\r\n[Body]\r\n{pa}";
-            Logger.LogDebug(log1);
+            Logger?.LogLocalizedDebug(new LocalizeString(
+                LocalizeScope,
+                "SendRequestDebugLog",
+                "发送{Method}请求至：\"{Url}\" {Headers} {Parameters}",
+                ("Method", req.Method.ToString()),
+                ("Url", url),
+                ("Headers", content.Headers.Any() ? $"\r\n[Header]\r\n{content.Headers.SelectMany(kv => kv.Value.Select(v => $"{kv.Key}: {v}")).JoinToString("\r\n")}" : ""),
+                ("Parameters", pa.IsNullOrEmpty() ? "" : $"\r\n[Body]\r\n{pa}")
+            ));
         }
         using var rep = await Client.SendAsync(req);
-        var codeStr = i18n("响应代码：HTTP {Code} ({Message})")
-            .Replace("{Code}", ((long)rep.StatusCode).ToString())
-            .Replace("{Message}", rep.StatusCode.ToString());
-        if (!rep.IsSuccessStatusCode)
+        (string, object?)[] lstrargs = [
+            ("Code", ((long)rep.StatusCode).ToString()),
+            ("Message", rep.StatusCode.ToString())
+        ];
+        if (rep.IsSuccessStatusCode)
+            Logger?.LogLocalizedDebug(new LocalizeString(
+                LocalizeScope,
+                "RequestSuccessMessage",
+                "请求成功，响应代码：HTTP {Code} ({Message})",
+                lstrargs
+            ));
+        else
         {
-            Logger?.LogError($"{i18n("请求失败")}，{codeStr}");
+            Logger?.LogLocalizedError(new LocalizeString(
+                LocalizeScope,
+                "RequestErrorMessage",
+                "请求失败，响应代码：HTTP {Code} ({Message})",
+                lstrargs
+            ));
             throw new HttpRequestException();
         }
-        else Logger?.LogDebug($"{i18n("请求成功")}，{codeStr}");
         var stream = await rep.Content.ReadAsStreamAsync();
         return await onGetStream(stream);
     }
