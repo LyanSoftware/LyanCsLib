@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Ports;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Lytec.Common;
 using Lytec.Common.Communication;
 using Lytec.Common.Data;
@@ -391,159 +389,230 @@ public class STBootloader
     }
 
     static readonly byte[] CallBytes = [(byte)SpBytes.Call];
-    public static bool Call(ISendAndGetAnswerConfig conf, int timeout = 200)
-    {
-        var rTimeout = DateTime.Now.AddMilliseconds(timeout);
-        conf.Send(CallBytes);
-        while (DateTime.Now < rTimeout)
-        {
-            if (!conf.TryGetAnswerWithFixedTimeout(out var buf, timeout))
-                continue;
-            if (buf == null || buf.Length < 1)
-                continue;
-            switch (buf[^1])
-            {
-                case (byte)SpBytes.ACK:
-                case (byte)SpBytes.NACK:
-                    return true;
-                default:
-                    break;
-            }
-        }
-        return false;
-    }
-
-    public static bool Send(ISendAndGetAnswerConfig conf, byte[] data, CheckSumType checkSum = CheckSumType.Xor_Init0x00)
-    {
-        if (checkSum != CheckSumType.None)
-            data = [.. data.Append(GetCheckSum(data, checkSum switch { CheckSumType.Xor_Init0x00 => 0x00, CheckSumType.Xor_Init0xFF => 0xFF, _ => throw new ArgumentException(""), }))];
-        conf.ClearReceiveBuffer();
-        return conf.Send(data);
-    }
+    const int OptionalSecondNackDrainTimeout = 20;
 
     enum WaitAnswerStep
     {
         WaitAck,
         WaitData,
-        WaitAfterAck
+        WaitAfterAck,
     }
 
-    // answerLen:
-    //      0   无数据
-    //      -1  变长数据, 数据中的第1字节为数据长度
-    //     其他 定长数据
-    public static bool WaitAnswer(
-        ISendAndGetAnswerConfig conf,
-        out byte[] Answer,
-        int answerLen,
-        bool waitAck = true,
-        int extTimeout = 0,
-        bool ackAfterData = true
-        )
+    static void ValidateConfig(ISendAndGetAnswerConfig conf)
     {
-        Answer = [];
-        var rbuf = new Queue<byte>();
-        var step = WaitAnswerStep.WaitAck;
-        if (!waitAck)
-            step = WaitAnswerStep.WaitData;
-        var rTimeout = DateTime.Now.AddMilliseconds(200 + extTimeout);
-        while (DateTime.Now < rTimeout)
+        if (conf == null)
+            throw new ArgumentNullException(nameof(conf));
+    }
+
+    static void ValidateTimeout(int timeout, string paramName)
+    {
+        if (timeout < 0)
+            throw new ArgumentOutOfRangeException(paramName);
+    }
+
+    static void ValidateAddressAndLength(int address, int length)
+    {
+        if (address < 0)
+            throw new ArgumentOutOfRangeException(nameof(address));
+        if (length < 0)
+            throw new ArgumentOutOfRangeException(nameof(length));
+        if ((long)address + length > int.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(length), "Address range exceeds Int32.MaxValue.");
+    }
+
+    static void DrainOptionalSecondNack(ISendAndGetAnswerConfig conf)
+    {
+        // Some STM32 products can send a second NACK while RDP is active.
+        // Drain it before another transaction can mistake it for its response.
+        conf.TryGetAnswerWithFixedTimeout(out _, OptionalSecondNackDrainTimeout);
+        conf.ClearReceiveBuffer();
+    }
+
+    public static bool Call(ISendAndGetAnswerConfig conf, int timeout = 200)
+    {
+        ValidateConfig(conf);
+        ValidateTimeout(timeout, nameof(timeout));
+        conf.ClearReceiveBuffer();
+        if (!conf.Send(CallBytes))
+            return false;
+
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeout);
+        do
         {
-            if (!conf.TryGetAnswer(out var answer, 200 + extTimeout))
-                continue;
-            if (answer == null || answer.Length < 1)
-                continue;
-            foreach (var b in answer)
-                rbuf.Enqueue(b);
-            switch (step)
+            if (!conf.TryGetAnswerWithFixedTimeout(out var buffer, timeout))
+                return false;
+            foreach (var value in buffer)
             {
-                default:
-                case WaitAnswerStep.WaitAck:
-                    while (rbuf.Count > 0)
-                    {
-                        var ch = rbuf.Dequeue();
-                        if (ch == (byte)SpBytes.ACK)
-                        {
-                            if (answerLen == 0)
-                                goto case WaitAnswerStep.WaitAfterAck;
-                            goto case WaitAnswerStep.WaitData;
-                        }
-                        else if (ch == (byte)SpBytes.NACK)
-                            return false;
-                    }
-                    break;
-                case WaitAnswerStep.WaitData:
-                    step = WaitAnswerStep.WaitData;
-                    if (answerLen < 0)
-                        answerLen = rbuf.Dequeue() + 1;
-                    if (answerLen <= rbuf.Count)
-                    {
-                        var lst = new List<byte>();
-                        for (; answerLen > 0; answerLen--)
-                            lst.Add(rbuf.Dequeue());
-                        Answer = [.. lst];
-                        goto case WaitAnswerStep.WaitAfterAck;
-                    }
-                    break;
-                case WaitAnswerStep.WaitAfterAck:
-                    step = WaitAnswerStep.WaitAfterAck;
-                    if (!ackAfterData)
-                        return true;
-                    while (rbuf.Count > 0)
-                    {
-                        var ch = rbuf.Dequeue();
-                        if (ch == (byte)SpBytes.ACK)
-                            return true;
-                        else if (ch == (byte)SpBytes.NACK)
-                            return false;
-                    }
-                    break;
+                if (value == (byte)SpBytes.ACK)
+                    return true;
+                if (value == (byte)SpBytes.NACK)
+                {
+                    DrainOptionalSecondNack(conf);
+                    return false;
+                }
             }
         }
+        while (DateTime.UtcNow <= deadline);
         return false;
     }
 
+    static bool Send(ISendAndGetAnswerConfig conf, byte[] data, CheckSumType checkSum)
+    {
+        if (checkSum != CheckSumType.None)
+        {
+            var initialValue = checkSum switch
+            {
+                CheckSumType.Xor_Init0x00 => 0x00,
+                CheckSumType.Xor_Init0xFF => 0xFF,
+                _ => throw new ArgumentOutOfRangeException(nameof(checkSum)),
+            };
+            data = [.. data.Append(GetCheckSum(data, initialValue))];
+        }
+        return conf.Send(data);
+    }
+
     // answerLen:
     //      0   无数据
-    //      -1  变长数据, 数据中的第1字节为数据长度
+    //      -1  变长数据, 第1字节N表示后续数据长度减1
     //     其他 定长数据
-    public static bool Exec(
+    static bool WaitAnswer(
+        ISendAndGetAnswerConfig conf,
+        out byte[] answer,
+        int answerLen,
+        int extTimeout,
+        bool ackAfterData
+        )
+    {
+        answer = [];
+        var receiveBuffer = new Queue<byte>();
+        var step = WaitAnswerStep.WaitAck;
+        var dataLength = answerLen;
+        var variableLengthRead = answerLen < 0;
+        var deadline = DateTime.UtcNow.AddMilliseconds((long)conf.Timeout + extTimeout);
+
+        do
+        {
+            if (!conf.TryGetAnswer(out var received, extTimeout))
+                return false;
+            if (received != null)
+            {
+                foreach (var value in received)
+                    receiveBuffer.Enqueue(value);
+            }
+
+            while (receiveBuffer.Count > 0)
+            {
+                switch (step)
+                {
+                    case WaitAnswerStep.WaitAck:
+                    {
+                        var value = receiveBuffer.Dequeue();
+                        if (value == (byte)SpBytes.NACK)
+                        {
+                            DrainOptionalSecondNack(conf);
+                            return false;
+                        }
+                        if (value != (byte)SpBytes.ACK)
+                            continue;
+                        if (answerLen == 0)
+                        {
+                            if (!ackAfterData)
+                                return true;
+                            step = WaitAnswerStep.WaitAfterAck;
+                        }
+                        else
+                            step = WaitAnswerStep.WaitData;
+                        break;
+                    }
+                    case WaitAnswerStep.WaitData:
+                    {
+                        if (variableLengthRead)
+                        {
+                            dataLength = receiveBuffer.Dequeue() + 1;
+                            variableLengthRead = false;
+                        }
+                        if (receiveBuffer.Count < dataLength)
+                            goto NeedMoreData;
+                        var data = new byte[dataLength];
+                        for (var index = 0; index < data.Length; index++)
+                            data[index] = receiveBuffer.Dequeue();
+                        answer = data;
+                        if (!ackAfterData)
+                            return true;
+                        step = WaitAnswerStep.WaitAfterAck;
+                        break;
+                    }
+                    case WaitAnswerStep.WaitAfterAck:
+                    {
+                        var value = receiveBuffer.Dequeue();
+                        if (value == (byte)SpBytes.ACK)
+                            return true;
+                        if (value == (byte)SpBytes.NACK)
+                        {
+                            DrainOptionalSecondNack(conf);
+                            return false;
+                        }
+                        break;
+                    }
+                    default:
+                        throw new InvalidOperationException();
+                }
+            }
+
+        NeedMoreData:
+            continue;
+        }
+        while (DateTime.UtcNow <= deadline);
+        return false;
+    }
+
+    static bool Exec(
         ISendAndGetAnswerConfig conf,
         byte[] data,
-        out byte[] Answer,
+        out byte[] answer,
         int answerLen,
         int extTimeout = 0,
-        bool waitAck = true,
         CheckSumType checkSum = CheckSumType.Xor_Init0x00,
         bool ackAfterData = false
         )
     {
-        Answer = [];
-        for (var retryCount = -1; retryCount < conf.Retries; retryCount++)
+        answer = [];
+        if (!Send(conf, data, checkSum))
+            return false;
+        return WaitAnswer(conf, out answer, answerLen, extTimeout, ackAfterData);
+    }
+
+    static bool Exec(
+        ISendAndGetAnswerConfig conf,
+        Command command,
+        out byte[] answer,
+        int answerLen,
+        int extTimeout = 0,
+        bool ackAfterData = false
+        )
+    => Exec(conf, [(byte)command], out answer, answerLen, extTimeout, CheckSumType.Xor_Init0xFF, ackAfterData);
+
+    static bool ExecuteTransaction(ISendAndGetAnswerConfig conf, bool allowRetry, Func<bool> transaction)
+    {
+        var attemptCount = allowRetry ? (long)Math.Max(0, conf.Retries) + 1 : 1;
+        for (long attempt = 0; attempt < attemptCount; attempt++)
         {
-            if (data.Length > 0)
-            {
-                conf.ClearReceiveBuffer();
-                if (!Send(conf, data, checkSum))
-                    continue;
-            }
-            if (WaitAnswer(conf, out Answer, answerLen, waitAck, extTimeout, ackAfterData))
+            conf.ClearReceiveBuffer();
+            if (transaction())
                 return true;
         }
         return false;
     }
 
-    // answerLen:
-    //      0   无数据
-    //      -1  变长数据, 数据中的第1字节为数据长度
-    //     其他 定长数据
-    public static bool Exec(ISendAndGetAnswerConfig conf, Command cmd, out byte[] Answer, int answerLen, int extTimeout = 0)
-    => Exec(conf, [(byte)cmd], out Answer, answerLen, extTimeout, true, CheckSumType.Xor_Init0xFF);
-
     public static bool GetBootloaderInfo(ISendAndGetAnswerConfig conf, [NotNullWhen(true)] out BootloaderInfo? Info, int extTimeout = 0)
     {
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
         Info = null;
-        if (!Exec(conf, Command.Get, out var data, -1, extTimeout))
+        var data = Array.Empty<byte>();
+        if (!ExecuteTransaction(conf, true, () => Exec(conf, Command.Get, out data, -1, extTimeout, true)))
+            return false;
+        if (data.Length < 1)
             return false;
         Info = new BootloaderInfo(data[0], [.. data.Skip(1)]);
         return true;
@@ -551,9 +620,12 @@ public class STBootloader
 
     public static bool GetVersionAndReadProtectionStatus(ISendAndGetAnswerConfig conf, [NotNullWhen(true)] out Version? Version, [NotNullWhen(true)] out ReadProtectionStatus? Status, int extTimeout = 0)
     {
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
         Version = null;
         Status = null;
-        if (!Exec(conf, Command.GetVersionAndReadProtectionStatus, out var data, 3, extTimeout))
+        var data = Array.Empty<byte>();
+        if (!ExecuteTransaction(conf, true, () => Exec(conf, Command.GetVersionAndReadProtectionStatus, out data, 3, extTimeout, true)))
             return false;
         Version = ParseVersionCode(data[0]);
         Status = new ReadProtectionStatus(data[1], data[2]);
@@ -562,9 +634,14 @@ public class STBootloader
 
     public static bool GetChipProductId(ISendAndGetAnswerConfig conf, out ushort ProductId, out byte[] ProductIdBytes, int extTimeout = 0)
     {
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
         ProductId = 0;
-        if (!Exec(conf, Command.GetChipProductId, out ProductIdBytes, -1, extTimeout))
+        ProductIdBytes = [];
+        var productIdBytes = Array.Empty<byte>();
+        if (!ExecuteTransaction(conf, true, () => Exec(conf, Command.GetChipProductId, out productIdBytes, -1, extTimeout, true)))
             return false;
+        ProductIdBytes = productIdBytes;
         switch (ProductIdBytes.Length)
         {
             case 1:
@@ -584,35 +661,30 @@ public class STBootloader
 
     public static bool Read(ISendAndGetAnswerConfig conf, int address, int length, out byte[] Data, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
     {
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
+        ValidateAddressAndLength(address, length);
         Data = [];
-        if (address < 1) // >= 0x80000000
-            return false;
-        // 地址可能需要对齐到128字节才能正常读取
-        const int addrAlign = 128;
-        // 文档说长度要对齐到4字节, 实际不一定需要对齐
-        const int lenAlign = 4;
-        var addr = address / addrAlign * addrAlign;
-        var rlen = length;
-        if (addr != address)
-            rlen += address - addr;
-        rlen = (rlen + lenAlign - 1) / lenAlign * lenAlign;
+        if (length == 0)
+            return true;
         var buf = new List<byte>();
-        if (rlen > MaxReadStepSize)
-            onProcess?.Invoke((0, rlen));
-        for (int offset = 0, plen; offset < rlen; offset += plen)
+        if (length > MaxReadStepSize)
+            onProcess?.Invoke((0, length));
+        for (int offset = 0, partLength; offset < length; offset += partLength)
         {
-            plen = Math.Min(rlen - offset, MaxReadStepSize);
-            if (!Exec(conf, Command.ReadMemory, out _, 0, extTimeout))
+            partLength = Math.Min(length - offset, MaxReadStepSize);
+            var partAddress = address + offset;
+            var part = Array.Empty<byte>();
+            if (!ExecuteTransaction(conf, true, () =>
+                Exec(conf, Command.ReadMemory, out _, 0, extTimeout)
+                && Exec(conf, partAddress.ToBytes(Endian.Big), out _, 0, extTimeout)
+                && Exec(conf, [(byte)(partLength - 1)], out part, partLength, extTimeout, CheckSumType.Xor_Init0xFF)))
                 return false;
-            if (!Exec(conf, addr.ToBytes(Endian.Big), out _, 0, extTimeout))
-                return false;
-            if (!Exec(conf, [(byte)(plen - 1)], out var d, plen, extTimeout, true, CheckSumType.Xor_Init0xFF))
-                return false;
-            buf.AddRange(d);
-            if (rlen > MaxReadStepSize)
-                onProcess?.Invoke((offset + plen, rlen));
+            buf.AddRange(part);
+            if (length > MaxReadStepSize)
+                onProcess?.Invoke((offset + partLength, length));
         }
-        Data = [.. buf.Skip(address - addr).Take(length)];
+        Data = [.. buf];
         return true;
     }
 
@@ -635,10 +707,15 @@ public class STBootloader
     }
 
     public static bool GetFlashSize(ISendAndGetAnswerConfig conf, DeviceInfo info, out int FlashSize, int extTimeout = 0)
-    => GetFlashSize(conf, info.FlashSizeAddress, out FlashSize, extTimeout);
+    {
+        if (info == null)
+            throw new ArgumentNullException(nameof(info));
+        return GetFlashSize(conf, info.FlashSizeAddress, out FlashSize, extTimeout);
+    }
 
     public static bool GetFlashSize(ISendAndGetAnswerConfig conf, int address, out int FlashSize, int extTimeout = 0)
     {
+        ValidateAddressAndLength(address, 2);
         FlashSize = -1;
         if (!ReadShortInt(conf, address, out var sz, extTimeout))
             return false;
@@ -648,86 +725,90 @@ public class STBootloader
 
     public static bool Go(ISendAndGetAnswerConfig conf, int address, int extTimeout = 0)
     {
-        if (!Exec(conf, Command.Go, out _, 0, extTimeout))
-            return false;
-        return Exec(conf, address.ToBytes(Endian.Big), out var buf, 1, extTimeout + 1000) && buf.Length == 1 && buf[0] == (int)SpBytes.ACK;
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
+        ValidateAddressAndLength(address, 0);
+        return ExecuteTransaction(conf, false, () =>
+            Exec(conf, Command.Go, out _, 0, extTimeout)
+            && Exec(conf, address.ToBytes(Endian.Big), out _, 0, extTimeout + 1000));
     }
-
-    public const int DefaultMainFlashStartAddress = 0x08000000;
-    public static bool Reset(ISendAndGetAnswerConfig conf, bool useWriteUnprotect = true)
-    => useWriteUnprotect ? WriteUnprotect(conf) : Go(conf, DefaultMainFlashStartAddress);
-    public static bool Reset(ISendAndGetAnswerConfig conf, DeviceInfo info)
-    => Go(conf, info.FlashStartAddress);
 
     public const byte FillByte = 0xff;
     public const int MaxWriteStepSize = 256;
 
-    public const int WriteAddressAlign = 128;
-    public const int WriteSizeAlign = 4;
-
     public static bool Write(ISendAndGetAnswerConfig conf, int address, IEnumerable<byte> data, int extTimeout = 0, Action<OnProcessEventArgs>? onProcess = null)
-    => WriteAligned(conf, address, [.. data], extTimeout, onProcess);
-    public static bool WriteAligned(ISendAndGetAnswerConfig conf, int address, byte[] data, int extTimeout = 0, Action<OnProcessEventArgs>? onProcess = null, int addrAlign = WriteAddressAlign, int sizeAlign = WriteSizeAlign)
     {
-        var alignedAddr = address / addrAlign * addrAlign;
-        var alignedSize = (address - alignedAddr + data.Length).SizeAlignTo(sizeAlign);
-        if (alignedAddr != address || alignedSize != data.Length)
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
+        if (data == null)
+            throw new ArgumentNullException(nameof(data));
+        var writeData = data as byte[] ?? [.. data];
+        ValidateAddressAndLength(address, writeData.Length);
+        if (writeData.Length == 0)
+            return true;
+        if (writeData.Length % 4 != 0)
+            throw new ArgumentException("AN3155 requires the write length to be a multiple of four bytes.", nameof(data));
+
+        if (writeData.Length > MaxWriteStepSize)
+            onProcess?.Invoke((0, writeData.Length));
+        for (int offset = 0, partLength; offset < writeData.Length; offset += partLength)
         {
-            var wbuf = Enumerable.Repeat(FillByte, alignedSize).ToArray();
-            Array.Copy(data, 0, wbuf, address - alignedAddr, data.Length);
-            data = wbuf;
-        }
-        if (data.Length > MaxWriteStepSize)
-            onProcess?.Invoke((0, data.Length));
-        for (int offset = 0, plen; offset < data.Length; offset += plen)
-        {
-            plen = Math.Min(data.Length - offset, MaxWriteStepSize);
-            var buf = data.Subarray(offset, plen);
-            var alen = buf.Length.SizeAlignTo(4);
-            {
-                var buf2 = Enumerable.Repeat(FillByte, alen + 1).ToArray();
-                Array.Copy(buf, 0, buf2, 1, buf.Length);
-                buf2[0] = (byte)(alen - 1);
-                buf = buf2;
-            }
-            if (!Exec(conf, Command.WriteMemory, out _, 0, extTimeout))
+            partLength = Math.Min(writeData.Length - offset, MaxWriteStepSize);
+            var partAddress = address + offset;
+            var packet = new byte[partLength + 1];
+            packet[0] = (byte)(partLength - 1);
+            Array.Copy(writeData, offset, packet, 1, partLength);
+            if (!ExecuteTransaction(conf, true, () =>
+                Exec(conf, Command.WriteMemory, out _, 0, extTimeout)
+                && Exec(conf, partAddress.ToBytes(Endian.Big), out _, 0, extTimeout)
+                && Exec(conf, packet, out _, 0, extTimeout + 1000)))
                 return false;
-            if (!Exec(conf, alignedAddr.ToBytes(Endian.Big), out _, 0, extTimeout))
-                return false;
-            if (!Exec(conf, buf, out _, 0, extTimeout + 1000))
-                return false;
-            alignedAddr += alen;
-            if (data.Length > MaxWriteStepSize)
-                onProcess?.Invoke((offset + plen, data.Length));
+            if (writeData.Length > MaxWriteStepSize)
+                onProcess?.Invoke((offset + partLength, writeData.Length));
         }
         return true;
     }
 
     public static bool WriteValid(ISendAndGetAnswerConfig conf, int address, IEnumerable<byte> data, int extTimeout = 0, Action<OnProcessEventArgs>? onProcess = null)
-    => WriteAlignedValid(conf, address, [.. data], extTimeout, onProcess);
-    public static bool WriteAlignedValid(ISendAndGetAnswerConfig conf, int address, byte[] data, int extTimeout = 0, Action<OnProcessEventArgs>? onProcess = null, int addrAlign = WriteAddressAlign, int sizeAlign = WriteSizeAlign)
     {
-        if (!WriteAligned(conf, address, data, extTimeout, onProcess, addrAlign, sizeAlign))
+        if (data == null)
+            throw new ArgumentNullException(nameof(data));
+        var writeData = data as byte[] ?? [.. data];
+        if (!Write(conf, address, writeData, extTimeout, onProcess))
             return false;
-        if (!Read(conf, address, data.Length, out var vbuf, null, extTimeout))
+        if (!Read(conf, address, writeData.Length, out var readData, null, extTimeout))
             return false;
-        return data.SequenceEqual(vbuf);
+        return writeData.SequenceEqual(readData);
     }
 
     private static bool Erase(ISendAndGetAnswerConfig conf, IEnumerable<int> pageIndexes, int extTimeout = 0)
     {
-        if (!Exec(conf, Command.Erase, out _, 0, extTimeout))
-            return false;
-        var pages = pageIndexes.Select(v => (byte)v).Distinct().ToList();
-        return Exec(conf, [.. pages.Prepend((byte)(pages.Count - 1))], out _, 0, extTimeout);
+        var pages = pageIndexes.Distinct().ToArray();
+        if (pages.Length == 0)
+            throw new ArgumentException("At least one page is required.", nameof(pageIndexes));
+        if (pages.Length > 256 || pages.Any(value => value < 0 || value > byte.MaxValue))
+            throw new ArgumentOutOfRangeException(nameof(pageIndexes));
+        var packet = pages.Select(value => (byte)value).Prepend((byte)(pages.Length - 1)).ToArray();
+        return ExecuteTransaction(conf, true, () =>
+            Exec(conf, Command.Erase, out _, 0, extTimeout)
+            && Exec(conf, packet, out _, 0, extTimeout));
     }
 
     private static bool ExtendedErase(ISendAndGetAnswerConfig conf, IEnumerable<int> pageIndexes, int extTimeout = 0)
     {
-        if (!Exec(conf, Command.ExtendedErase, out _, 0, extTimeout))
-            return false;
-        var pages = pageIndexes.Select(v => (ushort)v).Distinct().ToList();
-        return Exec(conf, [.. pages.Prepend((ushort)(pages.Count - 1)).SelectMany(v => v.ToBytes(Endian.Big))], out _, 0, extTimeout);
+        var pages = pageIndexes.Distinct().ToArray();
+        if (pages.Length == 0)
+            throw new ArgumentException("At least one page is required.", nameof(pageIndexes));
+        if (pages.Length > ushort.MaxValue + 1L || pages.Any(value => value < 0 || value > ushort.MaxValue))
+            throw new ArgumentOutOfRangeException(nameof(pageIndexes));
+        var packet = pages
+            .Select(value => (ushort)value)
+            .Prepend((ushort)(pages.Length - 1))
+            .SelectMany(value => value.ToBytes(Endian.Big))
+            .ToArray();
+        return ExecuteTransaction(conf, true, () =>
+            Exec(conf, Command.ExtendedErase, out _, 0, extTimeout)
+            && Exec(conf, packet, out _, 0, extTimeout));
     }
 
     public enum ExtendedEraseBank : ushort
@@ -739,119 +820,127 @@ public class STBootloader
 
     public static bool ExtendedErase(ISendAndGetAnswerConfig conf, ExtendedEraseBank bank, int extTimeout = 0)
     {
-        if (!Exec(conf, Command.ExtendedErase, out _, 0, extTimeout))
-            return false;
-        return Exec(conf, bank.ToBytes(Endian.Big), out _, 0, extTimeout + 500);
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
+        if (!Enum.IsDefined(typeof(ExtendedEraseBank), bank))
+            throw new ArgumentOutOfRangeException(nameof(bank));
+        return ExecuteTransaction(conf, true, () =>
+            Exec(conf, Command.ExtendedErase, out _, 0, extTimeout)
+            && Exec(conf, bank.ToBytes(Endian.Big), out _, 0, extTimeout + 500));
     }
 
     public static bool FullChipErase(ISendAndGetAnswerConfig conf, bool useExtendedErase, int extTimeout = 0)
     {
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
         extTimeout += 2000;
         if (useExtendedErase)
             return ExtendedErase(conf, ExtendedEraseBank.FullChip, extTimeout);
-        else
-        {
-            if (!Exec(conf, Command.Erase, out _, 0, extTimeout))
-                return false;
-            return Exec(conf, [0xFF], out _, 0, extTimeout, true, CheckSumType.Xor_Init0xFF);
-        }
+        return ExecuteTransaction(conf, true, () =>
+            Exec(conf, Command.Erase, out _, 0, extTimeout)
+            && Exec(conf, [0xFF], out _, 0, extTimeout, CheckSumType.Xor_Init0xFF));
     }
 
     public static bool Erase(ISendAndGetAnswerConfig conf, DeviceInfo info, bool useExtendedErase, int address, int length, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
-    => InnerErase(conf, info, useExtendedErase, address, length, false, onProcess, extTimeout);
+    => InnerErase(conf, info, 0, useExtendedErase, address, length, false, onProcess, extTimeout);
     public static bool Erase(ISendAndGetAnswerConfig conf, DeviceInfos info, int address, int length, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
-    => InnerErase(conf, info.Device, info.Bootloader.SupportedExtendedErase, address, length, false, onProcess, extTimeout);
+    {
+        if (info == null)
+            throw new ArgumentNullException(nameof(info));
+        return InnerErase(conf, info.Device, info.FlashSize, info.Bootloader.SupportedExtendedErase, address, length, false, onProcess, extTimeout);
+    }
 
     public static bool SafeErase(ISendAndGetAnswerConfig conf, DeviceInfo info, bool useExtendedErase, int address, int length, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
-    => InnerErase(conf, info, useExtendedErase, address, length, true, onProcess, extTimeout);
+    => InnerErase(conf, info, 0, useExtendedErase, address, length, true, onProcess, extTimeout);
     public static bool SafeErase(ISendAndGetAnswerConfig conf, DeviceInfos info, int address, int length, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
-    => InnerErase(conf, info.Device, info.Bootloader.SupportedExtendedErase, address, length, true, onProcess, extTimeout);
-
-    private static bool InnerErase(ISendAndGetAnswerConfig conf, DeviceInfo info, bool useExtendedErase, int address, int length, bool keepAlignData, Action<OnProcessEventArgs>? onProcess = null, int extTimeout = 0)
     {
+        if (info == null)
+            throw new ArgumentNullException(nameof(info));
+        return InnerErase(conf, info.Device, info.FlashSize, info.Bootloader.SupportedExtendedErase, address, length, true, onProcess, extTimeout);
+    }
+
+    private static bool InnerErase(ISendAndGetAnswerConfig conf, DeviceInfo info, int knownFlashSize, bool useExtendedErase, int address, int length, bool keepAlignData, Action<OnProcessEventArgs>? onProcess, int extTimeout)
+    {
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
+        if (info == null)
+            throw new ArgumentNullException(nameof(info));
+        ValidateAddressAndLength(address, length);
+        if (length == 0)
+            return true;
+
         var flashStartAddr = info.FlashStartAddress;
         var flashEndAddr = info.FlashEndAddress;
-        if (GetFlashSize(conf, info, out var flashSize, extTimeout))
-            flashEndAddr = flashStartAddr + flashSize;
         var startAddr = address;
         var endAddr = startAddr + length;
+        if (flashStartAddr < 0 || flashEndAddr <= flashStartAddr)
+            throw new ArgumentException("Flash address range is invalid.", nameof(info));
         if (startAddr < flashStartAddr || endAddr > flashEndAddr)
-            return false;
+            throw new ArgumentOutOfRangeException(nameof(address), "Erase range is outside the device flash.");
+        if (knownFlashSize < 0)
+            throw new ArgumentOutOfRangeException(nameof(knownFlashSize));
+        if (knownFlashSize > 0)
+        {
+            if ((long)flashStartAddr + knownFlashSize > int.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(knownFlashSize));
+            flashEndAddr = flashStartAddr + knownFlashSize;
+        }
+        else if (info.FlashSizeAddress > 0 && GetFlashSize(conf, info, out var flashSize, extTimeout))
+        {
+            if ((long)flashStartAddr + flashSize > int.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(info));
+            flashEndAddr = flashStartAddr + flashSize;
+        }
+        if (startAddr < flashStartAddr || endAddr > flashEndAddr)
+            throw new ArgumentOutOfRangeException(nameof(address), "Erase range is outside the device flash.");
+        if (info.FlashPageSizes == null)
+            throw new ArgumentException("Flash page sizes are required.", nameof(info));
         var pageSizes = info.FlashPageSizes.AsEnumerable().Reverse().SkipWhile(v => v == 0).Reverse().ToArray();
-        if (pageSizes.Length < 1)
-            return false;
+        if (pageSizes.Length < 1 || pageSizes.Any(value => value <= 0))
+            throw new ArgumentException("Flash page sizes must contain positive values.", nameof(info));
+
         var beforeBuf = Array.Empty<byte>();
         var afterBuf = Array.Empty<byte>();
-        var alignedStartAddr = flashStartAddr;
-        var alignedEndAddr = alignedStartAddr;
-        List<int> pageIndexes;
-        if (pageSizes.Length == 1)
+        var alignedStartAddr = 0;
+        var alignedEndAddr = 0;
+        var pageIndexes = new List<int>();
+        var pageStart = flashStartAddr;
+        for (var pageIndex = 0; pageStart < flashEndAddr; pageIndex++)
         {
-            // 统一的页大小
-            var pageSize = pageSizes[0];
-            // 对齐开始地址
-            alignedStartAddr = (startAddr - flashStartAddr) / pageSize * pageSize + flashStartAddr;
-            // 对齐结束地址
-            alignedEndAddr = (endAddr - alignedStartAddr + pageSize - 1) / pageSize * pageSize + alignedStartAddr;
-            var pageCount = (alignedEndAddr - alignedStartAddr) / pageSize;
-            var startPageIndex = (alignedStartAddr - flashStartAddr) / pageSize;
-            pageIndexes = [.. Enumerable.Range(startPageIndex, pageCount)];
-        }
-        else
-        {
-            // 非统一的页大小
-            var startPage = 0;
-            int GetFlashPageSize(int pageIndex) => pageSizes[Math.Min(pageSizes.Length-1, pageIndex)];
-            while (alignedStartAddr < startAddr)
+            var pageSize = pageSizes[Math.Min(pageIndex, pageSizes.Length - 1)];
+            var nextPage = Math.Min((long)pageStart + pageSize, flashEndAddr);
+            if (startAddr < nextPage && endAddr > pageStart)
             {
-                var pageSize = GetFlashPageSize(startPage);
-                alignedEndAddr = alignedStartAddr + pageSize;
-                if (alignedEndAddr > startAddr)
-                    break;
-                alignedStartAddr += pageSize;
-                startPage++;
+                if (pageIndexes.Count == 0)
+                    alignedStartAddr = pageStart;
+                pageIndexes.Add(pageIndex);
+                alignedEndAddr = (int)nextPage;
             }
-            var endPage = startPage;
-            while (alignedEndAddr < endAddr)
-            {
-                var pageSize = GetFlashPageSize(endPage);
-                alignedEndAddr += pageSize;
-                if (alignedEndAddr >= endAddr)
-                    break;
-                endPage++;
-            }
-            pageIndexes = [.. Enumerable.Range(startPage, endPage - startPage + 1)];
+            pageStart = (int)nextPage;
         }
+        if (pageIndexes.Count == 0)
+            throw new ArgumentOutOfRangeException(nameof(address));
+
         var beforeSize = keepAlignData ? (startAddr - alignedStartAddr) : 0;
         var afterSize = keepAlignData ? (alignedEndAddr - endAddr) : 0;
-        var stepSizes = new int[]
+        var totalSteps = beforeSize + afterSize + pageIndexes.Count + beforeSize + afterSize;
+        var currentStep = 0;
+        onProcess?.Invoke((currentStep, totalSteps));
+        if (beforeSize > 0)
         {
-            beforeSize,
-            afterSize,
-            pageIndexes.Count,
-            beforeSize,
-            afterSize
-        };
-        var stepOffsets = Enumerable.Range(0, stepSizes.Length)
-            .Select(i => stepSizes.Take(i).Sum())
-            .ToArray();
-        var totalSteps = stepSizes.Sum();
-        OnProcessEventArgs GetStep(int outerStep, OnProcessEventArgs inner)
-        => ((int)((float)inner.CurrentStep / inner.TotalStep * stepSizes[outerStep]) + stepOffsets[outerStep], totalSteps);
-        if (keepAlignData && alignedStartAddr != startAddr)
-        {
-            // 尝试先将对齐后, 前面会被额外擦除的数据读回来
-            if (Read(conf, alignedStartAddr, beforeSize, out var cacheBuf, p => onProcess?.Invoke(GetStep(0, p)), extTimeout))
-                beforeBuf = cacheBuf;
+            if (!Read(conf, alignedStartAddr, beforeSize, out beforeBuf, null, extTimeout))
+                return false;
+            currentStep += beforeSize;
+            onProcess?.Invoke((currentStep, totalSteps));
         }
-        if (keepAlignData && alignedEndAddr != endAddr)
+        if (afterSize > 0)
         {
-            // 尝试先将对齐后, 后面会被额外擦除的数据读回来
-            if (Read(conf, endAddr, afterSize, out var cacheBuf, p => onProcess?.Invoke(GetStep(1, p)), extTimeout))
-                afterBuf = cacheBuf;
+            if (!Read(conf, endAddr, afterSize, out afterBuf, null, extTimeout))
+                return false;
+            currentStep += afterSize;
+            onProcess?.Invoke((currentStep, totalSteps));
         }
-        if (keepAlignData)
-            onProcess?.Invoke(GetStep(2, (0, 1)));
+
         if (useExtendedErase)
         {
             if (!ExtendedErase(conf, pageIndexes, extTimeout))
@@ -859,40 +948,99 @@ public class STBootloader
         }
         else if (!Erase(conf, pageIndexes, extTimeout))
             return false;
-        if (keepAlignData)
-            onProcess?.Invoke(GetStep(2, (1, 1)));
-        // 把数据写回去
-        if (beforeBuf.Length > 0)
-            WriteAligned(conf, alignedStartAddr, beforeBuf, extTimeout, p => onProcess?.Invoke(GetStep(3, p)));
-        if (afterBuf.Length > 0)
-            WriteAligned(conf, endAddr, afterBuf, extTimeout, p => onProcess?.Invoke(GetStep(4, p)));
-        onProcess?.Invoke((totalSteps, totalSteps));
+        currentStep += pageIndexes.Count;
+        onProcess?.Invoke((currentStep, totalSteps));
+
+        if (keepAlignData && !RestoreEraseBoundaries(
+            conf,
+            alignedStartAddr,
+            startAddr,
+            endAddr,
+            alignedEndAddr,
+            beforeBuf,
+            afterBuf,
+            extTimeout))
+            return false;
+        currentStep += beforeSize + afterSize;
+        onProcess?.Invoke((currentStep, totalSteps));
         return true;
     }
 
-    public static bool WriteProtect(ISendAndGetAnswerConfig conf, IEnumerable<int> pageIndexes, int extTimeout = 0)
+    static bool RestoreEraseBoundaries(
+        ISendAndGetAnswerConfig conf,
+        int alignedStartAddress,
+        int startAddress,
+        int endAddress,
+        int alignedEndAddress,
+        byte[] beforeData,
+        byte[] afterData,
+        int extTimeout)
     {
-        if (!Exec(conf, Command.WriteProtect, out _, 0, extTimeout))
-            return false;
-        var pages = pageIndexes.Select(v => (byte)v).Distinct().ToList();
-        return Exec(conf, [.. pages.Prepend((byte)(pages.Count - 1))], out _, 0, extTimeout);
+        var ranges = new List<(int Start, int End)>();
+        if (beforeData.Length > 0)
+            ranges.Add((alignedStartAddress, (int)(((long)startAddress + 3) / 4 * 4)));
+        if (afterData.Length > 0)
+            ranges.Add((endAddress / 4 * 4, alignedEndAddress));
+        if (ranges.Count == 2 && ranges[0].End > ranges[1].Start)
+            ranges = [(ranges[0].Start, ranges[1].End)];
+
+        foreach (var range in ranges)
+        {
+            var restoreData = new byte[range.End - range.Start];
+            for (var offset = 0; offset < restoreData.Length; offset++)
+            {
+                var currentAddress = range.Start + offset;
+                if (currentAddress < startAddress)
+                    restoreData[offset] = beforeData[currentAddress - alignedStartAddress];
+                else if (currentAddress >= endAddress)
+                    restoreData[offset] = afterData[currentAddress - endAddress];
+                else
+                    restoreData[offset] = FillByte;
+            }
+            if (!WriteValid(conf, range.Start, restoreData, extTimeout))
+                return false;
+        }
+        return true;
     }
 
-    public static bool WriteUnprotect(ISendAndGetAnswerConfig conf, int extTimeout = 0)
-    => Exec(conf, Command.WriteUnprotect, out var buf, 1, extTimeout) && buf.Length == 1 && buf[0] == (int)SpBytes.ACK;
-
-    public static bool ReadoutProtect(ISendAndGetAnswerConfig conf, int extTimeout = 0)
+    public static bool WriteProtectAndReset(ISendAndGetAnswerConfig conf, IEnumerable<int> pageIndexes, int extTimeout = 0)
     {
-        if (!Exec(conf, Command.ReadoutProtect, out _, 0, extTimeout))
-            return false;
-        return WaitAnswer(conf, out _, 0);
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
+        if (pageIndexes == null)
+            throw new ArgumentNullException(nameof(pageIndexes));
+        var pages = pageIndexes.Distinct().ToArray();
+        if (pages.Length == 0)
+            throw new ArgumentException("At least one page is required.", nameof(pageIndexes));
+        if (pages.Length > 256 || pages.Any(value => value < 0 || value > byte.MaxValue))
+            throw new ArgumentOutOfRangeException(nameof(pageIndexes));
+        var packet = pages.Select(value => (byte)value).Prepend((byte)(pages.Length - 1)).ToArray();
+        return ExecuteTransaction(conf, false, () =>
+            Exec(conf, Command.WriteProtect, out _, 0, extTimeout)
+            && Exec(conf, packet, out _, 0, extTimeout));
     }
 
-    public static bool ReadoutUnprotect(ISendAndGetAnswerConfig conf, int extTimeout = 0)
+    public static bool WriteUnprotectAndReset(ISendAndGetAnswerConfig conf, int extTimeout = 0)
     {
-        if (!Exec(conf, Command.ReadoutUnprotect, out _, 0, extTimeout))
-            return false;
-        return WaitAnswer(conf, out _, 0);
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
+        return ExecuteTransaction(conf, false, () =>
+            Exec(conf, Command.WriteUnprotect, out _, 0, extTimeout + 1000, true));
     }
 
+    public static bool ReadoutProtectAndReset(ISendAndGetAnswerConfig conf, int extTimeout = 0)
+    {
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
+        return ExecuteTransaction(conf, false, () =>
+            Exec(conf, Command.ReadoutProtect, out _, 0, extTimeout + 1000, true));
+    }
+
+    public static bool ReadoutUnprotectAndReset(ISendAndGetAnswerConfig conf, int extTimeout = 0)
+    {
+        ValidateConfig(conf);
+        ValidateTimeout(extTimeout, nameof(extTimeout));
+        return ExecuteTransaction(conf, false, () =>
+            Exec(conf, Command.ReadoutUnprotect, out _, 0, extTimeout + 2000, true));
+    }
 }
