@@ -197,13 +197,18 @@ public partial class App
                     Logger?.LogLocalizedDebug(new LocalizeString(
                         LocalizeScope,
                         "FullResponseDataTrace",
-                        "响应数据：{ResponseData}\r\n解析结果：\r\n{ParsedData}",
+                        "响应数据：{{ResponseData}}\r\n解析结果：\r\n{{ParsedData}}",
                         ("ResponseData", jsonStr),
                         ("ParsedData", json.ToString(Formatting.Indented))
                         ));
                     return new JsonResult(code, msg, json) { RequestContent = parameters };
                 }
-                Logger?.LogLocalizedError(new LocalizeString(LocalizeScope, "ResponseDataFormatError_WithResponseData", "响应数据格式错误\r\n响应数据：{Data}", ("Data", jsonStr)));
+                Logger?.LogLocalizedError(new LocalizeString(
+                    LocalizeScope,
+                    "ResponseDataFormatError_WithResponseData",
+                    "响应数据格式错误\r\n响应数据：{{Data}}",
+                    ("Data", jsonStr)
+                ));
                 return new JsonResult(RequestError) { RequestContent = parameters };
             });
         }
@@ -223,9 +228,9 @@ public partial class App
                 else Logger?.LogLocalizedError(new LocalizeString(
                     LocalizeScope,
                     "FailedToSendRequestErrorMessage",
-                    "发送请求出错：{Message} {InnerMessage}",
+                    "发送请求出错：{{Message}} {{InnerMessage}}",
                     ("Message", Localizer != null && err.GetLocalizedMessage() is {} lstr ? Localizer.Format(lstr) : err.Message),
-                    ("InnerMessage", err.InnerException?.Message ?? "")
+                    ("InnerMessage", err.InnerException != null ? $"\r\n{err.InnerException.Message}" : "")
                 ), err);
             }
             return RequestError;
@@ -265,7 +270,7 @@ public partial class App
             Logger?.LogLocalizedDebug(new LocalizeString(
                 LocalizeScope,
                 "SendRequestDebugLog",
-                "发送{Method}请求至：\"{Url}\" {Headers} {Parameters}",
+                "发送{{Method}}请求至：\"{{Url}}\" {{Headers}} {{Parameters}}",
                 ("Method", req.Method.ToString()),
                 ("Url", url),
                 ("Headers", content.Headers.Any() ? $"\r\n[Header]\r\n{content.Headers.SelectMany(kv => kv.Value.Select(v => $"{kv.Key}: {v}")).JoinToString("\r\n")}" : ""),
@@ -281,7 +286,7 @@ public partial class App
             Logger?.LogLocalizedDebug(new LocalizeString(
                 LocalizeScope,
                 "RequestSuccessMessage",
-                "请求成功，响应代码：HTTP {Code} ({Message})",
+                "请求成功，响应代码：HTTP {{Code}} ({{Message}})",
                 lstrargs
             ));
         else
@@ -289,7 +294,7 @@ public partial class App
             Logger?.LogLocalizedError(new LocalizeString(
                 LocalizeScope,
                 "RequestErrorMessage",
-                "请求失败，响应代码：HTTP {Code} ({Message})",
+                "请求失败，响应代码：HTTP {{Code}} ({{Message}})",
                 lstrargs
             ));
             throw new HttpRequestException();
