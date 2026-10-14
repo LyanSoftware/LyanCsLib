@@ -9,6 +9,10 @@ namespace Lytec.Image
 
     public class FontInfo
     {
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        public long Id { get; set; }
+
         public ISet<CharImg> ModifiedChars { get; set; } = new HashSet<CharImg>();
 
         public string Font { get; set; } = "";

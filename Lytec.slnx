@@ -25,6 +25,7 @@
   <Project Path="NetStandard20Compatibility/Lytec.NetStandard20Compatibility.csproj" />
   <Project Path="NetStandard21Compatibility/Lytec.NetStandard21Compatibility.csproj" />
   <Project Path="Protocol.Images/Lytec.Protocol.Images.csproj" />
+  <Project Path="Protocol.Images.Tests/Lytec.Protocol.Images.Tests.csproj" />
   <Project Path="Protocol/Lytec.Protocol.csproj" />
   <Project Path="SerialPort/Lytec.SerialPort.csproj" />
   <Project Path="Test/Test.csproj" />

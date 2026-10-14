@@ -1,58 +1,133 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Linq.Expressions;
-using System.Text;
-using SkiaSharp;
 using Lytec.Common;
-using Newtonsoft.Json.Linq;
-using Lytec.Image;
-using static Lytec.Protocol.SCL.Constants;
+using Lytec.Common.Localization.Extensions;
 using Lytec.Common.Text.Encoding;
-using HarfBuzzSharp;
+using Lytec.Image;
+using SkiaSharp;
+using System.Runtime.CompilerServices;
+using System.Runtime.ConstrainedExecution;
+using System.Text;
+using static Lytec.Protocol.SCL.Constants;
 
 namespace Lytec.Protocol.Images.SCL;
 
 public static class FontLibUtils
 {
+    private const string LocalizeScope = "Lytec.Protocol.Images.SCL.FontLibUtils";
+
     public static readonly Encoding Latin1Encoding = Encoding.GetEncoding("ISO-8859-1");
-    public static readonly Encoding SystemEncoding = Encoding.GetEncoding(System.Globalization.CultureInfo.CurrentCulture.TextInfo.ANSICodePage) ?? Encoding.Default;
+    public static readonly Encoding SystemEncoding = CreateSystemEncoding();
 
-    public static Expression<Func<CharImg, bool>> GetCharImg(int chr)
-    => cg => cg.Char == chr;
-
-    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
-    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
-    static CharImg? GetCharImg(this FontInfo font, int chr)
+    private static Encoding CreateSystemEncoding()
     {
         try
         {
-            return font.ModifiedChars.AsQueryable().FirstOrDefault(GetCharImg(chr));
+            return Encoding.GetEncoding(System.Globalization.CultureInfo.CurrentCulture.TextInfo.ANSICodePage);
         }
-        catch (Exception)
+        catch (NotSupportedException)
         {
-            return font.ModifiedChars.FirstOrDefault(GetCharImg(chr).Compile());
+            return Encoding.Default;
         }
     }
-    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
-    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
-    public static SKBitmap GetCharImage(this FontInfo font, string str, int index = 0, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
-    => font.GetCharImage(str.GetUtf32Char(index), FontFileTypefaces);
-    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
-    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
-    public static SKBitmap GetCharImage(this FontInfo font, int chr, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
+
+    private static async Task<ModifiedCharImage?> GetModifiedCharAsync(
+        FontInfo font,
+        IModifiedCharReader reader,
+        int chr,
+        CancellationToken cancellationToken)
     {
-        var img = font.GetCharImg(chr);
+        ArgumentNullException.ThrowIfNull(font);
+        ArgumentNullException.ThrowIfNull(reader);
+
+        var images = await reader.ReadAsync(font, [chr], cancellationToken).ConfigureAwait(false);
+        ModifiedCharImage? result = null;
+        foreach (var image in images)
+        {
+            if (image.Char != chr)
+                continue;
+            if (result != null)
+                throw new InvalidOperationException($"字体 {font.Id} 的字符 {chr} 存在重复的自定义图像。")
+                    .Localize(
+                        LocalizeScope,
+                        "CharHasMultiplyImageError",
+                        "字体 {{FontId}} 的字符 {{Char}} 存在重复的自定义图像。",
+                        ("FontId", font.Id),
+                        ("Char", chr));
+            result = image;
+        }
+        return result;
+    }
+
+    public static Task<SKBitmap> GetCharImageAsync(
+        this FontInfo font,
+        string str,
+        int index = 0,
+        IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null,
+        CancellationToken cancellationToken = default)
+    => font.GetCharImageAsync(InMemoryModifiedCharReader.Instance, str, index, FontFileTypefaces, cancellationToken);
+
+    public static Task<SKBitmap> GetCharImageAsync(
+        this FontInfo font,
+        IModifiedCharReader reader,
+        string str,
+        int index = 0,
+        IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null,
+        CancellationToken cancellationToken = default)
+    => font.GetCharImageAsync(reader, str.GetUtf32Char(index), FontFileTypefaces, cancellationToken);
+
+    public static Task<SKBitmap> GetCharImageAsync(
+        this FontInfo font,
+        int chr,
+        IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null,
+        CancellationToken cancellationToken = default)
+    => font.GetCharImageAsync(InMemoryModifiedCharReader.Instance, chr, FontFileTypefaces, cancellationToken);
+
+    public static async Task<SKBitmap> GetCharImageAsync(
+        this FontInfo font,
+        IModifiedCharReader reader,
+        int chr,
+        IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null,
+        CancellationToken cancellationToken = default)
+    {
+        var img = await GetModifiedCharAsync(font, reader, chr, cancellationToken).ConfigureAwait(false);
         return img == default ? font.GenerateCharImage(font.GetFont(chr, FontFileTypefaces), chr) : SKBitmap.Decode(img.ImageData);
     }
 
-    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
-    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
-    public static SKBitmap GetCharImageWithString(this FontInfo font, string renderStr, string str, int index = 0, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
-    => font.GetCharImageWithString(renderStr, str.GetUtf32Char(index), FontFileTypefaces);
-    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
-    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
-    public static SKBitmap GetCharImageWithString(this FontInfo font, string renderStr, int chr, IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null)
+    public static Task<SKBitmap> GetCharImageWithStringAsync(
+        this FontInfo font,
+        string renderStr,
+        string str,
+        int index = 0,
+        IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null,
+        CancellationToken cancellationToken = default)
+    => font.GetCharImageWithStringAsync(InMemoryModifiedCharReader.Instance, renderStr, str, index, FontFileTypefaces, cancellationToken);
+
+    public static Task<SKBitmap> GetCharImageWithStringAsync(
+        this FontInfo font,
+        IModifiedCharReader reader,
+        string renderStr,
+        string str,
+        int index = 0,
+        IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null,
+        CancellationToken cancellationToken = default)
+    => font.GetCharImageWithStringAsync(reader, renderStr, str.GetUtf32Char(index), FontFileTypefaces, cancellationToken);
+
+    public static Task<SKBitmap> GetCharImageWithStringAsync(
+        this FontInfo font,
+        string renderStr,
+        int chr,
+        IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null,
+        CancellationToken cancellationToken = default)
+    => font.GetCharImageWithStringAsync(InMemoryModifiedCharReader.Instance, renderStr, chr, FontFileTypefaces, cancellationToken);
+
+    public static async Task<SKBitmap> GetCharImageWithStringAsync(
+        this FontInfo font,
+        IModifiedCharReader reader,
+        string renderStr,
+        int chr,
+        IReadOnlyDictionary<FontTypefaceStyles, SKTypeface>? FontFileTypefaces = null,
+        CancellationToken cancellationToken = default)
     {
-        var img = font.GetCharImg(chr);
+        var img = await GetModifiedCharAsync(font, reader, chr, cancellationToken).ConfigureAwait(false);
         return img == default ? font.GenerateStrImage(renderStr, FontFileTypefaces) : SKBitmap.Decode(img.ImageData);
     }
 
@@ -454,25 +529,118 @@ public static class FontLibUtils
     public static int GetSCLFormatBytesCountPerChar(this FontInfo font)
     => (font.Height + 7) / 8 * font.Width;
 
-    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
-    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
-    public static FontLib ExportSBCS(this FontInfo font, Encoding encoding, byte codeEnd = 0xFF)
+    private static async Task<IReadOnlyDictionary<int, byte[]>> ReadModifiedCharImagesAsync(
+        FontInfo font,
+        IModifiedCharReader reader,
+        IReadOnlyCollection<int> characters,
+        CancellationToken cancellationToken)
     {
+        var images = await reader.ReadAsync(font, characters, cancellationToken).ConfigureAwait(false);
+        var result = new Dictionary<int, byte[]>(images.Count);
+        foreach (var image in images)
+        {
+            if (result.ContainsKey(image.Char))
+                throw new InvalidOperationException($"字体 {font.Id} 的字符 {image.Char} 存在重复的自定义图像。")
+                    .Localize(
+                        LocalizeScope,
+                        "CharHasMultiplyImageError",
+                        "字体 {{FontId}} 的字符 {{Char}} 存在重复的自定义图像。",
+                        ("FontId", font.Id),
+                        ("Char", image.Char));
+            result.Add(image.Char, image.ImageData);
+        }
+        return result;
+    }
+
+    private static SKBitmap GetCharImageWithString(
+        FontInfo font,
+        string renderStr,
+        int chr,
+        IReadOnlyDictionary<int, byte[]> modifiedChars)
+    => modifiedChars.TryGetValue(chr, out var imageData)
+        ? SKBitmap.Decode(imageData)
+        : font.GenerateStrImage(renderStr);
+
+    private static int NormalizeMaxThreads(int maxThreads)
+    {
+        if (maxThreads > 0)
+            return maxThreads;
+        var calculated = (long)Environment.ProcessorCount + maxThreads;
+        return calculated > 1 ? (int)Math.Min(calculated, int.MaxValue) : 1;
+    }
+
+    private static void ValidateBatchSize(int batchSize)
+    {
+        if (batchSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(batchSize), batchSize, "batchSize must be > 0");
+    }
+
+    public static Task<FontLib> ExportSBCSAsync(
+        this FontInfo font,
+        Encoding encoding,
+        byte codeEnd = 0xFF,
+        int batchSize = 256,
+        int maxThreads = 1,
+        CancellationToken cancellationToken = default)
+    => font.ExportSBCSAsync(InMemoryModifiedCharReader.Instance, encoding, codeEnd, batchSize, maxThreads, cancellationToken);
+
+    public static async Task<FontLib> ExportSBCSAsync(
+        this FontInfo font,
+        IModifiedCharReader reader,
+        Encoding encoding,
+        byte codeEnd = 0xFF,
+        int batchSize = 256,
+        int maxThreads = 1,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(font);
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentNullException.ThrowIfNull(encoding);
+        ValidateBatchSize(batchSize);
+
         var count = codeEnd + 1;
         var chrsize = font.GetSCLFormatBytesCountPerChar();
-
+        if (chrsize <= 0)
+            throw new InvalidOperationException("字符大小必须大于零")
+                .Localize(
+                    LocalizeScope,
+                    "CharSizeMustBeGreaterThanZeroError",
+                    "字符大小必须大于零"
+                    );
         var filemaxblock = (int)Math.Floor(MaxFileSize / (float)chrsize);
         if (filemaxblock < count)
             throw new NotSupportedException();
+
         var buff = new byte[count * chrsize];
-        for (int chr = 0; chr <= codeEnd; chr++)
+        var parallelOptions = new ParallelOptions
         {
-            var str = encoding.GetString(new byte[] { (byte)chr });
-            using var bmp = font.GetCharImageWithString(str, chr);
-            ExportToSCLFormat_FillCharBitmap(bmp, buff, chr * chrsize);
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = NormalizeMaxThreads(maxThreads),
+        };
+        for (var batchStart = 0; batchStart < count; batchStart += batchSize)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var currentBatchSize = Math.Min(batchSize, count - batchStart);
+            var characters = new int[currentBatchSize];
+            var renderStrings = new string[currentBatchSize];
+            for (var i = 0; i < currentBatchSize; i++)
+            {
+                var chr = batchStart + i;
+                characters[i] = chr;
+                renderStrings[i] = encoding.GetString([(byte)chr]);
+            }
+
+            var modifiedChars = await ReadModifiedCharImagesAsync(font, reader, characters, cancellationToken).ConfigureAwait(false);
+            Parallel.For(0, currentBatchSize, parallelOptions, i =>
+            {
+                var chr = characters[i];
+                using var bmp = GetCharImageWithString(font, renderStrings[i], chr, modifiedChars);
+                ExportToSCLFormat_FillCharBitmap(bmp, buff, chr * chrsize);
+            });
         }
         return new FontLib(font, encoding, true, font.Width, font.Height, count, new(encoding, 0, codeEnd, 0, 0), buff);
     }
+
     public const byte Byte2End = 0xFF;
     public static IEnumerable<(int CodePoint, byte[] Data)> GetEncodingTable(this Encoding enc, IEnumerable<byte[]> codes)
     {
@@ -518,44 +686,113 @@ public static class FontLibUtils
         return (int)Math.Ceiling(byte1Count / (float)filemaxblock);
     }
     public record ExportDBCSArgs(Encoding Encoding, byte Byte1Start = 0xA0, byte Byte1End = 0xFF, byte Byte2Start = 0xA0, bool Split = false, bool Average = true);
-    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
-    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
-    public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, Action<(int Current, int Total)>? progress)
-    => ExportDBCS(font, args, progress != null ? new Progress<(int, int)>(progress) : null);
-    [RequiresDynamicCode("发起数据库查询可能会动态生成代码")]
-    [RequiresUnreferencedCode("发起数据库查询可能会动态生成代码")]
-    public static IEnumerable<FontLib> ExportDBCS(this FontInfo font, ExportDBCSArgs args, IProgress<(int Current, int Total)>? progress = null, int maxThreads = 1)
+
+    public static IAsyncEnumerable<FontLib> ExportDBCSAsync(
+        this FontInfo font,
+        ExportDBCSArgs args,
+        IProgress<(int Current, int Total)>? progress = null,
+        int batchSize = 256,
+        int maxThreads = 1,
+        CancellationToken cancellationToken = default)
+    => font.ExportDBCSAsync(InMemoryModifiedCharReader.Instance, args, progress, batchSize, maxThreads, cancellationToken);
+
+    public static async IAsyncEnumerable<FontLib> ExportDBCSAsync(
+        this FontInfo font,
+        IModifiedCharReader reader,
+        ExportDBCSArgs args,
+        IProgress<(int Current, int Total)>? progress = null,
+        int batchSize = 256,
+        int maxThreads = 1,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(font);
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentNullException.ThrowIfNull(args);
+        if (args.Encoding == null)
+            throw new ArgumentException("必须指定编码。", nameof(args))
+                .Localize(
+                    LocalizeScope,
+                    "EncodingMustBeSpecifiedError",
+                    "必须指定编码"
+                    );
+        ValidateBatchSize(batchSize);
+
         const byte byte2End = Byte2End;
         var byte1Count = args.Byte1End - args.Byte1Start + 1;
         var byte2Count = byte2End - args.Byte2Start + 1;
+        if (byte1Count <= 0 || byte2Count <= 0)
+            throw new ArgumentOutOfRangeException(nameof(args), "编码范围不能为空")
+                .Localize(
+                    LocalizeScope,
+                    "EncodingRangeCannotBeEmptyError",
+                    "编码范围不能为空"
+                    );
         var chrsize = font.GetSCLFormatBytesCountPerChar();
+        if (chrsize <= 0)
+            throw new InvalidOperationException("字符大小必须大于零")
+                .Localize(
+                    LocalizeScope,
+                    "CharSizeMustBeGreaterThanZeroError",
+                    "字符大小必须大于零"
+                    );
         var blocksize = byte2Count * chrsize;
         var filemaxblock = args.Split ? (int)Math.Floor(MaxFileSize / (float)blocksize) : byte1Count;
+        if (filemaxblock <= 0)
+            throw new NotSupportedException("单行双字节字符数据已经超过最大字库文件大小")
+                .Localize(
+                    LocalizeScope,
+                    "FontLibFontSizeOverflowError",
+                    "单行双字节字符数据已经超过最大字库文件大小"
+                    );
         var filecount = args.Split ? (int)Math.Ceiling(byte1Count / (float)filemaxblock) : 1;
         if (args.Split && args.Average)
             filemaxblock = (int)Math.Ceiling(byte1Count / (float)filecount);
 
-        if (maxThreads <= 0)
-            maxThreads = Math.Max(Environment.ProcessorCount + maxThreads, 1);
+        var parallelOptions = new ParallelOptions
+        {
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = NormalizeMaxThreads(maxThreads),
+        };
         for (int block = args.Byte1Start; block <= args.Byte1End; block += filemaxblock)
         {
-            var buff = new byte[filemaxblock * blocksize];
-            var offset = 0;
-            for (var b1 = block; b1 < (block + filemaxblock); b1++)
+            cancellationToken.ThrowIfCancellationRequested();
+            var blockByte1Count = Math.Min(filemaxblock, args.Byte1End + 1 - block);
+            var blockCharacterCount = blockByte1Count * byte2Count;
+            var buff = new byte[blockCharacterCount * chrsize];
+            for (var batchStart = 0; batchStart < blockCharacterCount; batchStart += batchSize)
             {
-                Parallel.For(args.Byte2Start, byte2End + 1, new ParallelOptions() { MaxDegreeOfParallelism = maxThreads }, b2 =>
+                var currentBatchSize = Math.Min(batchSize, blockCharacterCount - batchStart);
+                var characterKeys = new int[currentBatchSize];
+                var renderStrings = new string?[currentBatchSize];
+                var queryCharacters = new List<int>(currentBatchSize);
+                for (var i = 0; i < currentBatchSize; i++)
                 {
+                    var characterOffset = batchStart + i;
+                    var b1 = block + characterOffset / byte2Count;
+                    var b2 = args.Byte2Start + characterOffset % byte2Count;
                     var str = args.Encoding.GetString([(byte)b1, (byte)b2]);
                     var chr = str.GetUtf32Char();
                     if (chr != 0 && chr != '\xFFFD')
                     {
-                        using var bmp = font.GetCharImageWithString(str, b1 | (b2 << 8));
-                        ExportToSCLFormat_FillCharBitmap(bmp, buff, offset + (b2 - args.Byte2Start) * chrsize);
+                        var characterKey = b1 | (b2 << 8);
+                        characterKeys[i] = characterKey;
+                        renderStrings[i] = str;
+                        queryCharacters.Add(characterKey);
                     }
+                }
+
+                var modifiedChars = await ReadModifiedCharImagesAsync(font, reader, queryCharacters, cancellationToken).ConfigureAwait(false);
+                Parallel.For(0, currentBatchSize, parallelOptions, i =>
+                {
+                    var renderString = renderStrings[i];
+                    if (renderString == null)
+                        return;
+                    using var bmp = GetCharImageWithString(font, renderString, characterKeys[i], modifiedChars);
+                    ExportToSCLFormat_FillCharBitmap(bmp, buff, (batchStart + i) * chrsize);
                 });
-                offset += byte2Count * chrsize;
-                progress?.Report((b1 - args.Byte1Start, byte1Count));
+
+                var completedRows = (block - args.Byte1Start) + (batchStart + currentBatchSize) / byte2Count;
+                progress?.Report((Math.Min(completedRows, byte1Count), byte1Count));
             }
             progress?.Report((byte1Count, byte1Count));
             yield return new FontLib(
@@ -564,8 +801,8 @@ public static class FontLibUtils
                 false,
                 font.Width,
                 font.Height,
-                (args.Byte1End + 1 - block) * byte2Count,
-                new(args.Encoding, (byte)block, args.Byte1End, args.Byte2Start, byte2End),
+                blockCharacterCount,
+                new(args.Encoding, (byte)block, (byte)(block + blockByte1Count - 1), args.Byte2Start, byte2End),
                 buff);
         }
     }

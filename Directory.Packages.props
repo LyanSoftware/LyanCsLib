@@ -44,6 +44,7 @@
 
   <ItemGroup>
     <PackageVersion Include="Newtonsoft.Json" Version="[13.0.4,)" />
+    <PackageVersion Include="System.Text.Json" Version="[8.0.6,)" />
     <PackageVersion Include="System.IO.Ports" Version="[6.0.0,9.0)" />
     <PackageVersion Include="System.Management" Version="[6.0.0,9.0)" />
     <PackageVersion Include="Microsoft.Windows.CsWin32" Version="0.3.183" />
