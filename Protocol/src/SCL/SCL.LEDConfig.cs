@@ -135,7 +135,7 @@ public static partial class SCL
     [Serializable]
     [Endian(Constants.DefaultEndian)]
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
-    public class RouteConfig : IPackage
+    public class RouteConfig : ILegacyPackage
     {
         public const int HeaderSizeConst = 64;
         public const int RouteDataLength = 1024;
@@ -314,7 +314,7 @@ public static partial class SCL
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
     [Endian(DefaultEndian)]
-    public struct LEDConfig : IPackage
+    public struct LEDConfig : ILegacyPackage
     {
         public const int SizeConst = 256;
 

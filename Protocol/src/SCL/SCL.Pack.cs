@@ -12,7 +12,7 @@ namespace Lytec.Protocol;
 
 public static partial class SCL
 {
-    public class Pack : IPackage, ICloneable<Pack>, IEquatable<Pack?>
+    public class Pack : ILegacyPackage, ICloneable<Pack>, IEquatable<Pack?>
     {
         public const ushort NoPassword = 0xffff;
         public const ushort PasswordAccepted = 0;

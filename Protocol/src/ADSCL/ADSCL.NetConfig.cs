@@ -211,7 +211,7 @@ namespace Lytec.Protocol
         [Serializable]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         [Endian(DefaultEndian)]
-        public struct Clock : IPackage
+        public struct Clock : ILegacyPackage
         {
             public const int SizeConst = 14;
 
@@ -387,7 +387,7 @@ namespace Lytec.Protocol
         [Serializable]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         [Endian(DefaultEndian)]
-        public class NetConfig : IPackage
+        public class NetConfig : ILegacyPackage
         {
             public const int SizeConst = 768;
             public const int ServerAddrMaxLength = 42;

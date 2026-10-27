@@ -77,7 +77,7 @@ partial class SCL
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     [Endian(Constants.DefaultEndian)]
-    public class FoglightArgs : IPackage, ICloneable
+    public class FoglightArgs : ILegacyPackage, ICloneable
     {
         public const int SizeConst = 64;
         public const int MaxWLSendCount = 15;

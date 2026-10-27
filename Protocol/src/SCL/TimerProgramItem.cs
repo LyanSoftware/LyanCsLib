@@ -14,7 +14,7 @@ namespace Lytec.Protocol
 {
     partial class SCL
     {
-        public class TimerProgramItem : IPackage
+        public class TimerProgramItem : ILegacyPackage
         {
             public enum ItemType : byte
             {
@@ -43,7 +43,7 @@ namespace Lytec.Protocol
                 Fahrenheit = 1,
             }
 
-            public interface IItem : IPackage { }
+            public interface IItem : ILegacyPackage { }
 
             public enum CounterType
             {
@@ -265,7 +265,7 @@ namespace Lytec.Protocol
             [Serializable]
             [Endian(DefaultEndian)]
             [StructLayout(LayoutKind.Sequential, Pack = 1)]
-            public struct FontInfo : IPackage
+            public struct FontInfo : ILegacyPackage
             {
                 public const int SizeConst = 6;
                 static FontInfo() => Debug.Assert(Marshal.SizeOf<FontInfo>() == SizeConst);
@@ -290,7 +290,7 @@ namespace Lytec.Protocol
             [Serializable]
             [Endian(DefaultEndian)]
             [StructLayout(LayoutKind.Sequential, Pack = 1)]
-            public struct FileHeader : IPackage
+            public struct FileHeader : ILegacyPackage
             {
                 public const int SizeConst = 12;
                 static FileHeader() => Debug.Assert(Marshal.SizeOf<FileHeader>() == SizeConst);

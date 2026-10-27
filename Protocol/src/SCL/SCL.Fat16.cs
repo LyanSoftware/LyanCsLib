@@ -94,7 +94,7 @@ public static partial class SCL
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     [Endian(DefaultEndian)]
-    public struct Fat16ItemInfo : IPackage
+    public struct Fat16ItemInfo : ILegacyPackage
     {
         public const int SizeConst = 32;
         static Fat16ItemInfo() => Debug.Assert(Marshal.SizeOf<Fat16ItemInfo>() == SizeConst);
@@ -141,7 +141,7 @@ public static partial class SCL
     [Serializable]
     [Endian(DefaultEndian)]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public readonly struct FileInfo : IPackage
+    public readonly struct FileInfo : ILegacyPackage
     {
         [JsonConverter(typeof(StringEnumConverter))]
         public enum Attribute : byte

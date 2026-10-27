@@ -34,7 +34,7 @@ public partial class ADSCL
 
     public static class BroadcastSeek
     {
-        public class BCPack : IPackage
+        public class BCPack : ILegacyPackage
         {
             public bool IsAnswer { get; set; }
             public BroadcastCommand Command { get; set; }
@@ -175,7 +175,7 @@ public partial class ADSCL
         [Serializable]
         [Endian(Endian.Little)]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public class NetInfo : IPackage
+        public class NetInfo : ILegacyPackage
         {
             public const int SizeConst = 44;
             static NetInfo() => Debug.Assert(Marshal.SizeOf<NetInfo>() == SizeConst);

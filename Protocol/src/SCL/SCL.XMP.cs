@@ -15,7 +15,7 @@ namespace Lytec.Protocol
         [Serializable]
         [Endian(DefaultEndian)]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct Point : IPackage
+        public struct Point : ILegacyPackage
         {
             private short _x, _y;
             public int X { get => _x; set => _x = (short)value; }
@@ -77,7 +77,7 @@ namespace Lytec.Protocol
         [Serializable]
         [Endian(DefaultEndian)]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct XMPSize : IPackage
+        public struct XMPSize : ILegacyPackage
         {
             public ushort Height { get; set; }
             public ushort Width { get; set; }
@@ -91,7 +91,7 @@ namespace Lytec.Protocol
         [Serializable]
         [Endian(DefaultEndian)]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct XMPHeader : IPackage
+        public struct XMPHeader : ILegacyPackage
         {
             public XMPType Type { get; set; }
             public int ImageCount { get => _ImageCount; set => _ImageCount = (byte)value; }

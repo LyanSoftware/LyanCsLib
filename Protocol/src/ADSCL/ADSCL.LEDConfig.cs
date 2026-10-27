@@ -67,7 +67,7 @@ namespace Lytec.Protocol
             }
         }
 
-        public interface IModuleConfigs : IPackage
+        public interface IModuleConfigs : ILegacyPackage
         {
             byte Chip { get; set; }
         }
@@ -169,7 +169,7 @@ namespace Lytec.Protocol
         [Serializable]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         [Endian(DefaultEndian)]
-        public class LEDConfig : IPackage
+        public class LEDConfig : ILegacyPackage
         {
             public const int SizeConst = 256;
             static LEDConfig() => Debug.Assert(Marshal.SizeOf<LEDConfig>() == SizeConst);

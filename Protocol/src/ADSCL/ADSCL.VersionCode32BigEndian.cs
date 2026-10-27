@@ -11,7 +11,7 @@ namespace Lytec.Protocol
         [Endian(Endian.Big)]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         [DebuggerDisplay("{" + nameof(Major) + "}.{" + nameof(Minor) + "}.{" + nameof(Build) + "}")]
-        public readonly struct VersionCode32BigEndian : IPackage, IVersionData
+        public readonly struct VersionCode32BigEndian : ILegacyPackage, IVersionData
         {
             public byte Major { get; }
             public byte Minor { get; }

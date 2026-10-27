@@ -93,7 +93,7 @@ partial class ADSCL
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     [Endian(DefaultEndian)]
-    public struct Fat16ItemInfo : IPackage
+    public struct Fat16ItemInfo : ILegacyPackage
     {
         public const int SizeConst = 32;
         static Fat16ItemInfo() => Debug.Assert(Marshal.SizeOf<Fat16ItemInfo>() == SizeConst);

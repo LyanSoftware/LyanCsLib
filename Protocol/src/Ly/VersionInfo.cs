@@ -9,7 +9,7 @@ namespace Lytec.Protocol.Ly;
 [Serializable]
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [Endian(Endian.Big)]
-public readonly struct VersionInfo : IPackage
+public readonly struct VersionInfo : ILegacyPackage
 {
     public const int SizeConst = 18;
     static VersionInfo() => Debug.Assert(Marshal.SizeOf<VersionInfo>() == SizeConst);

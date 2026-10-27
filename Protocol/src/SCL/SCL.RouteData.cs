@@ -12,7 +12,7 @@ public static partial class SCL
     [Serializable]
     [Endian(DefaultEndian)]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct RouteData : IEnumerable, IEnumerable<ushort>, IReadOnlyList<ushort>, IPackage
+    public struct RouteData : IEnumerable, IEnumerable<ushort>, IReadOnlyList<ushort>, ILegacyPackage
     {
         public const int Length = 1024;
         public const int SizeConst = 2048;

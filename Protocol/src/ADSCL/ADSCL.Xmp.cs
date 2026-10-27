@@ -19,7 +19,7 @@ namespace Lytec.Protocol
             RGBA8888 = 8,
         }
 
-        public class XmpFile : IPackage
+        public class XmpFile : ILegacyPackage
         {
             public IReadOnlyList<Xmp> Images { get; }
             public XmpFile(IReadOnlyList<Xmp> imgs)
@@ -158,7 +158,7 @@ namespace Lytec.Protocol
             }
         }
 
-        public class Xmp : IPackage
+        public class Xmp : ILegacyPackage
         {
             public XmpType Type { get; set; }
             public ushort Width { get; protected set; }

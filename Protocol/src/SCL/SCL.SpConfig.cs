@@ -11,7 +11,7 @@ public static partial class SCL
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
     [Endian(DefaultEndian)]
-    public struct SpConfig : IPackage
+    public struct SpConfig : ILegacyPackage
     {
         public const int SizeConst = 256;
 

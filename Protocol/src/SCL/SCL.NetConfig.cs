@@ -177,7 +177,7 @@ public static partial class SCL
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
     [Endian(DefaultEndian)]
-    public struct MacConfig : IPackage
+    public struct MacConfig : ILegacyPackage
     {
         public const int SizeConst = 256;
 
@@ -256,7 +256,7 @@ public static partial class SCL
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     [Endian(DefaultEndian)]
-    public struct Clock : IPackage
+    public struct Clock : ILegacyPackage
     {
         public const int SizeConst = 14;
 
@@ -313,7 +313,7 @@ public static partial class SCL
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     [Endian(DefaultEndian)]
-    public struct MacNetConfig : IPackage
+    public struct MacNetConfig : ILegacyPackage
     {
         public const int SizeConst = MacConfig.SizeConst + NetConfig.SizeConst;
 
@@ -335,7 +335,7 @@ public static partial class SCL
     [Serializable]
     [StructLayout(LayoutKind.Explicit, Pack = 1, Size = SizeConst, CharSet = CharSet.Ansi)]
     [Endian(DefaultEndian)]
-    public struct NetConfig : IPackage
+    public struct NetConfig : ILegacyPackage
     {
         public const int SizeConst = 256;
         public const int ServerAddrMaxLength = 42;

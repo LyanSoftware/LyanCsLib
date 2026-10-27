@@ -65,7 +65,7 @@ public static partial class SCL
         [Serializable]
         [Endian(Endian.Little)]
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
-        public class Info : IPackage
+        public class Info : ILegacyPackage
         {
             public const int SizeConst = BroadcastHeader.SizeConst + MacConfig.SizeConst + NetConfig.SizeConst;
 

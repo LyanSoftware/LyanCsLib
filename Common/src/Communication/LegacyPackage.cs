@@ -5,17 +5,17 @@ using Lytec.Common.Serialization;
 
 namespace Lytec.Common.Communication
 {
-    public interface IPackage
+    public interface ILegacyPackage
     {
         byte[] Serialize();
     }
 
-    public interface IPackage<out T> : IPackage where T : IPackage<T>
+    public interface ILegacyPackage<out T> : ILegacyPackage where T : ILegacyPackage<T>
     {
         ILegacyDeserializer<T> CreateDeserializer();
     }
 
-    public interface IPackage<in TPack, TAnswer> : IPackage where TPack : IPackage<TPack, TAnswer>
+    public interface ILegacyPackage<in TPack, TAnswer> : ILegacyPackage where TPack : ILegacyPackage<TPack, TAnswer>
     {
         bool IsMyAnswer(TAnswer answer);
 

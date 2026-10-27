@@ -24,7 +24,7 @@ namespace Lytec.Common.Communication;
 [TypeConverter(typeof(Converters.StringTypeConverter<MacAddress>))]
 [JsonObject]
 [JsonConverter(typeof(MacAddressJsonConverter))]
-public struct MacAddress : IPackage, IEquatable<MacAddress>, IComparable<MacAddress>
+public struct MacAddress : ILegacyPackage, IEquatable<MacAddress>, IComparable<MacAddress>
 {
     public const int SizeConst = 6;
 
