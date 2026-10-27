@@ -4,7 +4,7 @@ using Lytec.Common.Data;
 
 namespace Lytec.Common.Serialization;
 
-/// <summary>提供二进制格式在线路上的有限长度边界。</summary>
+/// <summary>提供二进制格式的有限长度边界。</summary>
 public interface IBinaryFormat
 {
     int MinimumFrameLength { get; }
@@ -53,10 +53,16 @@ public interface IBinaryCodec<T> : IBinarySerializer<T>, IBinaryDeserializer<T>
 {
 }
 
-/// <summary>声明线路大小固定的编解码器。</summary>
+/// <summary>声明二进制数据大小固定的编解码器。</summary>
 public interface IFixedBinaryCodec<T> : IBinaryCodec<T>
 {
     int FixedSize { get; }
+}
+
+/// <summary>为用户手动实现的固定长度二进制类型提供可复用 codec。</summary>
+public interface IFixedBinaryCodecProvider<T>
+{
+    IFixedBinaryCodec<T> GetBinaryCodec(Endian? endian = null);
 }
 
 /// <summary>

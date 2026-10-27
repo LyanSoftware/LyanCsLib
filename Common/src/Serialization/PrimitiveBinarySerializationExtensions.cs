@@ -117,6 +117,10 @@ public static class PrimitiveBinarySerializationExtensions
         return result;
     }
 
+    /// <summary>使用指定的固定宽度二进制数据类型把布尔值序列化为精确长度的字节数组。</summary>
+    public static byte[] SerializeToBytes(this bool value, BinaryDataType dataType, Endian? endian = null)
+        => value.SerializeToBytes(ToUnmanagedBooleanType(dataType), endian);
+
     /// <summary>从精确长度的输入反序列化一个 <see cref="sbyte"/>。</summary>
     public static OperationStatus TryDeserializeToSByte(
         this ReadOnlySpan<byte> source,
@@ -272,6 +276,14 @@ public static class PrimitiveBinarySerializationExtensions
         return OperationStatus.Done;
     }
 
+    /// <summary>使用指定的固定宽度二进制数据类型从精确长度的输入反序列化一个布尔值。</summary>
+    public static OperationStatus TryDeserializeToBoolean(
+        this ReadOnlySpan<byte> source,
+        BinaryDataType dataType,
+        out bool value,
+        Endian? endian = null)
+        => source.TryDeserializeToBoolean(ToUnmanagedBooleanType(dataType), out value, endian);
+
     /// <summary>从精确长度的数组反序列化一个 <see cref="sbyte"/>。</summary>
     public static OperationStatus TryDeserializeToSByte(
         this byte[] source,
@@ -383,6 +395,17 @@ public static class PrimitiveBinarySerializationExtensions
         return ((ReadOnlySpan<byte>)source).TryDeserializeToBoolean(representation, out value, endian);
     }
 
+    /// <summary>使用指定的固定宽度二进制数据类型从精确长度的数组反序列化一个布尔值。</summary>
+    public static OperationStatus TryDeserializeToBoolean(
+        this byte[] source,
+        BinaryDataType dataType,
+        out bool value,
+        Endian? endian = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return ((ReadOnlySpan<byte>)source).TryDeserializeToBoolean(dataType, out value, endian);
+    }
+
     private static OperationStatus Invalid<T>(out T value)
     {
         value = default!;
@@ -396,5 +419,14 @@ public static class PrimitiveBinarySerializationExtensions
             UnmanagedType.I2 or UnmanagedType.U2 => 2,
             UnmanagedType.Bool or UnmanagedType.I4 or UnmanagedType.U4 => 4,
             _ => throw new ArgumentOutOfRangeException(nameof(representation)),
+        };
+
+    private static UnmanagedType ToUnmanagedBooleanType(BinaryDataType dataType)
+        => dataType switch
+        {
+            BinaryDataType.Boolean8 => UnmanagedType.U1,
+            BinaryDataType.Boolean16 => UnmanagedType.U2,
+            BinaryDataType.Boolean32 => UnmanagedType.Bool,
+            _ => throw new ArgumentOutOfRangeException(nameof(dataType)),
         };
 }

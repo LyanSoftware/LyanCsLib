@@ -81,6 +81,19 @@ public class PrimitiveBinarySerializationExtensionsTest
         Assert.Equal(new byte[] { 0, 0, 0, 0 }, false.SerializeToBytes(UnmanagedType.Bool, Endian.Big));
     }
 
+    [Theory]
+    [InlineData(BinaryDataType.Boolean8, 1)]
+    [InlineData(BinaryDataType.Boolean16, 2)]
+    [InlineData(BinaryDataType.Boolean32, 4)]
+    public void BooleanSupportsBinaryDataTypeOverloads(BinaryDataType dataType, int size)
+    {
+        var bytes = true.SerializeToBytes(dataType, Endian.Big);
+
+        Assert.Equal(size, bytes.Length);
+        Assert.Equal(OperationStatus.Done, bytes.TryDeserializeToBoolean(dataType, out var value, Endian.Big));
+        Assert.True(value);
+    }
+
     [Fact]
     public void BooleanDeserializationAcceptsEveryNonzeroValueIncludingPascalTrue()
     {
