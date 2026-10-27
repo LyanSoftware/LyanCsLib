@@ -1,14 +1,15 @@
 using Lytec.Common.Data;
 using Lytec.Common.Localization.Extensions;
+using Lytec.Common.Serialization;
 using Newtonsoft.Json;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.NetworkInformation;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 #nullable enable
@@ -24,9 +25,46 @@ namespace Lytec.Common.Communication;
 [TypeConverter(typeof(Converters.StringTypeConverter<MacAddress>))]
 [JsonObject]
 [JsonConverter(typeof(MacAddressJsonConverter))]
-public struct MacAddress : ILegacyPackage, IEquatable<MacAddress>, IComparable<MacAddress>
+[FixedBinaryContract(SizeConst, typeof(CodecProvider))]
+public partial struct MacAddress : IBinarySerializable, IEquatable<MacAddress>, IComparable<MacAddress>
 {
     public const int SizeConst = 6;
+    public int SerializedSize => SizeConst;
+
+    class CodecProvider : IFixedBinaryCodecProvider<MacAddress>
+    {
+        public IFixedBinaryCodec<MacAddress> GetBinaryCodec(Endian? endian = null) => new Codec();
+    }
+    class Codec : IFixedBinaryCodec<MacAddress>
+    {
+        public int FixedSize => SizeConst;
+
+        public BinaryResynchronizationMode ResynchronizationMode => BinaryResynchronizationMode.Automatic;
+
+        public int MinimumFrameLength => SizeConst;
+
+        public int MaximumFrameLength => SizeConst;
+
+        public IBinaryStreamDecoder<MacAddress> CreateStreamDecoder() => new FixedBinaryStreamDecoder<MacAddress>(this);
+
+        public BinaryParseResult Parse(ReadOnlySpan<byte> source, bool isFinalBlock, out MacAddress value)
+        {
+            value = Empty;
+            if (source.Length < SizeConst)
+                return isFinalBlock ? BinaryParseResult.InvalidData(0, source.Length) : BinaryParseResult.NeedMoreData(source.Length);
+            value = new MacAddress(source[0], source[1], source[2], source[3], source[4], source[5]);
+            return BinaryParseResult.Done(SizeConst);
+        }
+
+        public OperationStatus TryGetSerializedLength(MacAddress value, out int length)
+        {
+            length = SizeConst;
+            return OperationStatus.Done;
+        }
+
+        public OperationStatus TrySerialize(MacAddress value, Span<byte> destination, out int written)
+        => value.TrySerialize(destination, out written);
+    }
 
     static MacAddress() => Debug.Assert(Marshal.SizeOf<MacAddress>() == SizeConst);
 
@@ -155,7 +193,25 @@ public struct MacAddress : ILegacyPackage, IEquatable<MacAddress>, IComparable<M
 
     public long ToLong() => Data;
 
-    public byte[] Serialize() => this.ToBytes();
+    public byte[] Serialize(Endian? _ = null) =>
+    [
+        Byte1, Byte2, Byte3, Byte4, Byte5, Byte6
+    ];
+
+    public OperationStatus TrySerialize(Span<byte> destination, out int written, Endian? _ = null)
+    {
+        written = 0;
+        if (destination.Length < SizeConst)
+            return OperationStatus.DestinationTooSmall;
+        destination[0] = Byte1;
+        destination[1] = Byte2;
+        destination[2] = Byte3;
+        destination[3] = Byte4;
+        destination[4] = Byte5;
+        destination[5] = Byte6;
+        written = 6;
+        return OperationStatus.Done;
+    }
 
     public static explicit operator long(MacAddress mac) => mac.Data;
     public static explicit operator MacAddress(long mac) => new MacAddress(mac);
